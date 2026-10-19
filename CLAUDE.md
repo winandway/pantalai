@@ -31,6 +31,9 @@ analiza su código. Sobre PANTALAI (nuestro) se puede usar todo REA.
 - YaDominios Cloud, sitio `pantalai` → `https://pantalai.sitios.dev`, rama `yapanel-build`
   (la llena el Action `publicar` después de que `verify` da verde).
 - Necesita plan con base de datos (`env.DB`) y almacenamiento (`env.BUCKET`).
+- Llaves (19 oct 2026, de Richard): `PANTALAI_YADOMINIOS_LLAVE` (hosting, servidor MCP `yadominios` en
+  `.mcp.json`, permiso de escritura sobre el sitio) y `PANTALAI_DB_TOKEN` (API de consultas a la base). Viven
+  SOLO en `.claude/settings.local.json` (ignorado por git). Nunca en el repositorio ni en el chat.
 - Prueba local: `npm run build`, `npx wrangler d1 execute pantalai-local --local --file schema.sql`,
   `npx wrangler dev --local --port 8787`, y `npx playwright test`.
 

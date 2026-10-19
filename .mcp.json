@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "yadominios": {
+      "type": "http",
+      "url": "https://yapanel.yadominios.com/api/sitio/mcp",
+      "headers": {
+        "Authorization": "Bearer ${PANTALAI_YADOMINIOS_LLAVE}"
+      }
+    }
+  }
+}
