@@ -50,6 +50,37 @@ describe('pantallas de IA', () => {
     expect(await screen.findByRole('button', { name: /Procesar con IA/ })).toBeTruthy();
   });
 
+  it('sin cerebro, transcribe solo y lo dice con su propio mensaje', async () => {
+    const f = vi.fn(async (url: string | URL | Request) => {
+      const u = String(url);
+      if (u.endsWith('/ia'))
+        return Response.json({
+          ia: { ...ia(f.mock.calls.length > 1 ? 'transcrito' : 'pendiente').ia, cerebro: false },
+        });
+      if (u.includes('/media/')) return new Response(new ArrayBuffer(8));
+      return Response.json({ ok: true, idioma: 'es', palabras: 1 });
+    });
+    vi.stubGlobal('fetch', f);
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        decodeAudioData = async () => ({ duration: 1 });
+        close = async () => undefined;
+      },
+    );
+    vi.stubGlobal(
+      'OfflineAudioContext',
+      class {
+        destination = {};
+        createBufferSource = () => ({ connect: () => undefined, start: () => undefined, buffer: null });
+        startRendering = async () => ({ getChannelData: () => new Float32Array(16000) });
+      },
+    );
+    envolver(<AvisoIA id="v1" idioma="es" alTerminar={() => undefined} />);
+    expect(await screen.findByText(/La IA transcribió tu video/)).toBeTruthy();
+    expect(f.mock.calls.some(([u]) => String(u).includes('analizar'))).toBe(false);
+  });
+
   it('tareas con copiar', () => {
     envolver(<Tareas tareas={['Revisar el teléfono']} />);
     expect(screen.getByText(/Revisar el teléfono/)).toBeTruthy();

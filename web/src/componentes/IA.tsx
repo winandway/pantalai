@@ -107,7 +107,7 @@ export function AvisoIA({
   if (hecho)
     return (
       <div className="aviso-ia exito" role="status">
-        ✨ {t('iaListo')}
+        ✨ {ia.cerebro ? t('iaListo') : t('iaListoOido')}
       </div>
     );
   if (error)
