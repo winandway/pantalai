@@ -1,0 +1,2 @@
+npx lint-staged
+gitleaks git --pre-commit --staged --redact --no-banner || gitleaks protect --staged --redact --no-banner

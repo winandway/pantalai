@@ -1,0 +1,6 @@
+dist
+salida
+coverage
+.wrangler
+package-lock.json
+docs/investigacion-rea/*.png

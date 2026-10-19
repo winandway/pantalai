@@ -1,0 +1,15 @@
+node_modules
+dist
+salida
+.dist-worker
+coverage
+.wrangler
+.env
+.env.*
+!.env.example
+.DS_Store
+.dev.vars
+docs/CUENTAS-DE-PRUEBA.md
+test-results
+playwright-report
+.claude/

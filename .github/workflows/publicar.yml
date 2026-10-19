@@ -1,0 +1,53 @@
+name: publicar
+# Compila y empuja el paquete a la rama yapanel-build. YaDominios Cloud republica solo esa rama.
+on:
+  workflow_run:
+    workflows: [verify]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ github.event.workflow_run.head_sha }}' }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+      - run: npm run build
+        env:
+          VERSION: ${{ github.event.workflow_run.head_sha }}
+      - name: Publicar en la rama yapanel-build
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: yapanel-build
+          publish_dir: ./salida
+          force_orphan: true
+      - name: Prueba de humo en vivo
+        # Se enciende con la variable SITIO_CONECTADO=1 cuando el sitio ya existe en YaDominios Cloud.
+        if: ${{ vars.SITIO_CONECTADO == '1' }}
+        run: |
+          COMMIT="${VERSION:0:7}"
+          for i in $(seq 1 40); do
+            R=$(curl -s https://pantalai.sitios.dev/datos/salud || true)
+            echo "$R" | grep -q "\"commit\":\"$COMMIT\"" && break
+            sleep 30
+          done
+          echo "$R"
+          for r in / /docs /docs/record-your-screen /login /signup /datos/salud; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" "https://pantalai.sitios.dev$r")
+            echo "$r $c"; [ "$c" = "200" ] || exit 1
+          done
+        env:
+          VERSION: ${{ github.event.workflow_run.head_sha }}
+        timeout-minutes: 25
