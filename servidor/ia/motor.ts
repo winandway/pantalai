@@ -135,7 +135,41 @@ export async function transcribir(
     if (texto) segmentos.push({ inicio: redondo(s.start), fin: redondo(s.end), texto });
     for (const w of s.words ?? []) palabras.push([redondo(w.start), redondo(w.end), w.word.trim()]);
   }
-  return { palabras, segmentos, idioma: datos.result.transcription_info?.language ?? idioma ?? '', segundos };
+  const frases = palabras.length ? frasesDesdePalabras(palabras) : segmentos;
+  return {
+    palabras,
+    segmentos: frases,
+    idioma: datos.result.transcription_info?.language ?? idioma ?? '',
+    segundos,
+  };
+}
+
+/** Arma frases cortas a partir de las palabras: corta en el punto, en una pausa o a las 14 palabras. Mejores subtítulos. */
+export function frasesDesdePalabras(palabras: Palabra[]): Segmento[] {
+  const salida: Segmento[] = [];
+  let actual: Palabra[] = [];
+  const cerrar = () => {
+    if (!actual.length) return;
+    salida.push({
+      inicio: actual[0]![0],
+      fin: actual[actual.length - 1]![1],
+      texto: actual
+        .map((p) => p[2])
+        .join(' ')
+        .trim(),
+    });
+    actual = [];
+  };
+  for (let i = 0; i < palabras.length; i++) {
+    const p = palabras[i]!;
+    const siguiente = palabras[i + 1];
+    actual.push(p);
+    const fin = /[.!?…]$/.test(p[2]);
+    const pausa = siguiente ? siguiente[0] - p[1] > 1 : true;
+    if (fin || pausa || actual.length >= 14) cerrar();
+  }
+  cerrar();
+  return salida;
 }
 
 function aBase64(datos: ArrayBuffer): string {

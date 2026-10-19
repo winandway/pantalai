@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import app, { PARTE_MIN } from '../servidor/app';
 import { asegurarModelo, costoGemini, costoWhisper } from '../servidor/ia/guardia';
-import { ErrorIA, analizar, anotarGasto, muletillas, topes, transcribir } from '../servidor/ia/motor';
+import {
+  ErrorIA,
+  analizar,
+  anotarGasto,
+  frasesDesdePalabras,
+  muletillas,
+  topes,
+  transcribir,
+} from '../servidor/ia/motor';
 import { aWav, partir } from '../web/src/logica/audio';
 import { procesar } from '../web/src/logica/ia';
 import { almacenFalso, baseFalsa } from './falsos';
@@ -128,9 +136,25 @@ describe('el oído', () => {
     expect(new Headers(init?.headers).get('authorization')).toBe('Bearer token-cf');
     expect(JSON.parse(String(init?.body)).initial_prompt).toContain('mmm');
     expect(r.palabras[0]).toEqual([120.2, 120.6, 'Hola,']);
-    expect(r.segmentos[0]).toEqual({ inicio: 120, fin: 123, texto: 'Hola, eh, equipo.' });
+    expect(r.segmentos[0]).toEqual({ inicio: 120.2, fin: 121.6, texto: 'Hola, eh, equipo.' });
     const gasto = await db.prepare('SELECT * FROM ia_gasto').first<{ proveedor: string; llamadas: number }>();
     expect(gasto).toMatchObject({ proveedor: 'cloudflare', llamadas: 1 });
+  });
+
+  it('parte en frases cortas para los subtítulos', () => {
+    const p: [number, number, string][] = [
+      [0, 0.4, 'Hola'],
+      [0.5, 0.9, 'equipo.'],
+      [1, 1.3, 'Primero'],
+      [1.4, 1.8, 'abre'],
+      [3.5, 3.9, 'después'],
+    ];
+    expect(frasesDesdePalabras(p).map((s) => s.texto)).toEqual(['Hola equipo.', 'Primero abre', 'después']);
+    const largas = Array.from(
+      { length: 30 },
+      (_, i) => [i * 0.3, i * 0.3 + 0.2, 'w'] as [number, number, string],
+    );
+    expect(frasesDesdePalabras(largas)).toHaveLength(3);
   });
 
   it('encuentra las muletillas sin tocar palabras de verdad', () => {
@@ -250,7 +274,7 @@ describe('rutas de IA de punta a punta (con proveedores simulados)', () => {
     expect(v.titulo).toBe('Mi título');
     expect(v.descripcion).toBe('Se explica el alta.');
     expect(v.capitulos).toHaveLength(2);
-    expect(v.transcripcion.map((s) => s.inicio)).toEqual([0, 120]);
+    expect(v.transcripcion.map((s) => s.inicio)).toEqual([0.2, 120.2]);
     const ia = (
       (await (await pedir(`/datos/videos/${id}/ia`)).json()) as {
         ia: { estado: string; tareas: string[]; muletillas: unknown[] };
