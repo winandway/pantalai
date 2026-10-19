@@ -9,6 +9,7 @@ import { llaveBorrador, useBorrador } from '../logica/borrador';
 import { textoError, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
+import { ahorro, leerIA, type EstadoIA } from '../logica/ia';
 import {
   capitulosAutomaticos,
   detectarSilencios,
@@ -74,6 +75,12 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
   const [analizando, setAnalizando] = useState(false);
   const [seleccion, setSeleccion] = useState<number | null>(null);
   const [vistaFinal, setVistaFinal] = useState(false);
+  const [ia, setIa] = useState<EstadoIA | null>(null);
+  useEffect(() => {
+    leerIA(video.id)
+      .then(setIa)
+      .catch(() => undefined);
+  }, [video.id]);
 
   const duracion = video.duracion;
   const vista: Video = useMemo(
@@ -391,6 +398,26 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
             )}
           </div>
         </section>
+
+        {ia && ia.muletillas.length > 0 && (
+          <section className="tarjeta">
+            <h2>✨ {t('quitarMuletillas')}</h2>
+            <p className="ayuda">{t('muletillasAyuda')}</p>
+            <button
+              type="button"
+              className="boton secundario chico"
+              onClick={() => {
+                b.cambiar(
+                  'cortes',
+                  unirTramos([...d.cortes, ...ia.muletillas.map(({ inicio, fin }) => ({ inicio, fin }))]),
+                );
+                avisar(`${ia.muletillas.length} · ${t('ahorra')} ${ahorro(ia.muletillas)} s`);
+              }}
+            >
+              {t('quitarMuletillas')} ({ia.muletillas.length} · {t('ahorra')} {ahorro(ia.muletillas)} s)
+            </button>
+          </section>
+        )}
 
         {video.transcripcion.length > 0 && (
           <section className="tarjeta">

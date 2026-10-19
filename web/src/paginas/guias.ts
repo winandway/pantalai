@@ -1,7 +1,7 @@
 // Guías públicas de Docs, en inglés y español. Escritas para el público, sin nada técnico ni privado.
 export type Guia = {
   slug: string;
-  seccion: 'empezar' | 'grabar' | 'compartir' | 'editar' | 'cuenta';
+  seccion: 'empezar' | 'grabar' | 'compartir' | 'editar' | 'ia' | 'cuenta';
   icono: string;
   imagen?: string;
   en: { titulo: string; resumen: string; cuerpo: string[] };
@@ -13,6 +13,7 @@ export const SECCIONES: Record<Guia['seccion'], { en: string; es: string; icono:
   grabar: { en: 'Recording', es: 'Grabar', icono: '⏺' },
   compartir: { en: 'Sharing & viewers', es: 'Compartir y quién lo ve', icono: '🔗' },
   editar: { en: 'Editing', es: 'Editar', icono: '✂' },
+  ia: { en: 'AI', es: 'IA', icono: '✨' },
   cuenta: { en: 'Library & account', es: 'Biblioteca y cuenta', icono: '📁' },
 };
 
@@ -358,6 +359,79 @@ export const GUIAS: Guia[] = [
         'Arrástralo sobre el video para ubicarlo y cambia cuándo empieza y cuándo termina. El difuminado esconde contraseñas, correos o cualquier cosa privada en pantalla.',
         'Botón de llamada a la acción: escribe el texto y el enlace (por ejemplo «Agenda una demo»). El botón queda sobre el video y en Estadísticas ves cuántos lo tocaron.',
         'Miniatura: pausa en el fotograma que te guste y toca «Usar este fotograma».',
+      ],
+    },
+  },
+  {
+    slug: 'ai-title-summary-chapters',
+    seccion: 'ia',
+    icono: '✨',
+    en: {
+      titulo: 'AI title, summary, chapters and tasks',
+      resumen: 'When you finish recording, AI listens to your video and writes the rest for you.',
+      cuerpo: [
+        'After you stop recording, open your video. A line at the top shows that AI is working: first it prepares the audio, then it transcribes, then it writes.',
+        'In about a minute you get an accurate transcript with punctuation and captions, a clear title, a short summary under the video, chapters on the progress bar, and a list of tasks you mentioned.',
+        'AI never overwrites your own work: if you changed the title or already wrote a summary or chapters, it leaves them as they are.',
+        'It works for any video, in any browser, in more than 50 languages. If the AI service is busy, your video keeps working and you can press “Try AI again” later.',
+      ],
+    },
+    es: {
+      titulo: 'Título, resumen, capítulos y tareas con IA',
+      resumen: 'Cuando terminas de grabar, la IA escucha tu video y escribe lo demás por ti.',
+      cuerpo: [
+        'Al terminar de grabar, abre tu video. Arriba aparece una línea que dice que la IA está trabajando: primero prepara el audio, después transcribe y después escribe.',
+        'En más o menos un minuto tienes una transcripción precisa con puntuación y subtítulos, un título claro, un resumen corto debajo del video, capítulos en la barra y la lista de tareas que mencionaste.',
+        'La IA nunca pisa lo tuyo: si cambiaste el título o ya escribiste un resumen o capítulos, los deja como están.',
+        'Funciona con cualquier video, en cualquier navegador y en más de 50 idiomas. Si el servicio de IA está ocupado, tu video sigue funcionando y puedes tocar «Intentar otra vez con IA» después.',
+      ],
+    },
+  },
+  {
+    slug: 'ai-remove-filler-words',
+    seccion: 'ia',
+    icono: '🧹',
+    en: {
+      titulo: 'Remove filler words',
+      resumen: 'Skip every “um”, “uh” and “hmm” with one click.',
+      cuerpo: [
+        'Open your video and press Edit. If AI found filler sounds, you will see “Remove filler words” with how many it found and how many seconds it saves.',
+        'Press it and those moments are skipped when people watch. Turn on Preview to hear the result.',
+        'Like every edit in PANTALAI, it never touches the original file: press “Bring back all cuts” to undo it.',
+      ],
+    },
+    es: {
+      titulo: 'Quitar muletillas',
+      resumen: 'Sáltate cada «eh», «mmm» y «um» con un clic.',
+      cuerpo: [
+        'Abre tu video y toca Editar. Si la IA encontró muletillas, verás «Quitar muletillas» con cuántas encontró y cuántos segundos ahorra.',
+        'Tócalo y esos momentos se saltan cuando alguien lo ve. Enciende Vista previa para escuchar cómo queda.',
+        'Como toda edición en PANTALAI, nunca toca el archivo original: toca «Devolver todos los cortes» para deshacerlo.',
+      ],
+    },
+  },
+  {
+    slug: 'ai-generate-documents',
+    seccion: 'ia',
+    icono: '📄',
+    en: {
+      titulo: 'Turn a video into a document',
+      resumen: 'Procedures, guides, bug reports and messages, with a screenshot for every step.',
+      cuerpo: [
+        'Open your video and press Generate. Pick a template: step-by-step procedure, customer guide, bug report, code change description, QA test steps, or message to share.',
+        'AI writes the document from what you said. Every step shows the minute of the video where it happens, and a screenshot of that moment.',
+        'Click a minute to jump there. Copy the text, or download it with screenshots to send it or keep it in your help center.',
+        'AI only uses what is in your video. If something is missing, record it and generate again.',
+      ],
+    },
+    es: {
+      titulo: 'Convierte un video en un documento',
+      resumen: 'Procedimientos, guías, reportes de error y mensajes, con una captura por paso.',
+      cuerpo: [
+        'Abre tu video y toca Generar. Elige una plantilla: procedimiento paso a paso, guía para clientes, reporte de error, descripción de un cambio de código, pasos de prueba o mensaje para compartir.',
+        'La IA escribe el documento con lo que dijiste. Cada paso muestra el minuto del video donde pasa y una captura de ese momento.',
+        'Toca un minuto para saltar ahí. Copia el texto o descárgalo con capturas para enviarlo o guardarlo en tu centro de ayuda.',
+        'La IA solo usa lo que está en tu video. Si falta algo, grábalo y genera otra vez.',
       ],
     },
   },

@@ -94,3 +94,26 @@ CREATE TABLE IF NOT EXISTS vistas (
   ultima INTEGER NOT NULL,
   PRIMARY KEY (video_id, visitante)
 );
+
+-- IA (19 oct 2026): tablas nuevas, así no se tocan columnas de tablas que ya existen en producción.
+CREATE TABLE IF NOT EXISTS video_ia (
+  video_id TEXT PRIMARY KEY,
+  estado TEXT NOT NULL DEFAULT 'pendiente',
+  error TEXT NOT NULL DEFAULT '',
+  palabras TEXT NOT NULL DEFAULT '[]',
+  segmentos TEXT NOT NULL DEFAULT '[]',
+  tareas TEXT NOT NULL DEFAULT '[]',
+  idioma TEXT NOT NULL DEFAULT '',
+  titulo_original TEXT NOT NULL DEFAULT '',
+  minutos REAL NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ia_gasto (
+  dia TEXT NOT NULL,
+  proveedor TEXT NOT NULL,
+  usd REAL NOT NULL DEFAULT 0,
+  unidades REAL NOT NULL DEFAULT 0,
+  llamadas INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (dia, proveedor)
+);

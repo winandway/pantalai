@@ -22,6 +22,8 @@ import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { buscarEnTranscripcion, formatoTiempo, segmentoActual, textoPlano } from '../logica/tiempo';
 import { copiar } from './Biblioteca';
+import { AvisoIA, Generar, Tareas } from '../componentes/IA';
+import type { EstadoIA } from '../logica/ia';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '👏', '🔥', '🙌'];
 type Pestana = 'actividad' | 'transcripcion' | 'estadisticas';
@@ -40,6 +42,8 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
   const [ahora, setAhora] = useState(0);
   const [compartir, setCompartir] = useState(false);
   const [borrando, setBorrando] = useState(false);
+  const [ia, setIa] = useState<EstadoIA | null>(null);
+  const [generando, setGenerando] = useState(false);
   const reproductor = useRef<ManejoReproductor>(null);
   const inicio = useMemo(() => {
     const v = Number(new URLSearchParams(location.search).get('t'));
@@ -192,6 +196,11 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
                 ✂ {t('editar')}
               </a>
             )}
+            {video.es_dueno && ia?.cerebro && video.transcripcion.length > 0 && (
+              <button type="button" className="boton secundario" onClick={() => setGenerando(true)}>
+                ✨ {t('generar')}
+              </button>
+            )}
             {video.es_dueno && (
               <button type="button" className="boton" onClick={() => setCompartir(true)}>
                 {t('compartir')}
@@ -229,6 +238,17 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
           </div>
         </header>
 
+        {video.es_dueno && (
+          <AvisoIA
+            id={video.id}
+            idioma={video.idioma}
+            alTerminar={(r, recien) => {
+              setIa(r);
+              if (recien) void cargar();
+            }}
+          />
+        )}
+
         {reproductorEl}
 
         <div className="reacciones" role="group" aria-label="Reactions">
@@ -240,7 +260,7 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
           <span className="ayuda atajos">{t('atajos')}</span>
         </div>
 
-        {(video.descripcion || video.capitulos.length > 0) && (
+        {(video.descripcion || video.capitulos.length > 0 || (video.es_dueno && !!ia?.tareas.length)) && (
           <section className="video-resumen">
             {video.descripcion && (
               <>
@@ -267,7 +287,16 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
                 </ol>
               </>
             )}
+            {video.es_dueno && ia && <Tareas tareas={ia.tareas} />}
           </section>
+        )}
+        {generando && (
+          <Generar
+            id={video.id}
+            enlace={enlaceVideo(video.id)}
+            ir={(s) => reproductor.current?.ir(s)}
+            cerrar={() => setGenerando(false)}
+          />
         )}
         {!usuario && (
           <p className="hecho-con">

@@ -16,6 +16,20 @@ import {
   pasaTurnstile,
   sha256,
 } from './seguridad';
+import {
+  ErrorIA,
+  PLANTILLAS,
+  analizar,
+  gastoDelMes,
+  generar,
+  iaConfigurada,
+  muletillas,
+  topes,
+  transcribir,
+  type Palabra,
+  type Plantilla,
+  type Segmento,
+} from './ia/motor';
 
 export type Env = {
   DB: D1Database;
@@ -23,6 +37,11 @@ export type Env = {
   ASSETS?: Fetcher;
   TURNSTILE_SECRET?: string;
   TURNSTILE_SITE_KEY?: string;
+  CF_ACCOUNT_ID?: string;
+  CF_AI_TOKEN?: string;
+  GEMINI_API_KEY?: string;
+  IA_TOPE_USD_MES?: string;
+  IA_TOPE_MINUTOS_DIA?: string;
 };
 
 type Usuario = { id: string; correo: string; nombre: string };
@@ -207,9 +226,22 @@ app.get('/datos/salud', async (c) => {
     piezas.almacen = 'error';
   }
   const ok = Object.values(piezas).every((p) => p === 'ok');
-  return c.json({ ok, piezas, turnstile: Boolean(c.env.TURNSTILE_SECRET), commit: COMMIT }, ok ? 200 : 500, {
-    'Cache-Control': 'no-store',
-  });
+  // La IA no tumba la salud del sitio: se informa aparte (encendida o apagada, y el gasto del mes).
+  let ia: Record<string, unknown> = { ...iaConfigurada(c.env) };
+  try {
+    const g = await gastoDelMes(c.env.DB);
+    ia = { ...ia, usd_mes: Math.round(g.usd * 10000) / 10000, tope_usd_mes: topes(c.env).usdMes };
+  } catch (e) {
+    console.error('salud: gasto de IA', e);
+    ia.gasto = 'error';
+  }
+  return c.json(
+    { ok, piezas, ia, turnstile: Boolean(c.env.TURNSTILE_SECRET), commit: COMMIT },
+    ok ? 200 : 500,
+    {
+      'Cache-Control': 'no-store',
+    },
+  );
 });
 
 app.get('/datos/config', (c) =>
@@ -615,6 +647,7 @@ app.delete('/datos/videos/:id', requiereSesion, async (c) => {
     c.env.DB.prepare('DELETE FROM comentarios WHERE video_id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM reacciones WHERE video_id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM vistas WHERE video_id = ?').bind(v.id),
+    c.env.DB.prepare('DELETE FROM video_ia WHERE video_id = ?').bind(v.id),
   ]);
   return c.json({ ok: true });
 });
@@ -772,6 +805,204 @@ app.get('/datos/videos/:id/estadisticas', requiereSesion, async (c) => {
       por_dia: porDia,
     },
   });
+});
+
+// ---------- IA: oído (Whisper en Cloudflare) y cerebro (Gemini) ----------
+// El navegador del dueño manda el audio en pedazos de 2 minutos (WAV 16 kHz mono) y después pide el análisis.
+// Así cada petición es corta y el video nunca depende de la IA: si algo falla, sigue funcionando igual.
+
+const AUDIO_MAX = 8 * 1024 * 1024;
+
+type FilaIA = {
+  video_id: string;
+  estado: string;
+  error: string;
+  palabras: string;
+  segmentos: string;
+  tareas: string;
+  idioma: string;
+  titulo_original: string;
+  minutos: number;
+};
+
+function errorIA(c: C, e: unknown) {
+  if (e instanceof ErrorIA) {
+    const estado = e.codigo === 'ia_apagada' ? 503 : e.codigo.startsWith('tope') ? 429 : 502;
+    return c.json({ error: e.codigo }, estado);
+  }
+  console.error('ia', e);
+  return err(c, 500, 'servidor');
+}
+
+async function filaIA(c: C, id: string): Promise<FilaIA | null> {
+  return c.env.DB.prepare('SELECT * FROM video_ia WHERE video_id = ?').bind(id).first<FilaIA>();
+}
+
+app.get('/datos/ia', requiereSesion, async (c) => {
+  const g = await gastoDelMes(c.env.DB);
+  const t = topes(c.env);
+  return c.json(
+    {
+      ...iaConfigurada(c.env),
+      usd_mes: g.usd,
+      tope_usd_mes: t.usdMes,
+      minutos_hoy: g.minutosHoy,
+      tope_minutos_dia: t.minutosDia,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.get('/datos/videos/:id/ia', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const f = await filaIA(c, v.id);
+  const palabras = f ? (jsonSeguro(f.palabras) as Palabra[]) : [];
+  return c.json(
+    {
+      ia: {
+        ...iaConfigurada(c.env),
+        estado: f?.estado ?? 'pendiente',
+        error: f?.error ?? '',
+        tareas: f ? jsonSeguro(f.tareas) : [],
+        muletillas: muletillas(palabras),
+        palabras: palabras.length,
+      },
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.post('/datos/videos/:id/ia/transcribir', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v || v.estado !== 'listo') return err(c, 404, 'no_existe');
+  const desde = Number(c.req.query('desde') ?? 0);
+  const primero = c.req.query('primero') === '1';
+  const ultimo = c.req.query('ultimo') === '1';
+  if (!Number.isFinite(desde) || desde < 0 || desde > v.duracion + 5) return err(c, 400, 'datos');
+  if (v.duracion > 2 * 3600) return err(c, 413, 'muy_largo');
+  const audio = await c.req.arrayBuffer();
+  if (audio.byteLength < 1000 || audio.byteLength > AUDIO_MAX) return err(c, 413, 'audio');
+  const ahora = Date.now();
+  if (primero) {
+    // Empieza de cero: se guarda el título del momento para no pisar uno que la persona haya cambiado.
+    await c.env.DB.prepare(
+      `INSERT INTO video_ia (video_id, estado, error, palabras, segmentos, titulo_original, minutos, actualizado)
+       VALUES (?, 'transcribiendo', '', '[]', '[]', ?, 0, ?)
+       ON CONFLICT (video_id) DO UPDATE SET estado = 'transcribiendo', error = '', palabras = '[]', segmentos = '[]',
+         titulo_original = excluded.titulo_original, minutos = 0, actualizado = excluded.actualizado`,
+    )
+      .bind(v.id, v.titulo, ahora)
+      .run();
+  }
+  const f = await filaIA(c, v.id);
+  if (!f || f.estado !== 'transcribiendo') return err(c, 409, 'orden');
+  try {
+    const idioma = c.req.query('idioma') || f.idioma || undefined;
+    const r = await transcribir(c.env, audio, desde, idioma);
+    const palabras = [...(jsonSeguro(f.palabras) as Palabra[]), ...r.palabras];
+    const segmentos = [...(jsonSeguro(f.segmentos) as Segmento[]), ...r.segmentos];
+    await c.env.DB.prepare(
+      `UPDATE video_ia SET palabras = ?, segmentos = ?, idioma = ?, minutos = minutos + ?, estado = ?, actualizado = ? WHERE video_id = ?`,
+    )
+      .bind(
+        JSON.stringify(palabras),
+        JSON.stringify(segmentos),
+        f.idioma || r.idioma,
+        r.segundos / 60,
+        ultimo ? 'transcrito' : 'transcribiendo',
+        Date.now(),
+        v.id,
+      )
+      .run();
+    if (ultimo && segmentos.length) {
+      // La transcripción de Whisper reemplaza la del navegador: es más precisa y trae puntuación.
+      await c.env.DB.prepare('UPDATE videos SET transcripcion = ?, idioma = ?, actualizado = ? WHERE id = ?')
+        .bind(
+          JSON.stringify(segmentos),
+          (f.idioma || r.idioma).startsWith('es') ? 'es' : 'en',
+          Date.now(),
+          v.id,
+        )
+        .run();
+    }
+    return c.json({ ok: true, palabras: r.palabras.length, idioma: f.idioma || r.idioma });
+  } catch (e) {
+    await c.env.DB.prepare(
+      `UPDATE video_ia SET estado = 'error', error = ?, actualizado = ? WHERE video_id = ?`,
+    )
+      .bind(e instanceof ErrorIA ? e.codigo : 'servidor', Date.now(), v.id)
+      .run();
+    return errorIA(c, e);
+  }
+});
+
+app.post('/datos/videos/:id/ia/analizar', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const f = await filaIA(c, v.id);
+  const segmentos = f ? (jsonSeguro(f.segmentos) as Segmento[]) : [];
+  if (!f || !segmentos.length) return err(c, 409, 'sin_transcripcion');
+  try {
+    const a = await analizar(c.env, segmentos, f.idioma || v.idioma, v.duracion);
+    // Solo se llena lo que la persona no cambió: el título si sigue igual, el resumen y los capítulos si están vacíos.
+    const sets: string[] = [];
+    const valores: (string | number)[] = [];
+    if (a.titulo && v.titulo === f.titulo_original) {
+      sets.push('titulo = ?');
+      valores.push(a.titulo);
+    }
+    if (a.resumen && !v.descripcion.trim()) {
+      sets.push('descripcion = ?');
+      valores.push(a.resumen);
+    }
+    if (a.capitulos.length && (jsonSeguro(v.capitulos) as unknown[]).length === 0) {
+      sets.push('capitulos = ?');
+      valores.push(JSON.stringify(a.capitulos));
+    }
+    if (sets.length) {
+      await c.env.DB.prepare(`UPDATE videos SET ${sets.join(', ')}, actualizado = ? WHERE id = ?`)
+        .bind(...valores, Date.now(), v.id)
+        .run();
+    }
+    await c.env.DB.prepare(
+      `UPDATE video_ia SET estado = 'listo', error = '', tareas = ?, actualizado = ? WHERE video_id = ?`,
+    )
+      .bind(JSON.stringify(a.tareas), Date.now(), v.id)
+      .run();
+    return c.json({ ok: true, analisis: a });
+  } catch (e) {
+    await c.env.DB.prepare(
+      `UPDATE video_ia SET estado = 'error', error = ?, actualizado = ? WHERE video_id = ?`,
+    )
+      .bind(e instanceof ErrorIA ? e.codigo : 'servidor', Date.now(), v.id)
+      .run();
+    return errorIA(c, e);
+  }
+});
+
+const esquemaGenerar = z.object({
+  plantilla: z.enum(Object.keys(PLANTILLAS) as [Plantilla, ...Plantilla[]]),
+});
+
+app.post('/datos/videos/:id/ia/generar', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const d = await cuerpo(c, esquemaGenerar);
+  if (!d) return err(c, 400, 'datos');
+  const f = await filaIA(c, v.id);
+  const segmentos =
+    f && (jsonSeguro(f.segmentos) as Segmento[]).length
+      ? (jsonSeguro(f.segmentos) as Segmento[])
+      : (jsonSeguro(v.transcripcion) as Segmento[]);
+  if (!segmentos.length) return err(c, 409, 'sin_transcripcion');
+  try {
+    return c.json({ documento: await generar(c.env, segmentos, f?.idioma || v.idioma, d.plantilla) });
+  } catch (e) {
+    return errorIA(c, e);
+  }
 });
 
 // ---------- archivos ----------

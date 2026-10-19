@@ -42,8 +42,10 @@ analiza su código. Sobre PANTALAI (nuestro) se puede usar todo REA.
 - Carpeta: solo `/Users/windocellc/PANTALAI`.
 - GitHub: repositorio `pantalai` de la cuenta conectada en `gh` (winandway).
 - YaDominios Cloud: solo el sitio `pantalai`.
-- IA de pago: NINGUNA conectada. Transcripción con el reconocimiento de voz del navegador (gratis).
-  Conectar un proveedor exige el sí de Richard con el costo escrito.
+- IA aprobada por Richard el 19 oct 2026, con tope de 10 USD al mes: Whisper Large v3 Turbo en Cloudflare
+  Workers AI (cuenta de Windoce) y Gemini 2.5 Flash (API de Google, plan de pago). Ver `docs/IA-PARA-PANTALAI.md`
+  y el candado C-IA-GASTO. Cualquier otro modelo o subir el tope exige su sí con el costo escrito.
+  Registro privado de cuentas: `docs/CUENTAS-Y-PAGOS-PROVEEDORES.md` (fuera de git).
 
 ## Compuertas
 

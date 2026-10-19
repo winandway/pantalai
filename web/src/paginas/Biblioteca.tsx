@@ -41,6 +41,7 @@ export function Biblioteca() {
     null,
   );
   const [error, setError] = useState('');
+  const [gastoIA, setGastoIA] = useState<{ usd: number; tope: number } | null>(null);
   const [renombrando, setRenombrando] = useState<VideoLista | null>(null);
   const [moviendo, setMoviendo] = useState<VideoLista | null>(null);
   const [borrando, setBorrando] = useState<VideoLista | null>(null);
@@ -66,6 +67,9 @@ export function Biblioteca() {
       setVideos(v.videos);
       setCarpetas(c.carpetas);
       setResumen(r.resumen);
+      pedir<{ oido: boolean; cerebro: boolean; usd_mes: number; tope_usd_mes: number }>('/datos/ia')
+        .then((x) => setGastoIA(x.oido || x.cerebro ? { usd: x.usd_mes, tope: x.tope_usd_mes } : null))
+        .catch(() => setGastoIA(null));
       setError('');
     } catch (e) {
       setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor'));
@@ -172,6 +176,14 @@ export function Biblioteca() {
             <div className="dato">
               <strong>{Math.round(resumen.segundos_vistos / 60)}</strong> {t('resumenMinutos')}
             </div>
+            {gastoIA && (
+              <div className="dato" title={t('iaMes')}>
+                ✨ {t('iaMes')}: <strong>${gastoIA.usd.toFixed(2)}</strong> / ${gastoIA.tope}
+                <div className="barra-exito">
+                  <div style={{ width: `${Math.min(100, (gastoIA.usd / gastoIA.tope) * 100)}%` }} />
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div className="biblioteca-barra">
