@@ -298,4 +298,14 @@ describe('audio en el navegador', () => {
     ]);
     expect(fases).toEqual(['audio', 'oido', 'oido', 'cerebro']);
   });
+
+  it('sin la llave del cerebro, solo transcribe', async () => {
+    const llamadas: string[] = [];
+    await procesar('v1', 'es', () => undefined, {
+      cerebro: false,
+      audio: async () => new Float32Array(16000 * 10),
+      llamar: (async (ruta: string) => (llamadas.push(ruta), { idioma: 'es', palabras: 1 })) as never,
+    });
+    expect(llamadas.some((r) => r.includes('analizar'))).toBe(false);
+  });
 });

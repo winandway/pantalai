@@ -32,7 +32,7 @@ export async function procesar(
   id: string,
   idioma: 'en' | 'es' | undefined,
   avisar: (f: Fase) => void,
-  dependencias: { audio?: typeof audioDelVideo; llamar?: typeof pedir } = {},
+  dependencias: { audio?: typeof audioDelVideo; llamar?: typeof pedir; cerebro?: boolean } = {},
 ): Promise<void> {
   const sacar = dependencias.audio ?? audioDelVideo;
   const llamar = dependencias.llamar ?? pedir;
@@ -53,6 +53,8 @@ export async function procesar(
     });
     detectado = detectado ?? (r.idioma ? r.idioma.slice(0, 2) : undefined);
   }
+  // Sin la llave del cerebro, el oído trabaja solo: transcripción precisa y muletillas.
+  if (dependencias.cerebro === false) return;
   avisar({ fase: 'cerebro', avance: 1 });
   try {
     await llamar(`/datos/videos/${id}/ia/analizar`, { method: 'POST' });

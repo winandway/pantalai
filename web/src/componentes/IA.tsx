@@ -47,12 +47,12 @@ export function AvisoIA({
   const [hecho, setHecho] = useState(false);
   const arrancado = useRef(false);
 
-  async function correr() {
+  async function correr(base: EstadoIA | null = ia) {
     if (arrancado.current) return;
     arrancado.current = true;
     setError('');
     try {
-      await procesar(id, idioma, setFase);
+      await procesar(id, idioma, setFase, { cerebro: base?.cerebro ?? false });
       const nuevo = await leerIA(id);
       setIa(nuevo);
       setHecho(true);
@@ -73,7 +73,7 @@ export function AvisoIA({
         if (!vivo) return;
         setIa(r);
         alTerminar(r, false);
-        if (r.oido && r.cerebro && r.estado === 'pendiente') void correr();
+        if (r.oido && r.estado === 'pendiente') void correr(r);
         else if (r.estado === 'error') setError(textoErrorIA(t, r.error || 'otro'));
       })
       .catch(() => undefined);
@@ -84,7 +84,7 @@ export function AvisoIA({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  if (!ia || !ia.oido || !ia.cerebro) return null;
+  if (!ia || !ia.oido) return null;
   if (fase) {
     const texto =
       fase.fase === 'audio'
@@ -119,7 +119,7 @@ export function AvisoIA({
         </button>
       </div>
     );
-  if (ia.estado !== 'listo')
+  if (ia.estado !== 'listo' && !(ia.estado === 'transcrito' && !ia.cerebro))
     return (
       <div className="aviso-ia">
         <button type="button" className="boton secundario chico" onClick={() => void correr()}>
