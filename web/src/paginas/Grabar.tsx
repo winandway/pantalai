@@ -1,0 +1,642 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import fixWebmDuration from 'fix-webm-duration';
+import { useAviso } from '../componentes/Aviso';
+import { MenuPuntos } from '../componentes/MenuPuntos';
+import { Confirmar } from '../componentes/Modal';
+import { ErrorApi, enlaceVideo, pedir } from '../logica/api';
+import {
+  AJUSTES_INICIALES,
+  Grabadora,
+  dispositivos,
+  posicionBurbuja,
+  puedeGrabarPantalla,
+  reconocimientoDisponible,
+  type Ajustes,
+} from '../logica/grabadora';
+import { textoError, useIdioma } from '../logica/idioma';
+import { navegar } from '../logica/ruta';
+import { useSesion } from '../logica/sesion';
+import {
+  Subidor,
+  borrarRespaldo,
+  leerRespaldo,
+  listarRespaldos,
+  respaldarPedazo,
+  type Respaldo,
+} from '../logica/subida';
+import { formatoTiempo, tituloAutomatico, type Segmento } from '../logica/tiempo';
+import { copiar } from './Biblioteca';
+
+type Estado = 'ajustes' | 'cuenta' | 'grabando' | 'pausa' | 'subiendo' | 'fallo';
+
+function leerAjustes(idioma: 'en' | 'es'): Ajustes {
+  try {
+    const g = JSON.parse(
+      localStorage.getItem('pantalai:ajustes-grabar') ?? 'null',
+    ) as Partial<Ajustes> | null;
+    return { ...AJUSTES_INICIALES, idiomaVoz: idioma === 'es' ? 'es-ES' : 'en-US', ...(g ?? {}) };
+  } catch {
+    return { ...AJUSTES_INICIALES, idiomaVoz: idioma === 'es' ? 'es-ES' : 'en-US' };
+  }
+}
+
+export function Grabar() {
+  const { t, idioma } = useIdioma();
+  const { usuario, cargando } = useSesion();
+  const avisar = useAviso();
+  const [a, setA] = useState<Ajustes>(() => leerAjustes(idioma));
+  const [estado, setEstado] = useState<Estado>('ajustes');
+  const [cuenta, setCuenta] = useState(3);
+  const [segundos, setSegundos] = useState(0);
+  const [progreso, setProgreso] = useState(0);
+  const [error, setError] = useState('');
+  const [texto, setTexto] = useState<{ segmentos: Segmento[]; parcial: string }>({
+    segmentos: [],
+    parcial: '',
+  });
+  const [camaras, setCamaras] = useState<MediaDeviceInfo[]>([]);
+  const [microfonos, setMicrofonos] = useState<MediaDeviceInfo[]>([]);
+  const [confirmar, setConfirmar] = useState<'descartar' | 'reiniciar' | null>(null);
+  const grabadora = useRef<Grabadora | null>(null);
+  const subidor = useRef<Subidor | null>(null);
+  const videoId = useRef<string | null>(null);
+  const respaldo = useRef<Respaldo | null>(null);
+  const flujo = useRef<MediaStream | null>(null);
+  const previa = useRef<HTMLVideoElement>(null);
+  const camaraPrevia = useRef<HTMLVideoElement>(null);
+  const terminarRef = useRef<() => Promise<void>>(async () => undefined);
+
+  useEffect(() => {
+    if (!cargando && !usuario) navegar('/login?volver=/record', true);
+  }, [cargando, usuario]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pantalai:ajustes-grabar', JSON.stringify(a));
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, [a]);
+
+  // Lista de cámaras y micrófonos (con nombre solo después del primer permiso).
+  const leerDispositivos = useCallback(async () => {
+    try {
+      const d = await dispositivos();
+      setCamaras(d.camaras);
+      setMicrofonos(d.microfonos);
+    } catch (e) {
+      console.error('dispositivos', e);
+    }
+  }, []);
+  useEffect(() => {
+    void leerDispositivos();
+  }, [leerDispositivos]);
+
+  // Vista previa de la cámara mientras se ajusta (la burbuja que se va a ver).
+  useEffect(() => {
+    if (estado !== 'ajustes' || a.modo === 'pantalla') return;
+    let flujoCam: MediaStream | null = null;
+    let vivo = true;
+    navigator.mediaDevices
+      ?.getUserMedia({ video: a.camaraId ? { deviceId: { exact: a.camaraId } } : true, audio: false })
+      .then((s) => {
+        if (!vivo) return s.getTracks().forEach((p) => p.stop());
+        flujoCam = s;
+        if (camaraPrevia.current) camaraPrevia.current.srcObject = s;
+        void leerDispositivos();
+      })
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+      flujoCam?.getTracks().forEach((p) => p.stop());
+    };
+  }, [estado, a.modo, a.camaraId, leerDispositivos]);
+
+  useEffect(() => {
+    if (estado !== 'grabando') return;
+    const i = setInterval(() => setSegundos(grabadora.current?.tiempo() ?? 0), 250);
+    return () => clearInterval(i);
+  }, [estado]);
+
+  // Aviso antes de cerrar la pestaña con una grabación en curso.
+  useEffect(() => {
+    if (estado === 'ajustes') return;
+    const antes = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', antes);
+    return () => window.removeEventListener('beforeunload', antes);
+  }, [estado]);
+
+  const limpiar = useCallback(() => {
+    grabadora.current?.liberar();
+    grabadora.current = null;
+    subidor.current = null;
+    videoId.current = null;
+    flujo.current = null;
+    setSegundos(0);
+    setProgreso(0);
+    setTexto({ segmentos: [], parcial: '' });
+  }, []);
+
+  async function empezar() {
+    setError('');
+    if (a.modo !== 'camara' && !puedeGrabarPantalla()) {
+      setError(t('navegadorNoSirve'));
+      return;
+    }
+    const g = new Grabadora(a, {
+      pedazo: (b) => {
+        subidor.current?.agregar(b);
+        if (respaldo.current) {
+          respaldo.current.duracion = g.tiempo();
+          void respaldarPedazo(respaldo.current, b);
+        }
+      },
+      texto: (segmentos, parcial) => setTexto({ segmentos: [...segmentos], parcial }),
+      terminada: (motivo) => {
+        if (motivo === 'pantalla_cerrada') void terminarRef.current();
+      },
+    });
+    try {
+      flujo.current = await g.preparar();
+    } catch (e) {
+      g.liberar();
+      const nombre = (e as DOMException)?.name;
+      if (nombre !== 'AbortError' && !(nombre === 'NotAllowedError' && a.modo !== 'camara'))
+        setError(t('sinPermiso'));
+      return;
+    }
+    grabadora.current = g;
+    void leerDispositivos();
+    if (previa.current) previa.current.srcObject = g.previa;
+    // El video se crea en el servidor durante la cuenta regresiva: así el enlace existe desde el primer segundo.
+    try {
+      const r = await pedir<{ id: string; parte_minima: number }>('/datos/videos', {
+        method: 'POST',
+        json: {
+          tipo: 'video/webm',
+          ancho: g.ancho,
+          alto: g.alto,
+          idioma: a.idiomaVoz.startsWith('es') ? 'es' : 'en',
+        },
+      });
+      videoId.current = r.id;
+      subidor.current = new Subidor({
+        videoId: r.id,
+        parteMinima: r.parte_minima,
+        progreso: (s, total) => setProgreso(total ? s / total : 0),
+      });
+      respaldo.current = { id: r.id, tipo: 'video/webm', creado: Date.now(), duracion: 0 };
+    } catch (e) {
+      g.liberar();
+      setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor'));
+      return;
+    }
+    setEstado('cuenta');
+    for (let n = 3; n > 0; n--) {
+      setCuenta(n);
+      await new Promise((r) => setTimeout(r, 1000));
+      if (!grabadora.current) return; // se descartó durante la cuenta
+    }
+    g.empezar(flujo.current);
+    if (respaldo.current) respaldo.current.tipo = g.tipo.split(';')[0]!;
+    setEstado('grabando');
+  }
+
+  const terminar = useCallback(async () => {
+    const g = grabadora.current;
+    const s = subidor.current;
+    const id = videoId.current;
+    if (!g || !s || !id) return;
+    setEstado('subiendo');
+    const miniatura = await g.miniatura().catch(() => null);
+    const duracion = await g.terminar('usuario');
+    const segmentos = g.segmentos;
+    try {
+      const partes = await s.terminar((b) =>
+        g.tipo.includes('webm')
+          ? fixWebmDuration(b, Math.round(duracion * 1000), { logger: false })
+          : Promise.resolve(b),
+      );
+      const titulo = tituloAutomatico(segmentos, a.idiomaVoz.startsWith('es') ? 'es' : 'en') ?? undefined;
+      await pedir(`/datos/videos/${id}/completar`, {
+        method: 'POST',
+        json: { partes, duracion, transcripcion: segmentos, titulo },
+      });
+      if (miniatura)
+        await pedir(`/datos/videos/${id}/miniatura`, {
+          method: 'PUT',
+          body: miniatura,
+          headers: { 'content-type': 'image/jpeg' },
+        }).catch((e) => console.error('miniatura', e));
+      await borrarRespaldo(id);
+      const ok = await copiar(enlaceVideo(id));
+      avisar(ok ? `${t('listo')} · ${t('enlaceCopiado')}` : t('listo'));
+      limpiar();
+      navegar(`/v/${id}`);
+    } catch (e) {
+      console.error('subida', e);
+      setEstado('fallo');
+    }
+  }, [a.idiomaVoz, avisar, limpiar, t]);
+  terminarRef.current = terminar;
+
+  async function descartar() {
+    const id = videoId.current;
+    await grabadora.current?.terminar('usuario');
+    limpiar();
+    setEstado('ajustes');
+    if (id) {
+      await borrarRespaldo(id);
+      await pedir(`/datos/videos/${id}/cancelar`, { method: 'POST' }).catch(() => undefined);
+    }
+  }
+
+  async function reiniciar() {
+    await descartar();
+    await empezar();
+  }
+
+  function descargarLocal() {
+    const g = grabadora.current;
+    const s = subidor.current;
+    if (!s) return;
+    const url = URL.createObjectURL(s.archivo(g?.tipo.split(';')[0] ?? 'video/webm'));
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = `pantalai-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.webm`;
+    enlace.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
+  // Atajos mientras graba: Alt+Shift+P pausa, Alt+Shift+S termina.
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (!e.altKey || !e.shiftKey) return;
+      if (e.code === 'KeyP') {
+        if (estado === 'grabando') {
+          grabadora.current?.pausar();
+          setEstado('pausa');
+        } else if (estado === 'pausa') {
+          grabadora.current?.continuar();
+          setEstado('grabando');
+        }
+      }
+      if (e.code === 'KeyS' && (estado === 'grabando' || estado === 'pausa')) void terminar();
+    };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, [estado, terminar]);
+
+  if (!usuario) return null;
+  const cambiar = <K extends keyof Ajustes>(k: K, v: Ajustes[K]) => setA((x) => ({ ...x, [k]: v }));
+  const enCurso = estado === 'grabando' || estado === 'pausa' || estado === 'cuenta';
+  const burbuja = posicionBurbuja(320, 180, a);
+
+  return (
+    <div className="grabar">
+      {estado === 'ajustes' && (
+        <div className="grabar-ajustes">
+          <section className="tarjeta">
+            <h1>{t('nuevaGrabacion')}</h1>
+            <fieldset className="selector-modo">
+              <legend>{t('modo')}</legend>
+              {(
+                [
+                  ['pantalla_camara', t('modoPantallaCamara'), '🖥️👤'],
+                  ['pantalla', t('modoPantalla'), '🖥️'],
+                  ['camara', t('modoCamara'), '👤'],
+                ] as const
+              ).map(([v, etiqueta, icono]) => (
+                <label key={v} className={a.modo === v ? 'activo' : ''}>
+                  <input
+                    type="radio"
+                    name="modo"
+                    checked={a.modo === v}
+                    onChange={() => cambiar('modo', v)}
+                  />
+                  <span className="modo-icono" aria-hidden="true">
+                    {icono}
+                  </span>
+                  {etiqueta}
+                </label>
+              ))}
+            </fieldset>
+
+            {a.modo !== 'pantalla' && (
+              <div className="campo">
+                <label htmlFor="camara">{t('camara')}</label>
+                <select id="camara" value={a.camaraId} onChange={(e) => cambiar('camaraId', e.target.value)}>
+                  <option value="">{camaras[0]?.label || t('camara')}</option>
+                  {camaras.slice(1).map((c) => (
+                    <option key={c.deviceId} value={c.deviceId}>
+                      {c.label || c.deviceId.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="campo">
+              <label htmlFor="micro">{t('microfono')}</label>
+              <select
+                id="micro"
+                value={a.microfonoId}
+                onChange={(e) => cambiar('microfonoId', e.target.value)}
+              >
+                <option value="default">
+                  {microfonos.find((m) => m.deviceId === 'default')?.label || t('microfono')}
+                </option>
+                {microfonos
+                  .filter((m) => m.deviceId !== 'default')
+                  .map((m) => (
+                    <option key={m.deviceId} value={m.deviceId}>
+                      {m.label || m.deviceId.slice(0, 8)}
+                    </option>
+                  ))}
+                <option value="">{t('sinMicrofono')}</option>
+              </select>
+            </div>
+            {a.modo !== 'camara' && (
+              <label className="interruptor">
+                <input
+                  type="checkbox"
+                  checked={a.audioSistema}
+                  onChange={(e) => cambiar('audioSistema', e.target.checked)}
+                />
+                {t('audioSistema')}
+              </label>
+            )}
+            <div className="campo">
+              <label htmlFor="calidad">{t('calidad')}</label>
+              <select
+                id="calidad"
+                value={a.calidad}
+                onChange={(e) => cambiar('calidad', e.target.value as Ajustes['calidad'])}
+              >
+                <option value="720">720p</option>
+                <option value="1080">1080p HD</option>
+                <option value="2160">4K</option>
+              </select>
+            </div>
+            <label className="interruptor">
+              <input
+                type="checkbox"
+                checked={a.transcribir && reconocimientoDisponible()}
+                disabled={!reconocimientoDisponible() || !a.microfonoId}
+                onChange={(e) => cambiar('transcribir', e.target.checked)}
+              />
+              {t('subtitulosEnVivo')}
+            </label>
+            <p className="ayuda">{t('subtitulosAyuda')}</p>
+            {a.transcribir && reconocimientoDisponible() && (
+              <div className="campo">
+                <label htmlFor="voz">{t('idiomaVoz')}</label>
+                <select id="voz" value={a.idiomaVoz} onChange={(e) => cambiar('idiomaVoz', e.target.value)}>
+                  <option value="en-US">English (US)</option>
+                  <option value="en-GB">English (UK)</option>
+                  <option value="es-ES">español (España)</option>
+                  <option value="es-US">español (Estados Unidos)</option>
+                  <option value="es-MX">español (México)</option>
+                  <option value="pt-BR">português (Brasil)</option>
+                  <option value="fr-FR">français</option>
+                  <option value="de-DE">Deutsch</option>
+                  <option value="it-IT">italiano</option>
+                </select>
+              </div>
+            )}
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <button type="button" className="boton grande ancho" onClick={() => void empezar()}>
+              <span className="punto-rojo" aria-hidden="true" /> {t('empezarGrabacion')}
+            </button>
+            <p className="ayuda centro">
+              {a.modo !== 'camara' ? t('permisoPantalla') : ''} {t('limiteSinLimite')}
+            </p>
+          </section>
+
+          <section className="tarjeta grabar-previa-ajustes">
+            <h2>{t('vistaPrevia')}</h2>
+            <div className={`maqueta-pantalla modo-${a.modo}`}>
+              {a.modo !== 'camara' && <div className="maqueta-escritorio" aria-hidden="true" />}
+              {a.modo !== 'pantalla' && (
+                <video
+                  ref={camaraPrevia}
+                  autoPlay
+                  muted
+                  playsInline
+                  className={`camara-previa forma-${a.burbujaForma}`}
+                  style={
+                    a.modo === 'camara'
+                      ? undefined
+                      : {
+                          left: `${(burbuja.x / 320) * 100}%`,
+                          top: `${(burbuja.y / 180) * 100}%`,
+                          width: `${(burbuja.lado / 320) * 100}%`,
+                        }
+                  }
+                />
+              )}
+            </div>
+            {a.modo === 'pantalla_camara' && (
+              <div className="ajustes-burbuja">
+                <div className="campo">
+                  <label htmlFor="tam">{t('burbujaTamano')}</label>
+                  <select
+                    id="tam"
+                    value={a.burbujaTamano}
+                    onChange={(e) => cambiar('burbujaTamano', e.target.value as Ajustes['burbujaTamano'])}
+                  >
+                    <option value="chico">{t('chico')}</option>
+                    <option value="mediano">{t('mediano')}</option>
+                    <option value="grande">{t('grande')}</option>
+                  </select>
+                </div>
+                <div className="campo">
+                  <label htmlFor="forma">{t('forma')}</label>
+                  <select
+                    id="forma"
+                    value={a.burbujaForma}
+                    onChange={(e) => cambiar('burbujaForma', e.target.value as Ajustes['burbujaForma'])}
+                  >
+                    <option value="circulo">{t('circulo')}</option>
+                    <option value="cuadrado">{t('cuadrado')}</option>
+                  </select>
+                </div>
+                <div className="campo">
+                  <label htmlFor="esquina">{t('esquina')}</label>
+                  <select
+                    id="esquina"
+                    value={a.esquina}
+                    onChange={(e) => cambiar('esquina', e.target.value as Ajustes['esquina'])}
+                  >
+                    <option value="abajo-izq">↙</option>
+                    <option value="abajo-der">↘</option>
+                    <option value="arriba-izq">↖</option>
+                    <option value="arriba-der">↗</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {(enCurso || estado === 'subiendo' || estado === 'fallo') && (
+        <div className="grabar-en-curso">
+          <div className="grabar-previa">
+            <video ref={previa} autoPlay muted playsInline />
+            {estado === 'cuenta' && (
+              <div className="cuenta-regresiva" aria-live="assertive">
+                <span>{t('cuentaRegresiva')}</span>
+                <strong>{cuenta}</strong>
+              </div>
+            )}
+            {(texto.parcial || texto.segmentos.length > 0) && enCurso && (
+              <p className="subtitulo-vivo">
+                {texto.parcial || texto.segmentos[texto.segmentos.length - 1]?.texto}
+              </p>
+            )}
+          </div>
+          <div className="barra-grabacion" role="toolbar">
+            <span className={`indicador ${estado === 'grabando' ? 'vivo' : ''}`}>
+              {estado === 'pausa'
+                ? t('enPausa')
+                : estado === 'subiendo'
+                  ? t('procesando')
+                  : estado === 'cuenta'
+                    ? `${t('cuentaRegresiva')} ${cuenta}`
+                    : t('grabando')}
+            </span>
+            <span className="cronometro">{formatoTiempo(segundos)}</span>
+            {estado === 'grabando' && (
+              <button
+                type="button"
+                className="boton secundario"
+                onClick={() => (grabadora.current?.pausar(), setEstado('pausa'))}
+              >
+                ⏸ {t('pausar')}
+              </button>
+            )}
+            {estado === 'pausa' && (
+              <button
+                type="button"
+                className="boton secundario"
+                onClick={() => (grabadora.current?.continuar(), setEstado('grabando'))}
+              >
+                ▶ {t('continuar')}
+              </button>
+            )}
+            {(estado === 'grabando' || estado === 'pausa') && (
+              <>
+                <button type="button" className="boton secundario" onClick={() => setConfirmar('reiniciar')}>
+                  ↺ {t('reiniciar')}
+                </button>
+                <button type="button" className="boton secundario" onClick={() => setConfirmar('descartar')}>
+                  {t('descartar')}
+                </button>
+                <button type="button" className="boton" onClick={() => void terminar()}>
+                  ■ {t('terminar')}
+                </button>
+              </>
+            )}
+            {estado === 'subiendo' && (
+              <div className="progreso" aria-label={t('subiendo')}>
+                <div style={{ width: `${Math.round(progreso * 100)}%` }} />
+              </div>
+            )}
+          </div>
+          {estado === 'fallo' && (
+            <div className="tarjeta alerta">
+              <p>{t('fallaSubida')}</p>
+              <div className="fila-botones izquierda">
+                <button type="button" className="boton" onClick={() => void terminar()}>
+                  {t('reintentar')}
+                </button>
+                <button type="button" className="boton secundario" onClick={descargarLocal}>
+                  {t('descargarGrabacion')}
+                </button>
+              </div>
+            </div>
+          )}
+          {texto.segmentos.length > 0 && (
+            <details className="tarjeta transcripcion-viva">
+              <summary>{t('transcripcion')}</summary>
+              {texto.segmentos.map((s, i) => (
+                <p key={i}>
+                  <span className="minuto">{formatoTiempo(s.inicio)}</span> {s.texto}
+                </p>
+              ))}
+            </details>
+          )}
+        </div>
+      )}
+
+      {confirmar && (
+        <Confirmar
+          texto={confirmar === 'descartar' ? t('confirmarDescartar') : t('confirmarReiniciar')}
+          etiquetaSi={confirmar === 'descartar' ? t('descartar') : t('reiniciar')}
+          etiquetaNo={t('cancelar')}
+          no={() => setConfirmar(null)}
+          si={() => {
+            const c = confirmar;
+            setConfirmar(null);
+            void (c === 'descartar' ? descartar() : reiniciar());
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Grabaciones que no terminaron de subir: se quedan en esta computadora hasta que se descarguen o borren. */
+export function Respaldos() {
+  const { t, idioma } = useIdioma();
+  const [lista, setLista] = useState<Respaldo[]>([]);
+  useEffect(() => {
+    void listarRespaldos().then(setLista);
+  }, []);
+  if (!lista.length) return null;
+  return (
+    <div className="tarjeta alerta respaldos">
+      <strong>{t('respaldos')}</strong>
+      <p className="ayuda">{t('respaldosAyuda')}</p>
+      {lista.map((r) => (
+        <div key={r.id} className="respaldo-fila">
+          <span>
+            {new Date(r.creado).toLocaleString(idioma)} · {formatoTiempo(r.duracion)}
+          </span>
+          <button
+            type="button"
+            className="boton secundario chico"
+            onClick={() =>
+              void leerRespaldo(r.id, r.tipo).then((b) => {
+                const url = URL.createObjectURL(b);
+                const enlace = document.createElement('a');
+                enlace.href = url;
+                enlace.download = `pantalai-${r.id}.${r.tipo.includes('mp4') ? 'mp4' : 'webm'}`;
+                enlace.click();
+                setTimeout(() => URL.revokeObjectURL(url), 10_000);
+              })
+            }
+          >
+            {t('descargarGrabacion')}
+          </button>
+          <MenuPuntos
+            opciones={[
+              {
+                etiqueta: t('eliminar'),
+                peligro: true,
+                accion: () =>
+                  void borrarRespaldo(r.id).then(() => setLista((l) => l.filter((x) => x.id !== r.id))),
+              },
+            ]}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}

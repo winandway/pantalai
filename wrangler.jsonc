@@ -1,0 +1,10 @@
+// Solo para probar en esta computadora (wrangler dev --local). En YaDominios Cloud
+// de aquí se leen únicamente compatibility_date y compatibility_flags.
+{
+  "name": "pantalai-local",
+  "main": "salida/_worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "salida", "binding": "ASSETS", "run_worker_first": true },
+  "d1_databases": [{ "binding": "DB", "database_name": "pantalai-local", "database_id": "local" }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "pantalai-local" }]
+}

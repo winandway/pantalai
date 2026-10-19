@@ -1,0 +1,395 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import app, { PARTE_MIN } from '../servidor/app';
+import { almacenFalso, baseFalsa } from './falsos';
+
+type Env = { DB: D1Database; BUCKET: ReturnType<typeof almacenFalso>; TURNSTILE_SECRET?: string };
+let env: Env;
+
+beforeEach(() => {
+  env = { DB: baseFalsa(), BUCKET: almacenFalso() };
+});
+
+function cliente(ip = '1.1.1.1') {
+  let cookie = '';
+  return async (ruta: string, init: RequestInit & { json?: unknown } = {}) => {
+    const h = new Headers(init.headers);
+    h.set('cf-connecting-ip', ip);
+    if (cookie) h.set('cookie', cookie);
+    if (init.method && init.method !== 'GET' && !h.has('x-pantalai')) h.set('x-pantalai', '1');
+    if (init.json !== undefined) h.set('content-type', 'application/json');
+    const r = await app.request(
+      `https://pantalai.test${ruta}`,
+      { ...init, headers: h, body: init.json !== undefined ? JSON.stringify(init.json) : init.body },
+      env,
+    );
+    const sc = r.headers.get('set-cookie');
+    if (sc) cookie = sc.split(';')[0]!;
+    return r;
+  };
+}
+
+async function registrado(nombre = 'Ana', correo = 'ana@example.com', ip = '1.1.1.1') {
+  const c = cliente(ip);
+  const r = await c('/datos/registro', { method: 'POST', json: { nombre, correo, clave: 'clave-segura-1' } });
+  expect(r.status).toBe(201);
+  return c;
+}
+
+async function videoListo(c: ReturnType<typeof cliente>, bytes = PARTE_MIN + 1000) {
+  const r = await c('/datos/videos', {
+    method: 'POST',
+    json: { tipo: 'video/webm;codecs=vp9', ancho: 1280, alto: 720 },
+  });
+  const { id } = (await r.json()) as { id: string };
+  const datos = new Uint8Array(bytes).map((_, i) => i % 251);
+  const p1 = await (
+    await c(`/datos/videos/${id}/partes/1`, { method: 'PUT', body: datos.slice(0, PARTE_MIN) })
+  ).json();
+  const p2 = await (
+    await c(`/datos/videos/${id}/partes/2`, { method: 'PUT', body: datos.slice(PARTE_MIN) })
+  ).json();
+  const fin = await c(`/datos/videos/${id}/completar`, {
+    method: 'POST',
+    json: {
+      partes: [(p2 as { parte: object }).parte, (p1 as { parte: object }).parte],
+      duracion: 42,
+      transcripcion: [{ inicio: 0, fin: 3, texto: 'Hello there.' }],
+    },
+  });
+  expect(fin.status).toBe(200);
+  return { id, datos };
+}
+
+describe('cuentas', () => {
+  it('registra, entra, dice quién soy y cierra sesión de verdad', async () => {
+    const c = await registrado();
+    const yo = (await (await c('/datos/yo')).json()) as { usuario: { correo: string } };
+    expect(yo.usuario.correo).toBe('ana@example.com');
+    await c('/datos/salir', { method: 'POST' });
+    const despues = (await (await c('/datos/yo')).json()) as { usuario: null };
+    expect(despues.usuario).toBeNull();
+    // La sesión se borró en la base, no solo la cookie.
+    const filas = (
+      env.DB as unknown as { crudo: { prepare: (s: string) => { get: () => { n: number } } } }
+    ).crudo
+      .prepare('SELECT COUNT(*) AS n FROM sesiones')
+      .get();
+    expect(filas.n).toBe(0);
+  });
+
+  it('nunca guarda la contraseña en claro', async () => {
+    await registrado();
+    const fila = (
+      env.DB as unknown as { crudo: { prepare: (s: string) => { get: () => Record<string, string> } } }
+    ).crudo
+      .prepare('SELECT * FROM usuarios')
+      .get();
+    expect(JSON.stringify(fila)).not.toContain('clave-segura-1');
+    expect(fila.clave_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('rechaza correo repetido y contraseña equivocada', async () => {
+    await registrado();
+    const c = cliente('2.2.2.2');
+    const otra = await c('/datos/registro', {
+      method: 'POST',
+      json: { nombre: 'B', correo: 'ana@example.com', clave: 'otra-clave-1' },
+    });
+    expect(otra.status).toBe(409);
+    const mal = await c('/datos/entrar', {
+      method: 'POST',
+      json: { correo: 'ana@example.com', clave: 'equivocada' },
+    });
+    expect(mal.status).toBe(401);
+    const bien = await c('/datos/entrar', {
+      method: 'POST',
+      json: { correo: 'ANA@example.com', clave: 'clave-segura-1' },
+    });
+    expect(bien.status).toBe(200);
+  });
+
+  it('limita los intentos de entrar', async () => {
+    await registrado();
+    const c = cliente('9.9.9.9');
+    let ultimo = 0;
+    for (let i = 0; i < 11; i++) {
+      ultimo = (
+        await c('/datos/entrar', { method: 'POST', json: { correo: 'ana@example.com', clave: 'mala' } })
+      ).status;
+    }
+    expect(ultimo).toBe(429);
+  });
+
+  it('exige el escudo anti-robots cuando está configurado', async () => {
+    env.TURNSTILE_SECRET = 'secreto';
+    const c = cliente();
+    const r = await c('/datos/registro', {
+      method: 'POST',
+      json: { nombre: 'A', correo: 'a@example.com', clave: 'clave-segura-1' },
+    });
+    expect(r.status).toBe(403);
+  });
+
+  it('bloquea escrituras sin la cabecera propia (otro sitio no puede mandar formularios)', async () => {
+    const c = await registrado();
+    const r = await c('/datos/carpetas', {
+      method: 'POST',
+      json: { nombre: 'X' },
+      headers: { 'x-pantalai': '0' },
+    });
+    expect(r.status).toBe(403);
+  });
+});
+
+describe('videos', () => {
+  it('sube por partes en desorden y arma el archivo exacto', async () => {
+    const c = await registrado();
+    const { id, datos } = await videoListo(c);
+    const guardado = env.BUCKET.objetos.get(`videos/${id}/video`)!;
+    expect(guardado.datos.length).toBe(datos.length);
+    expect(guardado.datos[PARTE_MIN + 10]).toBe(datos[PARTE_MIN + 10]);
+    expect(guardado.tipo).toBe('video/webm');
+    const v = (await (await c(`/datos/videos/${id}`)).json()) as {
+      video: { estado: string; duracion: number; transcripcion: unknown[] };
+    };
+    expect(v.video.estado).toBe('listo');
+    expect(v.video.duracion).toBe(42);
+    expect(v.video.transcripcion).toHaveLength(1);
+  });
+
+  it('sirve el video por rangos (para poder adelantar)', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const r = await c(`/media/${id}/video`, { headers: { range: 'bytes=0-99' } });
+    expect(r.status).toBe(206);
+    expect(r.headers.get('content-range')).toBe(`bytes 0-99/${PARTE_MIN + 1000}`);
+    expect((await r.arrayBuffer()).byteLength).toBe(100);
+  });
+
+  it('CANDADO privacidad: un video privado no lo ve nadie más, ni sus datos ni el archivo', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    await c(`/datos/videos/${id}`, { method: 'PATCH', json: { privacidad: 'privado' } });
+    const ajeno = cliente('3.3.3.3');
+    expect((await ajeno(`/datos/videos/${id}`)).status).toBe(404);
+    expect((await ajeno(`/media/${id}/video`)).status).toBe(404);
+    expect((await ajeno(`/datos/videos/${id}/actividad`)).status).toBe(404);
+    expect((await c(`/media/${id}/video`)).status).toBe(200);
+    // Y el video nunca queda guardado en memorias compartidas.
+    expect((await c(`/media/${id}/video`)).headers.get('cache-control')).toContain('no-store');
+  });
+
+  it('CANDADO dueño: nadie más puede editar, borrar ni ver estadísticas', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const otro = await registrado('Beto', 'beto@example.com', '4.4.4.4');
+    expect((await otro(`/datos/videos/${id}`, { method: 'PATCH', json: { titulo: 'robado' } })).status).toBe(
+      404,
+    );
+    expect((await otro(`/datos/videos/${id}`, { method: 'DELETE' })).status).toBe(404);
+    expect((await otro(`/datos/videos/${id}/estadisticas`)).status).toBe(404);
+    expect(
+      (await otro(`/datos/videos/${id}/partes/3`, { method: 'PUT', body: new Uint8Array(10) })).status,
+    ).toBe(404);
+  });
+
+  it('edita con lista cerrada de campos y valida lo que entra', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const ok = await c(`/datos/videos/${id}`, {
+      method: 'PATCH',
+      json: {
+        titulo: 'Nuevo',
+        cortes: [{ inicio: 1, fin: 2 }],
+        cta_texto: 'Book',
+        cta_url: 'https://example.com',
+        permitir_descarga: false,
+      },
+    });
+    expect(ok.status).toBe(200);
+    const v = (
+      (await ok.json()) as { video: { titulo: string; cortes: unknown[]; permitir_descarga: boolean } }
+    ).video;
+    expect(v.titulo).toBe('Nuevo');
+    expect(v.cortes).toHaveLength(1);
+    expect(v.permitir_descarga).toBe(false);
+    expect(
+      (await c(`/datos/videos/${id}`, { method: 'PATCH', json: { cta_url: 'javascript:alert(1)' } })).status,
+    ).toBe(400);
+    expect((await c(`/datos/videos/${id}`, { method: 'PATCH', json: { usuario_id: 'otro' } })).status).toBe(
+      200,
+    );
+    const fila = (await (await c(`/datos/videos/${id}`)).json()) as { video: { es_dueno: boolean } };
+    expect(fila.video.es_dueno).toBe(true);
+  });
+
+  it('descarga solo si el dueño la permite', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    await c(`/datos/videos/${id}`, { method: 'PATCH', json: { permitir_descarga: false } });
+    const ajeno = cliente('5.5.5.5');
+    expect((await ajeno(`/media/${id}/video?descargar=1`)).status).toBe(403);
+    const propia = await c(`/media/${id}/video?descargar=1`);
+    expect(propia.headers.get('content-disposition')).toContain('attachment');
+  });
+
+  it('borra el video, su archivo y su actividad', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    await c(`/datos/videos/${id}/comentarios`, { method: 'POST', json: { texto: 'Hola', segundo: 1 } });
+    expect((await c(`/datos/videos/${id}`, { method: 'DELETE' })).status).toBe(200);
+    expect(env.BUCKET.objetos.has(`videos/${id}/video`)).toBe(false);
+    expect((await c(`/datos/videos/${id}`)).status).toBe(404);
+  });
+
+  it('cancelar una grabación borra el video a medias', async () => {
+    const c = await registrado();
+    const { id } = (await (await c('/datos/videos', { method: 'POST', json: {} })).json()) as { id: string };
+    expect((await c(`/datos/videos/${id}/cancelar`, { method: 'POST' })).status).toBe(200);
+    expect((await c(`/datos/videos/${id}`)).status).toBe(404);
+  });
+
+  it('duplica con su archivo', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const r = (await (await c(`/datos/videos/${id}/duplicar`, { method: 'POST' })).json()) as { id: string };
+    expect(env.BUCKET.objetos.has(`videos/${r.id}/video`)).toBe(true);
+    const v = (await (await c(`/datos/videos/${r.id}`)).json()) as { video: { titulo: string } };
+    expect(v.video.titulo).toContain('(copy)');
+  });
+
+  it('biblioteca: busca en la transcripción, filtra por carpeta y por archivo', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const { carpeta } = (await (
+      await c('/datos/carpetas', { method: 'POST', json: { nombre: 'Clientes' } })
+    ).json()) as { carpeta: { id: string } };
+    await c(`/datos/videos/${id}`, { method: 'PATCH', json: { carpeta_id: carpeta.id } });
+    const lista = async (q: string) =>
+      ((await (await c(`/datos/videos?${q}`)).json()) as { videos: unknown[] }).videos.length;
+    expect(await lista('q=hello')).toBe(1);
+    expect(await lista('q=nada')).toBe(0);
+    expect(await lista(`carpeta=${carpeta.id}`)).toBe(1);
+    await c(`/datos/videos/${id}`, { method: 'PATCH', json: { archivado: true } });
+    expect(await lista('')).toBe(0);
+    expect(await lista('archivo=1')).toBe(1);
+    // Borrar la carpeta no borra sus videos.
+    await c(`/datos/carpetas/${carpeta.id}`, { method: 'DELETE' });
+    expect(await lista('archivo=1')).toBe(1);
+  });
+
+  it('no deja mover un video a la carpeta de otro', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const otro = await registrado('Beto', 'beto@example.com', '4.4.4.4');
+    const { carpeta } = (await (
+      await otro('/datos/carpetas', { method: 'POST', json: { nombre: 'Suya' } })
+    ).json()) as { carpeta: { id: string } };
+    expect(
+      (await c(`/datos/videos/${id}`, { method: 'PATCH', json: { carpeta_id: carpeta.id } })).status,
+    ).toBe(400);
+  });
+});
+
+describe('actividad y estadísticas', () => {
+  it('cuenta vistas únicas, completas y clics; el dueño no suma', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const visitante = cliente('6.6.6.6');
+    await visitante(`/datos/videos/${id}/vista`, {
+      method: 'POST',
+      json: { visitante: 'abcdefgh01', segundos: 40, completado: true, cta: true },
+    });
+    await visitante(`/datos/videos/${id}/vista`, {
+      method: 'POST',
+      json: { visitante: 'abcdefgh01', segundos: 10 },
+    });
+    await visitante(`/datos/videos/${id}/vista`, {
+      method: 'POST',
+      json: { visitante: 'abcdefgh02', segundos: 20 },
+    });
+    await c(`/datos/videos/${id}/vista`, { method: 'POST', json: { visitante: 'duenoxxxx1', segundos: 42 } });
+    const e = (
+      (await (await c(`/datos/videos/${id}/estadisticas`)).json()) as { estadisticas: Record<string, number> }
+    ).estadisticas;
+    expect(e.vistas).toBe(2);
+    expect(e.promedio_segundos).toBe(30);
+    expect(e.completado_pct).toBe(50);
+    expect(e.cta_clics).toBe(1);
+  });
+
+  it('comentarios: anónimo con nombre, se pueden apagar, y solo el dueño o el autor borran', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const anon = cliente('7.7.7.7');
+    expect(
+      (await anon(`/datos/videos/${id}/comentarios`, { method: 'POST', json: { texto: 'sin nombre' } }))
+        .status,
+    ).toBe(400);
+    const r = await anon(`/datos/videos/${id}/comentarios`, {
+      method: 'POST',
+      json: { nombre: 'Ana', texto: 'Hola', segundo: 3 },
+    });
+    expect(r.status).toBe(201);
+    const { comentario } = (await r.json()) as { comentario: { id: string } };
+    const otro = await registrado('Beto', 'beto@example.com', '4.4.4.4');
+    expect(
+      (await otro(`/datos/videos/${id}/comentarios/${comentario.id}`, { method: 'DELETE' })).status,
+    ).toBe(404);
+    expect((await c(`/datos/videos/${id}/comentarios/${comentario.id}`, { method: 'DELETE' })).status).toBe(
+      200,
+    );
+    await c(`/datos/videos/${id}`, { method: 'PATCH', json: { permitir_comentarios: false } });
+    expect(
+      (
+        await anon(`/datos/videos/${id}/comentarios`, {
+          method: 'POST',
+          json: { nombre: 'Ana', texto: 'Hola' },
+        })
+      ).status,
+    ).toBe(403);
+  });
+
+  it('reacciones solo con los emojis de la lista', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    expect(
+      (await c(`/datos/videos/${id}/reacciones`, { method: 'POST', json: { emoji: '🔥', segundo: 2 } }))
+        .status,
+    ).toBe(201);
+    expect(
+      (await c(`/datos/videos/${id}/reacciones`, { method: 'POST', json: { emoji: '<b>', segundo: 2 } }))
+        .status,
+    ).toBe(400);
+  });
+});
+
+describe('páginas y salud', () => {
+  it('salud dice ok con base y almacén', async () => {
+    const r = await cliente()('/datos/salud');
+    expect(r.status).toBe(200);
+    expect(((await r.json()) as { ok: boolean }).ok).toBe(true);
+  });
+
+  it('salud dice error si la base falla', async () => {
+    env.DB = {
+      prepare: () => ({ first: async () => Promise.reject(new Error('caída')) }),
+    } as unknown as D1Database;
+    const r = await cliente()('/datos/salud');
+    expect(r.status).toBe(500);
+  });
+
+  it('pone cabeceras de seguridad y deja insertar solo el reproductor', async () => {
+    const pagina = await cliente()('/library');
+    expect(pagina.headers.get('x-frame-options')).toBe('SAMEORIGIN');
+    expect(pagina.headers.get('content-security-policy')).toContain("frame-ancestors 'self'");
+    const embebido = await cliente()('/embed/abc');
+    expect(embebido.headers.get('x-frame-options')).toBeNull();
+    expect(embebido.headers.get('content-security-policy')).toContain('frame-ancestors *');
+  });
+
+  it('las rutas de datos desconocidas dan 404 en JSON', async () => {
+    const r = await cliente()('/datos/nada');
+    expect(r.status).toBe(404);
+  });
+});
