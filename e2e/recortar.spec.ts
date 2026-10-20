@@ -56,7 +56,21 @@ test('recortar las puntas y descargar el video recortado', async ({ page }) => {
   await page.locator('.tarjeta-recortar').getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/v/${id}$`));
 
-  // El MP4 se arma de nuevo con el recorte y es el que se descarga.
+  // El MP4 se arma de nuevo con el recorte y es el que se descarga (si este Chrome sabe codificar H.264 + AAC).
+  const puede = await page.evaluate(async () => {
+    try {
+      const v = await VideoEncoder.isConfigSupported({ codec: 'avc1.42001f', width: 640, height: 480 });
+      const a = await AudioEncoder.isConfigSupported({
+        codec: 'mp4a.40.2',
+        sampleRate: 48000,
+        numberOfChannels: 2,
+      });
+      return Boolean(v.supported && a.supported);
+    } catch {
+      return false;
+    }
+  });
+  test.skip(!puede, 'Este navegador no codifica H.264/AAC: se omite la parte MP4.');
   await expect(page.getByRole('link', { name: /Download MP4/ })).toBeVisible({ timeout: 90_000 });
   const mp4 = await page.request.get(`/media/${id}/video?descargar=1`);
   expect(mp4.headers()['content-type']).toBe('video/mp4');
