@@ -77,8 +77,8 @@ export class ErrorIA extends Error {
 
 /** Frase de arranque para que Whisper escriba las muletillas en vez de borrarlas (así se pueden quitar luego). */
 const ARRANQUE: Record<string, string> = {
-  en: 'Umm, let me think like, hmm... Okay, here is what I, uh, mean.',
-  es: 'Eh, a ver, mmm... bueno, este, lo que quiero decir es, eh, esto.',
+  en: 'Umm, let me think like, hmm... Okay, here is what I, uh, mean. PANTALAI.',
+  es: 'Eh, a ver, mmm... bueno, este, lo que quiero decir es, eh, esto. PANTALAI.',
 };
 
 type RespuestaWhisper = {
@@ -294,9 +294,9 @@ export async function analizar(
   const prompt = [
     'You receive the transcript of a screen recording. Each line starts with the second where it is said.',
     `Write everything in ${lengua}. Never invent facts that are not in the transcript.`,
-    '- titulo: a clear, specific title of at most 8 words, no quotes, no emojis.',
+    '- titulo: a clear, specific title of at most 8 words, no quotes, no emojis. Sentence case: capitalize only the first word and proper names (never Title Case).',
     '- resumen: 2 to 4 sentences describing what the video shows and explains, written for the viewer.',
-    `- capitulos: only if the video is longer than 60 seconds; 3 to 8 chapters, the first at second 0, each with the second where it starts (integer, below ${Math.floor(duracion)}) and a short title. Empty list otherwise.`,
+    `- capitulos: only if the video is longer than 60 seconds; 3 to 8 chapters, the first at second 0, each with the second where it starts (integer, below ${Math.floor(duracion)}) and a short title in sentence case. Empty list otherwise.`,
     '- tareas: pending work that someone still has to do AFTER this video: things to fix, change, add, review or follow up on (for example "we need to fix…", "remember to…", "someone should…", "two things to fix: …"). Write each one as a short imperative sentence. Do NOT include the steps of the process being demonstrated or instructions to the viewer on how to use something; those are not tasks. Empty list if nothing is pending.',
     '',
     'TRANSCRIPT:',
