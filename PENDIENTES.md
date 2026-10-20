@@ -7,6 +7,11 @@
 
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
 
+## 👤 Claves de Stripe
+
+- 👤 Crear la clave restringida «Pantalay» (de prueba y real) y pasar también las claves publicables. Destraba: probar el
+  cobro de punta a punta y encender los planes. Plano y enlaces en el chat del 20 oct 2026; estado en docs/VERIFICAR-PAGOS.md.
+
 ## Hecho por Richard
 
 - ✅ 20 oct 2026: pantalay.com verificado en Google Search Console y sitemap enviado (Correcto, 25 páginas).
@@ -42,3 +47,5 @@
       `suscripciones`, probar de punta a punta y recién ahí encender `COBRO_ACTIVO=1` y anunciar la página de precios
       (`/pricing`, hoy oculta con noindex). Falta también limitar en Starter la miniatura a elección y el botón de acción.
 - [ ] Los cortes del MEDIO (silencios, cortar por texto) todavía no salen en el MP4 descargado; las puntas sí.
+- [x] Superadmin en /admin con usuarios, planes y grabaciones (20 oct 2026, C-SUPERADMIN, uso en docs/SUPERADMIN.md).
+- [x] Cobro con Stripe dentro de la página construido (20 oct 2026, C-PAGOS); falta probarlo con las claves.
