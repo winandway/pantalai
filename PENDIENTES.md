@@ -2,12 +2,18 @@
 
 ## 👤 Depende de Richard
 
+- 👤 Recuperar sus 2 grabaciones de 5 min del 19 oct: abrir la Biblioteca en la MISMA computadora y navegador y
+  tocar «Subir otra vez» en «Grabaciones guardadas en esta computadora».
+
 - 👤 Comprar pantalay.com (14 USD al año en YaDominios). Destraba: conectarlo al sitio y cambiar el pie, la
   tarjeta para redes y los enlaces a pantalay.com (lo hago yo con la llave del hosting).
 
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
 
 ## De mi lado
+
+- [x] Partes de subida iguales (grabaciones largas), vista previa con imagen, burbuja flotante, forma vertical,
+      borde de colores, «Grabando» arriba, ruedita de subida, «Subir otra vez» (19 oct 2026, comprobado en vivo).
 
 - [x] Marca pública Pantalay (19 oct 2026), portada con cabeceras de seguridad, guía «Empieza aquí» con
       capturas originales tomadas del sitio publicado con la IA real.
