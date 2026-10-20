@@ -54,7 +54,7 @@ await p.getByRole('button', { name: 'Log in' }).click();
 await p.waitForTimeout(2000);
 if (!p.url().includes('/library')) {
   await p.goto(`${BASE}/signup`);
-  await p.getByLabel('Your name').fill('Soporte PANTALAI');
+  await p.getByLabel('Your name').fill('Soporte Pantalay');
   await p.getByLabel('Email').fill(correo);
   await p.getByLabel('Password', { exact: true }).fill(clave);
   await p.getByRole('button', { name: 'Create account' }).click();

@@ -124,7 +124,7 @@ export function Entrar({ registro }: { registro: boolean }) {
             value={b.valor.correo}
             onChange={(e) => b.cambiar('correo', e.target.value)}
             autoComplete="email"
-            placeholder="name@example.com"
+            placeholder={t('correoEjemplo')}
             required
           />
         </div>

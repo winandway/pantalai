@@ -24,6 +24,7 @@ const en = {
   // cuenta
   nombre: 'Your name',
   correo: 'Email',
+  correoEjemplo: 'name@example.com',
   clave: 'Password',
   claveAyuda: 'At least 8 characters',
   verClave: 'Show password',
@@ -272,6 +273,7 @@ const es: Record<Clave, string> = {
   nuevaGrabacion: 'Nueva grabación',
   nombre: 'Tu nombre',
   correo: 'Correo electrónico',
+  correoEjemplo: 'correo@ejemplo.com',
   clave: 'Contraseña',
   claveAyuda: 'Mínimo 8 caracteres',
   verClave: 'Ver la contraseña',
