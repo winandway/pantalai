@@ -1063,7 +1063,15 @@ function escaparAtributo(t: string): string {
 async function paginaApp(c: C): Promise<Response> {
   if (!c.env.ASSETS) return c.text('PANTALAI', 200);
   const origen = new URL(c.req.url).origin;
-  const r = await c.env.ASSETS.fetch(new Request(`${origen}/index.html`));
+  // La página base es app.html; algunos servidores de estáticos redirigen «/app.html» a «/app»: se sigue una vez.
+  let r = await c.env.ASSETS.fetch(new Request(`${origen}/app.html`));
+  const destino = r.headers.get('location');
+  if (r.status >= 300 && r.status < 400 && destino)
+    r = await c.env.ASSETS.fetch(new Request(new URL(destino, origen)));
+  if (!r.ok) {
+    console.error('página base no encontrada', r.status);
+    return c.text('PANTALAI', 500);
+  }
   return new Response(r.body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 

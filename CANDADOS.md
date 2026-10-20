@@ -82,3 +82,11 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Lo que encontró la primera vez: las «tareas» salían como los pasos del procedimiento y se perdían los pendientes
   reales. Se arregló definiendo tarea como «trabajo pendiente después del video» en la instrucción de `analizar`.
   No volver a la definición corta.
+
+## C-PORTADA-SEGURA (19 oct 2026)
+
+- Protege: la portada «/» también lleva las cabeceras de seguridad. La plataforma sirve los estáticos ANTES que el
+  programa; si el paquete trae `index.html`, la portada sale sin cabeceras. Por eso la página base se publica como
+  `app.html` (`scripts/empaquetar.mjs` falla si aparece un index.html) y el programa la entrega en toda ruta.
+- Prueba: `pruebas/servidor.test.ts` › CANDADO portada segura, y en vivo: `curl -sI https://pantalai.sitios.dev/`
+  debe mostrar Content-Security-Policy.

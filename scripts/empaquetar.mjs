@@ -1,5 +1,5 @@
 // Arma la carpeta «salida»: lo que se publica en la rama yapanel-build de YaDominios Cloud.
-import { cpSync, existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 
@@ -8,11 +8,15 @@ mkdirSync('salida');
 cpSync('dist', 'salida', { recursive: true });
 cpSync('.dist-worker/_worker.js', 'salida/_worker.js');
 cpSync('schema.sql', 'salida/schema.sql');
+// La página base se llama app.html (no index.html): así la plataforma no sirve la portada como archivo fijo
+// y TODA página pasa por el programa, que le pone las cabeceras de seguridad (candado C-PORTADA-SEGURA).
+renameSync('salida/index.html', 'salida/app.html');
 writeFileSync(
   'salida/yadominios.json',
   JSON.stringify({ compatibility_date: '2026-09-01', compatibility_flags: [] }, null, 2) + '\n',
 );
-for (const f of ['salida/index.html', 'salida/_worker.js', 'salida/schema.sql']) {
+if (existsSync('salida/index.html')) throw new Error('No debe haber index.html en el paquete');
+for (const f of ['salida/app.html', 'salida/_worker.js', 'salida/schema.sql']) {
   if (!existsSync(f)) throw new Error(`Falta ${f} en el paquete`);
 }
 const gz = gzipSync(readFileSync('salida/_worker.js')).length;

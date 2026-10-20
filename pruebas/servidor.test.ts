@@ -388,6 +388,26 @@ describe('páginas y salud', () => {
     expect(embebido.headers.get('content-security-policy')).toContain('frame-ancestors *');
   });
 
+  it('CANDADO portada segura: la portada pasa por el programa y lleva las cabeceras, aunque la página base redirija', async () => {
+    const pedidos: string[] = [];
+    (env as unknown as { ASSETS: Fetcher }).ASSETS = {
+      fetch: async (r: Request | string) => {
+        const u = new URL(typeof r === 'string' ? r : r.url);
+        pedidos.push(u.pathname);
+        if (u.pathname === '/app.html')
+          return new Response(null, { status: 307, headers: { location: '/app' } });
+        if (u.pathname === '/app') return new Response('<html><title>PANTALAI</title></html>');
+        return new Response('no', { status: 404 });
+      },
+    } as unknown as Fetcher;
+    const r = await cliente()('/');
+    expect(r.status).toBe(200);
+    expect(await r.text()).toContain('<title>PANTALAI');
+    expect(r.headers.get('content-security-policy')).toContain("default-src 'self'");
+    expect(r.headers.get('strict-transport-security')).toContain('max-age');
+    expect(pedidos).toEqual(['/', '/app.html', '/app']);
+  });
+
   it('las rutas de datos desconocidas dan 404 en JSON', async () => {
     const r = await cliente()('/datos/nada');
     expect(r.status).toBe(404);
