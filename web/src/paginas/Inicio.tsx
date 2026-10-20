@@ -327,9 +327,14 @@ export function Inicio() {
       <section className="portada-redes" aria-label={es ? 'Comparte en tus redes' : 'Share anywhere'}>
         <p>{es ? 'Tu video, donde ya está tu gente' : 'Your video, wherever your people are'}</p>
         <div className="portada-logos">
-          {REDES.map((i) => (
-            <Logo key={i.slug} icono={i} />
-          ))}
+          {/* La cinta va dos veces seguida para que dé la vuelta sin cortes. */}
+          <div className="portada-logos-cinta">
+            {[...REDES, ...REDES].map((i, n) => (
+              <span key={`${i.slug}-${n}`} aria-hidden={n >= REDES.length}>
+                <Logo icono={i} tam={44} /> {i.title}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 

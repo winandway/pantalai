@@ -14,3 +14,10 @@ describe('demo animada de la portada', () => {
     expect(escenaDemo(9000).segundos).toBe(5);
   });
 });
+
+describe('pantallas de la demo', () => {
+  it('se turnan tres programas distintos', async () => {
+    const { PANTALLAS } = await import('../web/src/componentes/Demo');
+    expect(PANTALLAS).toEqual(['plan', 'tienda', 'ventas']);
+  });
+});
