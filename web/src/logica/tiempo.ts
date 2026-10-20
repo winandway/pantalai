@@ -65,10 +65,10 @@ export function aVtt(segmentos: Segmento[]): string {
   };
   const cuerpo = segmentos
     .filter((s) => s.texto.trim())
-    // line:80% sube los subtítulos para que la barra de controles no los tape.
+    // line:72% sube los subtítulos para que la barra de controles no los tape.
     .map(
       (s, i) =>
-        `${i + 1}\n${f(s.inicio)} --> ${f(Math.max(s.fin, s.inicio + 0.5))} line:80%\n${s.texto.trim()}`,
+        `${i + 1}\n${f(s.inicio)} --> ${f(Math.max(s.fin, s.inicio + 0.5))} line:72%\n${s.texto.trim()}`,
     )
     .join('\n\n');
   return `WEBVTT\n\n${cuerpo}\n`;
