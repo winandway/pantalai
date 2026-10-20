@@ -1,7 +1,21 @@
 # Estado del cobro de Pantalay
 
-> 🔴 **EL CIRCUITO DE PAGOS NO ESTÁ PROBADO.** Está construido, pero no hay claves de Stripe todavía. No se anuncia
-> la página de precios ni se manda a nadie a pagar hasta completar la tabla de abajo.
+> 🟡 **CONECTADO EN VIVO, FALTA EL PRIMER COBRO REAL.** Claves reales puestas el 20 oct 2026, aviso de Stripe creado y
+> comprobado (llegó firmado y se procesó). Falta la compra real de Richard. No se anuncia la página de precios ni se
+> encienden los límites hasta que esa compra salga bien.
+
+## Comprobado en vivo el 20 oct 2026 (sin cobrar)
+
+- Las claves funcionan; la página crea sola el producto y el precio de fundador (Business + AI mensual, 12 USD:
+  `pantalay_business_ia_mensual_fundador`).
+- El cuadro de la tarjeta (Payment Element) se abre DENTRO de pantalay.com con la cuenta real (tarjeta y cuenta
+  bancaria de EE. UU.).
+- Aviso (webhook) `we_1USmD0LDByFATg8RqtBB0vMe` → `https://pantalay.com/datos/pago/aviso`, eventos de suscripción.
+  Stripe mandó el aviso real de una suscripción incompleta, la firma se validó y la cuenta quedó «inactiva» (correcto:
+  no se pagó). Esa suscripción de prueba se canceló.
+- Sin firma, el aviso responde 400.
+- `PAGO_DIAS_PRUEBA=0` puesto para la compra del video de Richard. **Después de esa compra, volver a 14.**
+- La cuenta de Stripe es la de Windoce, LLC y la comparten otros negocios: no se toca ningún otro aviso ni producto.
 
 ## Cómo funciona
 

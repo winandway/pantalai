@@ -9,8 +9,9 @@
 
 ## 👤 Claves de Stripe
 
-- 👤 Crear la clave restringida «Pantalay» REAL (sin modo de prueba, decidido el 20 oct 2026) y pasar la publicable real;
-  después Richard hace una compra real de un mes y la graba en video para la gente. Destraba: probar el
+- ✅ Claves reales de Stripe recibidas y conectadas (20 oct 2026).
+- 👤 Hacer la compra real de un mes (Business + AI, 12 USD) y grabarla en video. Después: volver PAGO_DIAS_PRUEBA a 14,
+  decidir encender COBRO_ACTIVO y anunciar la página de precios. Destraba: probar el
   cobro de punta a punta y encender los planes. Plano y enlaces en el chat del 20 oct 2026; estado en docs/VERIFICAR-PAGOS.md.
 
 ## Hecho por Richard
