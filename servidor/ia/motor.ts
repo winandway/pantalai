@@ -297,7 +297,7 @@ export async function analizar(
     '- titulo: a clear, specific title of at most 8 words, no quotes, no emojis.',
     '- resumen: 2 to 4 sentences describing what the video shows and explains, written for the viewer.',
     `- capitulos: only if the video is longer than 60 seconds; 3 to 8 chapters, the first at second 0, each with the second where it starts (integer, below ${Math.floor(duracion)}) and a short title. Empty list otherwise.`,
-    '- tareas: action items or to-dos explicitly mentioned (short imperative sentences). Empty list if none.',
+    '- tareas: pending work that someone still has to do AFTER this video: things to fix, change, add, review or follow up on (for example "we need to fix…", "remember to…", "someone should…", "two things to fix: …"). Write each one as a short imperative sentence. Do NOT include the steps of the process being demonstrated or instructions to the viewer on how to use something; those are not tasks. Empty list if nothing is pending.',
     '',
     'TRANSCRIPT:',
     textoConMinutos(segmentos).slice(0, 120_000),
