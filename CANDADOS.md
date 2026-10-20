@@ -174,3 +174,19 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `pruebas/dibujo.test.ts` (comprobada en rojo cambiando el color) y `e2e/lapices.spec.ts` (graba de verdad,
   dibuja una raya roja y mide los píxeles rojos en lo que se graba; comprobada en rojo quitando `pintar` del compositor).
 - Capturas: `scripts/capturas-lapices.mjs` → `docs/capturas/lapices-{en,es}.png`.
+
+## C-RECORTE-DESCARGA (20 oct 2026)
+
+- Qué pasaba: al descargar o enviar un video salían las dos puntas (el arranque de la grabación y el clic en
+  Terminar). El recorte del editor solo se aplicaba al reproducir; la descarga entregaba el archivo entero.
+- Arreglo: recortador como el de los reels (`web/src/componentes/Recortador.tsx`, cuentas en
+  `web/src/logica/recorte.ts`): tira de fotos, regla, agarraderas, «Reproducir recortado» y Guardar. La copia MP4 se
+  arma CON el recorte (`trim` de mediabunny en `web/src/logica/mp4.ts`). El servidor anota con qué recorte se armó
+  cada copia (tabla `video_mp4_recorte`, `firmaRecorte` en `servidor/app.ts`); si el recorte cambia, la copia deja de
+  valer, el dueño la rehace al abrir su video y la descarga sale recortada. Las copias de antes sin firma valen solo
+  si el video no tiene recorte.
+- Límite: los cortes del MEDIO (quitar silencios, cortar por texto) todavía no salen en el MP4, solo en el
+  reproductor. Si el navegador no puede armar MP4, se descarga el WebM original entero.
+- Pruebas: `pruebas/recorte.test.ts`, `pruebas/servidor.test.ts` (comprobada en rojo quitando la firma) y
+  `e2e/recortar.spec.ts` (graba 10 s, recorta a unos 5 s, guarda y mide el MP4 descargado; comprobada en rojo
+  quitando el `trim`: salía de 10,3 s).

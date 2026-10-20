@@ -425,7 +425,7 @@ export const GUIAS: Guia[] = [
       resumen: 'Trim, cut by transcript and remove silences without recording again.',
       cuerpo: [
         'Open your video and press Edit.',
-        'Trim: move Start and End to cut the beginning and the end. “Use current time” takes the minute you are watching.',
+        'Trim the ends: drag the two handles on the strip under the video to cut the beginning and the end. See the guide “Trim the start and end of a video”.',
         'Cut by transcript: tap a sentence to remove that part. Tap it again to bring it back.',
         'Remove silences: Pantalay listens to the audio, finds long pauses and cuts them for you.',
         'Turn on Preview to watch the final version. Edits never touch your original file, so you can undo anything later. Press Save when you are happy.',
@@ -436,10 +436,42 @@ export const GUIAS: Guia[] = [
       resumen: 'Recorta, corta con la transcripción y quita silencios sin volver a grabar.',
       cuerpo: [
         'Abre tu video y toca Editar.',
-        'Recortar: mueve Inicio y Final para quitar el principio y el final. «Usar el minuto actual» toma el minuto que estás viendo.',
+        'Recortar las puntas: arrastra las dos agarraderas de la tira debajo del video para quitar el principio y el final. Mira la guía «Recorta el principio y el final de un video».',
         'Cortar con la transcripción: toca una frase para quitar esa parte. Tócala otra vez para devolverla.',
         'Quitar silencios: Pantalay escucha el audio, encuentra las pausas largas y las corta por ti.',
         'Enciende Vista previa para ver cómo queda. Editar nunca toca tu archivo original, así que puedes deshacer cualquier cosa después. Toca Guardar cuando te guste.',
+      ],
+    },
+  },
+  {
+    slug: 'trim-video',
+    seccion: 'editar',
+    icono: '✂️',
+    imagen: 'recortar',
+    en: {
+      titulo: 'Trim the start and end of a video',
+      resumen:
+        'Cut the first seconds and the last click in a few seconds, and download or share it already trimmed.',
+      cuerpo: [
+        'Almost every recording starts with a second of you getting ready and ends with the click on Finish. Trimming the ends removes that so your video looks finished.',
+        'Open your video and press Edit. Under the video you will see “Trim the ends”: a strip with pictures of your whole video and a time ruler on top.',
+        'Drag the left handle to where your video should start and the right handle to where it should end. The blue frame shows what stays, and the bubble tells you how long the final video is.',
+        'Press “Play trimmed video” to watch it from the new start: it stops by itself at the new end. With the keyboard, select a handle and use the arrows (Shift + arrow moves one second).',
+        'Press Save. From then on your link plays trimmed, the embedded player too, and Download gives you an MP4 without the ends: ready for your phone, YouTube or Final Cut.',
+        'Changed your mind? Press “Reset trim” and save again. Your original recording is never touched.',
+      ],
+    },
+    es: {
+      titulo: 'Recorta el principio y el final de un video',
+      resumen:
+        'Quita los primeros segundos y el último clic en unos segundos, y descárgalo o envíalo ya recortado.',
+      cuerpo: [
+        'Casi toda grabación empieza con un segundo en el que te acomodas y termina con el clic en Terminar. Recortar las puntas quita eso para que tu video se vea terminado.',
+        'Abre tu video y toca Editar. Debajo del video verás «Recortar las puntas»: una tira con fotos de todo tu video y una regla de tiempo arriba.',
+        'Arrastra la agarradera de la izquierda hasta donde debe empezar tu video y la de la derecha hasta donde debe terminar. El marco azul muestra lo que se queda y la burbuja te dice cuánto dura el video final.',
+        'Toca «Reproducir recortado» para verlo desde el nuevo inicio: se para solo en el nuevo final. Con el teclado, elige una agarradera y usa las flechas (Shift + flecha mueve un segundo).',
+        'Toca Guardar. Desde ese momento tu enlace se ve recortado, el reproductor insertado también, y Descargar te da un MP4 sin las puntas: listo para el celular, YouTube o Final Cut.',
+        '¿Cambiaste de idea? Toca «Quitar el recorte» y guarda otra vez. Tu grabación original nunca se toca.',
       ],
     },
   },

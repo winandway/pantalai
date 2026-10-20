@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
+import { Recortador } from '../componentes/Recortador';
 import { Reproductor, type ManejoReproductor } from '../componentes/Reproductor';
 import { ErrorApi, archivoVideo, pedir, type Superposicion, type Video } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
@@ -10,6 +11,7 @@ import { textoError, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { ahorro, leerIA, type EstadoIA } from '../logica/ia';
+import { recorteParaGuardar } from '../logica/recorte';
 import {
   capitulosAutomaticos,
   detectarSilencios,
@@ -179,8 +181,7 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
         method: 'PATCH',
         json: {
           ...d,
-          recorte_inicio: Math.max(0, Math.min(d.recorte_inicio, duracion)),
-          recorte_fin: d.recorte_fin >= duracion - 0.05 ? 0 : d.recorte_fin,
+          ...recorteParaGuardar(d.recorte_inicio, d.recorte_fin, duracion),
           capitulos: [...d.capitulos].sort((a, c) => a.segundo - c.segundo),
           superposiciones: d.superposiciones.map((s) => ({ ...s, fin: Math.max(s.fin, s.inicio + 0.5) })),
         },
@@ -258,6 +259,25 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
           alTiempo={setAhora}
           encima={vistaFinal ? undefined : capaArrastre}
         />
+        <section className="tarjeta tarjeta-recortar">
+          <h2>✂ {t('recortarPuntas')}</h2>
+          <Recortador
+            id={video.id}
+            duracion={duracion}
+            inicio={d.recorte_inicio}
+            fin={Math.min(d.recorte_fin || duracion, duracion)}
+            ahora={ahora}
+            cambiar={(r) => b.setValor((x) => ({ ...x, recorte_inicio: r.inicio, recorte_fin: r.fin }))}
+            ir={(s) => reproductor.current?.ir(s)}
+            reproducir={() => reproductor.current?.reproducir()}
+            pausar={() => reproductor.current?.pausar()}
+          />
+          <div className="fila-botones">
+            <button type="button" className="boton" disabled={guardando} onClick={() => void guardar()}>
+              {t('guardar')}
+            </button>
+          </div>
+        </section>
         {b.recuperado && (
           <p className="recuperado">
             {t('recuperado')}{' '}
@@ -316,62 +336,6 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
               onChange={(e) => b.cambiar('descripcion', e.target.value)}
             />
             <small className="ayuda">{t('descripcionAyuda')}</small>
-          </div>
-        </section>
-
-        <section className="tarjeta">
-          <h2>{t('recortar')}</h2>
-          <div className="fila-campos">
-            <div className="campo">
-              <label htmlFor="ed-ini">
-                {t('inicioVideo')} ({formatoTiempo(d.recorte_inicio)})
-              </label>
-              <input
-                id="ed-ini"
-                type="range"
-                min={0}
-                max={duracion}
-                step={0.1}
-                value={d.recorte_inicio}
-                onChange={(e) => {
-                  const v = Math.min(Number(e.target.value), d.recorte_fin - 1);
-                  b.cambiar('recorte_inicio', v);
-                  reproductor.current?.ir(v);
-                }}
-              />
-              <button
-                type="button"
-                className="enlace chico"
-                onClick={() => b.cambiar('recorte_inicio', Math.min(tiempo(), d.recorte_fin - 1))}
-              >
-                {t('usarActual')}
-              </button>
-            </div>
-            <div className="campo">
-              <label htmlFor="ed-fin">
-                {t('finVideo')} ({formatoTiempo(d.recorte_fin)})
-              </label>
-              <input
-                id="ed-fin"
-                type="range"
-                min={0}
-                max={duracion}
-                step={0.1}
-                value={d.recorte_fin}
-                onChange={(e) => {
-                  const v = Math.max(Number(e.target.value), d.recorte_inicio + 1);
-                  b.cambiar('recorte_fin', v);
-                  reproductor.current?.ir(v);
-                }}
-              />
-              <button
-                type="button"
-                className="enlace chico"
-                onClick={() => b.cambiar('recorte_fin', Math.max(tiempo(), d.recorte_inicio + 1))}
-              >
-                {t('usarActual')}
-              </button>
-            </div>
           </div>
         </section>
 

@@ -2065,3 +2065,136 @@ main {
   flex-basis: 100%;
   margin: 0;
 }
+
+/* Recortador de puntas (como el de los reels) */
+.tarjeta-recortar {
+  margin: 12px 0;
+  padding: 14px 16px;
+}
+.tarjeta-recortar h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.recortador-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.recortador-datos {
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+.recortador-regla {
+  position: relative;
+  height: 20px;
+  margin: 0 8px;
+  border-bottom: 1px solid var(--borde);
+  font-size: 11px;
+  color: var(--gris);
+}
+.recortador-regla span {
+  position: absolute;
+  bottom: 3px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.recortador-regla span::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 1px;
+  height: 5px;
+  background: var(--gris);
+}
+.recortador-tira {
+  position: relative;
+  height: 64px;
+  margin: 6px 8px 0;
+  border-radius: 8px;
+  background: #1c1f26;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+.recortador-fotos {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.recortador-fotos span {
+  flex: 1;
+  background: #2a2e37 center / cover no-repeat;
+  border-right: 1px solid rgba(0, 0, 0, 0.35);
+}
+.recortador-fuera {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.72);
+  pointer-events: none;
+}
+.recortador-marco {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  border: 3px solid var(--azul);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.recortador-largo {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--azul);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.recortador-agarradera {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 16px;
+  margin-left: -8px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--azul);
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 2;
+}
+.recortador-agarradera::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  bottom: 30%;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: #fff;
+}
+.recortador-agarradera:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+.recortador-cabezal {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--rojo);
+  pointer-events: none;
+  z-index: 3;
+}

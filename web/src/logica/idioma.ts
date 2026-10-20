@@ -213,6 +213,11 @@ const en = {
   inicioVideo: 'Start',
   finVideo: 'End',
   usarActual: 'Use current time',
+  reproducirRecorte: 'Play trimmed video',
+  quitarRecorte: 'Reset trim',
+  recortadorAyuda:
+    'Drag the handles to cut the start and the end. Press Save: your link, your downloads and the MP4 will come out trimmed.',
+  recortarPuntas: 'Trim the ends',
   cortesTitulo: 'Cut by transcript',
   cortesAyuda: 'Click a sentence to remove that part from the video. Click again to bring it back.',
   quitarSilencios: 'Remove silences',
@@ -497,6 +502,11 @@ const es: Record<Clave, string> = {
   inicioVideo: 'Inicio',
   finVideo: 'Final',
   usarActual: 'Usar el minuto actual',
+  reproducirRecorte: 'Reproducir recortado',
+  quitarRecorte: 'Quitar el recorte',
+  recortadorAyuda:
+    'Arrastra las agarraderas para cortar el principio y el final. Toca Guardar: tu enlace, tus descargas y el MP4 salen ya recortados.',
+  recortarPuntas: 'Recortar las puntas',
   cortesTitulo: 'Cortar con la transcripción',
   cortesAyuda: 'Toca una frase para quitar esa parte del video. Tócala otra vez para devolverla.',
   quitarSilencios: 'Quitar silencios',

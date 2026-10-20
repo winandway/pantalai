@@ -126,3 +126,10 @@ CREATE TABLE IF NOT EXISTS video_mp4 (
   bytes INTEGER NOT NULL DEFAULT 0,
   actualizado INTEGER NOT NULL
 );
+
+-- Con qué recorte se armó la copia MP4 (20 oct 2026). Si el dueño cambia las puntas, la copia se vuelve a armar
+-- y la descarga sale recortada. Tabla aparte para no tocar video_mp4 (columna nueva = migración).
+CREATE TABLE IF NOT EXISTS video_mp4_recorte (
+  video_id TEXT PRIMARY KEY,
+  firma TEXT NOT NULL
+);

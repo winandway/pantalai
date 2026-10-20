@@ -270,6 +270,43 @@ describe('videos', () => {
     expect(env.BUCKET.objetos.has(`videos/${id}/video.mp4`)).toBe(false);
   });
 
+  it('CANDADO C-RECORTE-DESCARGA: si el dueño corta las puntas, la copia MP4 se vuelve a armar con ese recorte', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const subirCopia = async () => {
+      const ini = (await (await c(`/datos/videos/${id}/mp4`, { method: 'POST' })).json()) as {
+        ya: boolean;
+        recorte_inicio?: number;
+        recorte_fin?: number;
+      };
+      if (ini.ya) return ini;
+      const p1 = (
+        (await (
+          await c(`/datos/videos/${id}/mp4/partes/1`, { method: 'PUT', body: new Uint8Array(10).fill(1) })
+        ).json()) as { parte: object }
+      ).parte;
+      await c(`/datos/videos/${id}/mp4/completar`, { method: 'POST', json: { partes: [p1] } });
+      return ini;
+    };
+    const tiene = async () =>
+      ((await (await c(`/datos/videos/${id}`)).json()) as { video: { tiene_mp4: boolean } }).video.tiene_mp4;
+    expect((await subirCopia()).recorte_inicio).toBe(0);
+    expect(await tiene()).toBe(true);
+    // Cortar las puntas deja la copia vieja sin valor: no se descarga, y el navegador la rehace con el recorte nuevo.
+    const r = await c(`/datos/videos/${id}`, {
+      method: 'PATCH',
+      json: { recorte_inicio: 1.5, recorte_fin: 4 },
+    });
+    expect(((await r.json()) as { video: { tiene_mp4: boolean } }).video.tiene_mp4).toBe(false);
+    expect((await c(`/media/${id}/video?formato=mp4`)).status).toBe(404);
+    const ini = await subirCopia();
+    expect(ini).toMatchObject({ ya: false, recorte_inicio: 1.5, recorte_fin: 4 });
+    expect(await tiene()).toBe(true);
+    expect((await c(`/media/${id}/video?descargar=1`)).headers.get('content-type')).toBe('video/mp4');
+    // Sin cambios, no se rehace.
+    expect((await subirCopia()).ya).toBe(true);
+  });
+
   it('el nombre del archivo descargado aguanta tildes y letras de otros idiomas', async () => {
     const c = await registrado();
     const { id } = await videoListo(c);

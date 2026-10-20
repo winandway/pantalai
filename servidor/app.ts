@@ -546,7 +546,7 @@ app.get('/datos/videos/:id', async (c) => {
     .bind(v.usuario_id)
     .first<{ nombre: string }>();
   return c.json(
-    { video: videoPublico(v, autor?.nombre ?? '', u?.id === v.usuario_id, await tieneMp4(c, v.id)) },
+    { video: videoPublico(v, autor?.nombre ?? '', u?.id === v.usuario_id, await tieneMp4(c, v)) },
     200,
     {
       'Cache-Control': 'no-store',
@@ -624,7 +624,7 @@ app.patch('/datos/videos/:id', requiereSesion, async (c) => {
     .bind(...valores)
     .run();
   const nuevo = (await buscarVideo(c, v.id))!;
-  return c.json({ video: videoPublico(nuevo, c.get('usuario')!.nombre, true, await tieneMp4(c, v.id)) });
+  return c.json({ video: videoPublico(nuevo, c.get('usuario')!.nombre, true, await tieneMp4(c, nuevo)) });
 });
 
 app.post('/datos/videos/:id/duplicar', requiereSesion, async (c) => {
@@ -661,6 +661,7 @@ app.delete('/datos/videos/:id', requiereSesion, async (c) => {
     c.env.DB.prepare('DELETE FROM vistas WHERE video_id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM video_ia WHERE video_id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM video_mp4 WHERE video_id = ?').bind(v.id),
+    c.env.DB.prepare('DELETE FROM video_mp4_recorte WHERE video_id = ?').bind(v.id),
   ]);
   return c.json({ ok: true });
 });
@@ -1020,27 +1021,45 @@ app.post('/datos/videos/:id/ia/generar', requiereSesion, async (c) => {
 
 // ---------- copia MP4 (la arma el navegador del dueño) ----------
 
-async function tieneMp4(c: C, id: string): Promise<boolean> {
-  const f = await c.env.DB.prepare('SELECT estado FROM video_mp4 WHERE video_id = ?')
-    .bind(id)
-    .first<{ estado: string }>();
-  return f?.estado === 'listo';
+/** Recorte con el que tiene que estar armada la copia MP4 (las puntas que el dueño cortó). */
+export function firmaRecorte(v: Pick<FilaVideo, 'recorte_inicio' | 'recorte_fin'>): string {
+  return `${Math.round(v.recorte_inicio * 10) / 10}|${Math.round(v.recorte_fin * 10) / 10}`;
+}
+
+/** Hay copia MP4 lista Y armada con el recorte de ahora (si no, se vuelve a armar). */
+async function tieneMp4(c: C, v: Pick<FilaVideo, 'id' | 'recorte_inicio' | 'recorte_fin'>): Promise<boolean> {
+  const f = await c.env.DB.prepare(
+    `SELECT m.estado, r.firma FROM video_mp4 m LEFT JOIN video_mp4_recorte r ON r.video_id = m.video_id
+     WHERE m.video_id = ?`,
+  )
+    .bind(v.id)
+    .first<{ estado: string; firma: string | null }>();
+  // Las copias de antes del recortador no tienen firma: valen solo si el video no tiene puntas cortadas.
+  return f?.estado === 'listo' && (f.firma ?? '0|0') === firmaRecorte(v);
 }
 
 app.post('/datos/videos/:id/mp4', requiereSesion, async (c) => {
   const v = await videoDelDueno(c);
   if (!v || v.estado !== 'listo') return err(c, 404, 'no_existe');
-  if (await tieneMp4(c, v.id)) return c.json({ ya: true });
+  if (await tieneMp4(c, v)) return c.json({ ya: true });
   const subida = await c.env.BUCKET.createMultipartUpload(claveMp4(v.id), {
     httpMetadata: { contentType: 'video/mp4' },
   });
-  await c.env.DB.prepare(
-    `INSERT INTO video_mp4 (video_id, estado, subida_id, bytes, actualizado) VALUES (?, 'subiendo', ?, 0, ?)
-     ON CONFLICT (video_id) DO UPDATE SET estado = 'subiendo', subida_id = excluded.subida_id, actualizado = excluded.actualizado`,
-  )
-    .bind(v.id, subida.uploadId, Date.now())
-    .run();
-  return c.json({ ya: false, parte_minima: PARTE_MIN }, 201);
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO video_mp4 (video_id, estado, subida_id, bytes, actualizado) VALUES (?, 'subiendo', ?, 0, ?)
+       ON CONFLICT (video_id) DO UPDATE SET estado = 'subiendo', subida_id = excluded.subida_id, actualizado = excluded.actualizado`,
+    ).bind(v.id, subida.uploadId, Date.now()),
+    c.env.DB.prepare(
+      `INSERT INTO video_mp4_recorte (video_id, firma) VALUES (?, ?)
+       ON CONFLICT (video_id) DO UPDATE SET firma = excluded.firma`,
+    ).bind(v.id, firmaRecorte(v)),
+  ]);
+  // El navegador arma la copia con ESTE recorte (el que quedó anotado), para que siempre coincidan.
+  return c.json(
+    { ya: false, parte_minima: PARTE_MIN, recorte_inicio: v.recorte_inicio, recorte_fin: v.recorte_fin },
+    201,
+  );
 });
 
 app.put('/datos/videos/:id/mp4/partes/:n', requiereSesion, async (c) => {
@@ -1088,7 +1107,7 @@ app.get('/media/:id/video', async (c) => {
   if (descargar && !v.permitir_descarga && u?.id !== v.usuario_id) return err(c, 403, 'descarga');
   // La copia MP4 (si ya existe) se usa al pedir formato=mp4 y SIEMPRE al descargar: es la que abren iPhone y Final Cut.
   const quiereMp4 = c.req.query('formato') === 'mp4' || (descargar && c.req.query('formato') !== 'webm');
-  const mp4 = quiereMp4 ? await tieneMp4(c, v.id) : false;
+  const mp4 = quiereMp4 ? await tieneMp4(c, v) : false;
   if (c.req.query('formato') === 'mp4' && !mp4) return c.notFound();
   const obj = await c.env.BUCKET.get(mp4 ? claveMp4(v.id) : claveVideo(v.id), {
     range: c.req.raw.headers,
