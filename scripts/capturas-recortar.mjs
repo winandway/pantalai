@@ -1,6 +1,6 @@
 // Capturas ORIGINALES del recortador de puntas (inglés y español) para Docs.
 // Uso: con el sitio local corriendo, `node scripts/capturas-recortar.mjs`.
-/* global navigator, setInterval -- el guion de adentro corre en la página */
+/* global navigator, setInterval, window -- el guion de adentro corre en la página */
 // Se graba una pestaña de ejemplo («Demo board») para que no salga Pantalay dentro de Pantalay.
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
