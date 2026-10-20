@@ -126,7 +126,7 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 
 - La burbuja flotante usa Document Picture-in-Picture: la ventanita se abre PRIMERO en el clic de «Empezar»
   (Chrome exige el gesto) y después se pide la pantalla. En ese modo se graba la pantalla tal cual (la burbuja
-  está en ella) y no se compone en lienzo. Si la ventanita no se puede abrir, se vuelve a la burbuja dentro del
+  está en ella) y sí se compone en lienzo, pero sin pintar la burbuja (desde el 20 oct, para los lápices). Si la ventanita no se puede abrir, se vuelve a la burbuja dentro del
   video (lienzo). Probado en Chrome visible: ventanita con cámara, forma vertical y borde animado.
 
 ## C-VIDEO-A-LA-VISTA (19 oct 2026)
@@ -141,3 +141,36 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - En el celular, «Descargar MP4» → «Guardar en Fotos» abre el menú de compartir (Web Share) para que el video quede
   en Fotos, no perdido en Archivos.
 - Prueba: `e2e/iphone.spec.ts` (motor de Safari, iPhone 15 Pro). Comprobada en rojo el 19 oct 2026 (saltó 121 puntos).
+
+## C-SONIDO-COMPUTADORA (20 oct 2026)
+
+- Qué se rompió: el sonido de la computadora (YouTube, música, llamadas) no se grababa. Tres causas: la casilla venía
+  apagada, al sonido de la pantalla se le aplicaban los filtros de voz (cancelación de eco, supresión de ruido) que lo
+  apagan, y no había ningún aviso cuando el navegador no lo entregaba.
+- Arreglo (`web/src/logica/grabadora.ts`): `audioSistema` encendido por defecto (y los ajustes viejos sin `version` se
+  migran a encendido); `getDisplayMedia` pide el audio SIN filtros y con `systemAudio: 'include'`; todo el sonido pasa
+  por UN mezclador (AudioContext) que se despierta si está suspendido; cada fuente tiene su medidor (🎤/🔊 en la barra);
+  si se pidió y no llegó, `sinSonidoSistema` muestra el aviso.
+- Cómo se comprueba: grabar una pestaña con un video sonando: la barrita 🔊 se mueve y el video final tiene el sonido
+  (medido el 20 oct: unos −17 dB parejos de principio a fin con un tono de prueba).
+- En macOS el sonido de la pantalla completa depende de Chrome y del sistema; el de una pestaña siempre funciona.
+  Explicado al público en la guía «Record your computer’s sound».
+
+## C-LAPICES (20 oct 2026)
+
+- Qué faltaba: no había lápices para dibujar mientras se graba (REA lo comprobó en la página de grabar: la barra solo
+  tenía Pausar, Reiniciar, Descartar y Terminar; evidencia
+  `ev_0e94041ac7bfb01fe4b1bdc9b36312a78cce536f40dba78c2d4abf424fd0d2dd`).
+- Cómo funciona: `web/src/logica/dibujo.ts` guarda los trazos en coordenadas de 0 a 1 (lápiz, resaltador, flecha,
+  cuadro, círculo; seis colores; tres grosores; deshacer; borrar; desvanecer a los 3 s). La grabadora AHORA compone
+  SIEMPRE en el lienzo (pantalla + cámara, solo pantalla, solo cámara y también el modo flotante) y en cada cuadro
+  pinta los trazos encima. La capa `CapaDibujo` (`web/src/componentes/Lapices.tsx`) recibe el puntero sobre la vista
+  previa, que muestra exactamente lo que se graba.
+- Congelar: con la pantalla completa, al volver a Pantalay saldría Pantalay mismo en el video. Mientras la página NO
+  tiene el foco se guarda una foto de la pantalla cada medio segundo; con «Congelar» encendido (viene así) y los
+  lápices abiertos, se graba esa foto con los dibujos encima.
+- Límite honesto: dibujar ENCIMA de otros programas (sin volver a Pantalay) necesita una app de escritorio o una
+  extensión de Chrome. Anotado en `PENDIENTES.md`.
+- Pruebas: `pruebas/dibujo.test.ts` (comprobada en rojo cambiando el color) y `e2e/lapices.spec.ts` (graba de verdad,
+  dibuja una raya roja y mide los píxeles rojos en lo que se graba; comprobada en rojo quitando `pintar` del compositor).
+- Capturas: `scripts/capturas-lapices.mjs` → `docs/capturas/lapices-{en,es}.png`.

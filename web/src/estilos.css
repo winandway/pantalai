@@ -1968,3 +1968,100 @@ main {
   background: rgba(10, 11, 14, 0.85);
   font-weight: 600;
 }
+
+.niveles {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.nivel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+.nivel-barra {
+  width: 56px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--fondo-suave);
+  overflow: hidden;
+  display: inline-block;
+}
+.nivel-barra span {
+  display: block;
+  height: 100%;
+  background: var(--exito);
+  transition: width 0.1s;
+}
+
+/* Lápices para dibujar mientras se graba */
+.capa-dibujo {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  touch-action: none;
+  cursor: crosshair;
+}
+.capa-dibujo.herramienta-resaltador {
+  cursor: cell;
+}
+.barra-lapices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+.grupo-lapices {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lapiz-boton {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--fondo-suave);
+  font-size: 17px;
+  cursor: pointer;
+  color: var(--tinta);
+}
+.lapiz-boton.activo {
+  border-color: var(--azul);
+  background: #e8efff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+.color-boton {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--borde);
+  cursor: pointer;
+  padding: 0;
+}
+.color-boton.activo {
+  outline: 3px solid var(--azul);
+  outline-offset: 2px;
+}
+.muestra-grosor {
+  display: block;
+  border-radius: 50%;
+  outline: 1px solid rgba(0, 0, 0, 0.15);
+}
+.barra-lapices .interruptor.chico {
+  font-size: 13px;
+  margin: 0;
+}
+.barra-lapices .ayuda.ancho-total {
+  flex-basis: 100%;
+  margin: 0;
+}

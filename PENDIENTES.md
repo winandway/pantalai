@@ -31,6 +31,9 @@
       de punta a punta pasada contra https://pantalai.sitios.dev.
 - [ ] La portada «/» la sirve la plataforma como estático y no lleva las cabeceras de seguridad (las demás
       páginas sí). Estudiar servirla desde el programa sin romper la portada.
-- [ ] Grabación con dibujo sobre la pantalla y énfasis del cursor (necesita extensión de Chrome).
+- [x] Lápices para dibujar mientras se graba (20 oct 2026, candado C-LAPICES).
+- [x] Sonido de la computadora encendido por defecto, sin filtros, con medidores y aviso (20 oct 2026, C-SONIDO-COMPUTADORA).
+- [ ] Dibujar ENCIMA de otros programas sin volver a Pantalay, y énfasis del cursor (necesita extensión de Chrome o app de escritorio).
+- [ ] Mapa del sitio (sitemap) con todas las guías de Docs para Google.
 - [ ] Extensión de Chrome con modo «reporte de error» (consola y red).
 - [ ] Carpetas compartidas y espacios de equipo.

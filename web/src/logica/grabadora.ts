@@ -1,6 +1,7 @@
 // Motor de grabación en el navegador: pantalla, cámara (burbuja), micrófono y audio del sistema.
 // Pantalla + cámara se componen en un lienzo con un reloj en un Worker: así sigue grabando
 // aunque la pestaña de PANTALAI quede en segundo plano mientras grabas otra ventana.
+import { pintar, Pizarra } from './dibujo';
 import type { Segmento } from './tiempo';
 
 export type Modo = 'pantalla_camara' | 'pantalla' | 'camara';
@@ -28,7 +29,7 @@ export const AJUSTES_INICIALES: Ajustes = {
   modo: 'pantalla_camara',
   camaraId: '',
   microfonoId: 'default',
-  audioSistema: false,
+  audioSistema: true,
   calidad: '1080',
   burbujaTamano: 'mediano',
   burbujaForma: 'circulo',
@@ -138,10 +139,36 @@ export class Grabadora {
   ancho = 0;
   alto = 0;
   previa: MediaStream | null = null;
+  /** true si se pidió el sonido de la computadora y el navegador no lo entregó. */
+  sinSonidoSistema = false;
+  pistaMicro: MediaStreamTrack | null = null;
+  private medidores: { micro?: AnalyserNode; sistema?: AnalyserNode } = {};
+  private muestras = new Float32Array(512);
+  private ultimos = { micro: 0, sistema: 0 };
+
+  /** Nivel de sonido de 0 a 1 del micrófono y de la computadora, medido dentro del mezclador que se graba. */
+  niveles(): { micro: number; sistema: number } {
+    const nivel = (a?: AnalyserNode) => {
+      if (!a) return 0;
+      a.getFloatTimeDomainData(this.muestras);
+      let suma = 0;
+      for (const v of this.muestras) suma += v * v;
+      return Math.min(1, Math.sqrt(suma / this.muestras.length) * 4);
+    };
+    // Caída suave (como un vúmetro): el sonido capturado llega a ráfagas y una lectura suelta puede caer en un hueco.
+    this.ultimos.micro = Math.max(nivel(this.medidores.micro), this.ultimos.micro * 0.85);
+    this.ultimos.sistema = Math.max(nivel(this.medidores.sistema), this.ultimos.sistema * 0.85);
+    return { ...this.ultimos };
+  }
+  pistaSistema: MediaStreamTrack | null = null;
   /** En modo flotante: la cámara que se muestra en la ventanita. */
   camara: MediaStream | null = null;
   /** La ventanita flotante, abierta por la página antes de pedir la pantalla. */
   ventanaFlotante: Window | null = null;
+  /** Los lápices: lo que se dibuja aquí sale en el video. */
+  pizarra = new Pizarra();
+  /** Graba la última foto de la pantalla (de cuando estabas en otro programa) mientras dibujas. */
+  congelar = false;
   private videoPantalla: HTMLVideoElement | null = null;
   private videoCamara: HTMLVideoElement | null = null;
 
@@ -149,6 +176,15 @@ export class Grabadora {
     private a: Ajustes,
     private ev: Eventos = {},
   ) {}
+
+  /** true si se comparte la pantalla completa (ahí Pantalay mismo sale en el video al volver a dibujar). */
+  pantallaCompleta(): boolean {
+    const p = this.flujos[0]?.getVideoTracks()[0];
+    return (
+      this.a.modo !== 'camara' &&
+      (p?.getSettings() as { displaySurface?: string } | undefined)?.displaySurface === 'monitor'
+    );
+  }
 
   /** Segundos grabados (sin contar las pausas). */
   tiempo(): number {
@@ -166,7 +202,16 @@ export class Grabadora {
       pantalla = await navigator.mediaDevices.getDisplayMedia({
         // «monitor» deja preseleccionada la pantalla completa en Chrome: así salen también los programas instalados.
         video: { height: { ideal: alto }, frameRate: { ideal: 30 }, displaySurface: 'monitor' },
-        audio: this.a.audioSistema,
+        // Sonido de la computadora (videos, música, reuniones): SIN los filtros de voz, que lo apagan.
+        audio: this.a.audioSistema
+          ? {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+              suppressLocalAudioPlayback: false,
+            }
+          : false,
+        systemAudio: this.a.audioSistema ? 'include' : 'exclude',
         selfBrowserSurface: 'include',
         surfaceSwitching: 'include',
       } as DisplayMediaStreamOptions);
@@ -199,41 +244,54 @@ export class Grabadora {
     }
 
     const pistasAudio = [...(pantalla?.getAudioTracks() ?? []), ...(micro?.getAudioTracks() ?? [])];
+    // Todo el sonido pasa por UN mezclador: lo que mide la barrita es exactamente lo que se graba.
     let audio: MediaStreamTrack | null = null;
-    if (pistasAudio.length === 1) audio = pistasAudio[0]!;
-    else if (pistasAudio.length > 1) {
+    if (pistasAudio.length) {
       this.audio = new AudioContext();
+      // Un mezclador «suspendido» graba silencio: se despierta siempre.
+      if (this.audio.state === 'suspended') await this.audio.resume().catch(() => undefined);
       const destino = this.audio.createMediaStreamDestination();
-      for (const p of pistasAudio) this.audio.createMediaStreamSource(new MediaStream([p])).connect(destino);
+      // El medidor tiene que terminar en la salida (en silencio) para que el navegador lo procese siempre.
+      const silencio = this.audio.createGain();
+      silencio.gain.value = 0;
+      silencio.connect(this.audio.destination);
+      const conectar = (p: MediaStreamTrack | undefined, cual: 'micro' | 'sistema') => {
+        if (!p || !this.audio) return;
+        const fuente = this.audio.createMediaStreamSource(new MediaStream([p]));
+        const medidor = this.audio.createAnalyser();
+        medidor.fftSize = 512;
+        fuente.connect(destino);
+        fuente.connect(medidor);
+        medidor.connect(silencio);
+        this.medidores[cual] = medidor;
+      };
+      conectar(pantalla?.getAudioTracks()[0], 'sistema');
+      conectar(micro?.getAudioTracks()[0], 'micro');
       audio = destino.stream.getAudioTracks()[0] ?? null;
     }
+    // ¿Llegó el sonido de la computadora? Si se pidió y no vino, la página lo avisa.
+    this.sinSonidoSistema = Boolean(pantalla && this.a.audioSistema && !pantalla.getAudioTracks().length);
+    this.pistaMicro = micro?.getAudioTracks()[0] ?? null;
+    this.pistaSistema = pantalla?.getAudioTracks()[0] ?? null;
 
+    // Todo pasa por el lienzo (también la pantalla sola y la cámara sola): ahí se pintan los lápices.
     let video: MediaStreamTrack;
     if (pantalla && camara && this.a.flotante && this.ventanaFlotante) {
-      // Modo flotante: la burbuja vive en su ventanita encima de todo y la graba la propia pantalla.
+      // Modo flotante: la burbuja vive en su ventanita encima de todo y sale en la propia pantalla.
       this.camara = camara;
-      video = pantalla.getVideoTracks()[0]!;
-      const s = video.getSettings();
-      this.ancho = s.width ?? 0;
-      this.alto = s.height ?? 0;
-    } else if (pantalla && camara) video = await this.componer(pantalla, camara);
-    else {
-      video = (pantalla ?? camara)!.getVideoTracks()[0]!;
-      const s = video.getSettings();
-      this.ancho = s.width ?? 0;
-      this.alto = s.height ?? 0;
-    }
+      video = await this.componer(pantalla, null);
+    } else if (pantalla) video = await this.componer(pantalla, camara);
+    else video = await this.componer(camara!, null);
     this.previa = new MediaStream([video]);
     return new MediaStream(audio ? [video, audio] : [video]);
   }
 
-  private async componer(pantalla: MediaStream, camara: MediaStream): Promise<MediaStreamTrack> {
+  private async componer(pantalla: MediaStream, camara: MediaStream | null): Promise<MediaStreamTrack> {
     const vp = document.createElement('video');
-    const vc = document.createElement('video');
-    for (const [v, s] of [
-      [vp, pantalla],
-      [vc, camara],
-    ] as const) {
+    const vc = camara ? document.createElement('video') : null;
+    const fuentes: [HTMLVideoElement, MediaStream][] = [[vp, pantalla]];
+    if (vc && camara) fuentes.push([vc, camara]);
+    for (const [v, s] of fuentes) {
       v.muted = true;
       v.playsInline = true;
       v.srcObject = s;
@@ -249,51 +307,69 @@ export class Grabadora {
     lienzo.height = this.alto;
     this.lienzo = lienzo;
     const ctx = lienzo.getContext('2d')!;
+    const fija = document.createElement('canvas');
+    const fctx = fija.getContext('2d')!;
+    let ultimaFija = 0;
     const dibujar = () => {
       if (vp.videoWidth && (vp.videoWidth !== lienzo.width || vp.videoHeight !== lienzo.height)) {
         // La ventana compartida cambió de tamaño: el lienzo la sigue.
         lienzo.width = vp.videoWidth;
         lienzo.height = vp.videoHeight;
       }
-      ctx.drawImage(vp, 0, 0, lienzo.width, lienzo.height);
-      const { x, y, ancho: bw, alto: bh } = posicionBurbuja(lienzo.width, lienzo.height, this.a);
-      const cw = vc.videoWidth || 1;
-      const chh = vc.videoHeight || 1;
-      // Recorte centrado de la cámara con la proporción de la burbuja.
-      const escala = Math.min(cw / bw, chh / bh);
-      const sw = bw * escala;
-      const sh = bh * escala;
-      const forma = () => {
-        ctx.beginPath();
-        if (this.a.burbujaForma === 'circulo') ctx.arc(x + bw / 2, y + bh / 2, bw / 2, 0, Math.PI * 2);
-        else ctx.roundRect(x, y, bw, bh, Math.min(bw, bh) * 0.14);
-      };
-      ctx.save();
-      forma();
-      ctx.clip();
-      // Espejo, como se ve uno en la cámara.
-      ctx.translate(x + bw, y);
-      ctx.scale(-1, 1);
-      ctx.drawImage(vc, (cw - sw) / 2, (chh - sh) / 2, sw, sh, 0, 0, bw, bh);
-      ctx.restore();
-      if (this.a.bordeColores) {
-        // Borde de colores (rosado, naranja, amarillo, lila) que va girando.
-        const g = ctx.createConicGradient((performance.now() / 1000) * 2, x + bw / 2, y + bh / 2);
-        for (const [i, c] of ['#ff4fa3', '#ff9f43', '#ffe14d', '#b46bff', '#ff4fa3'].entries())
-          g.addColorStop(i / 4, c);
-        ctx.save();
-        ctx.lineWidth = Math.max(4, Math.min(bw, bh) * 0.035);
-        ctx.strokeStyle = g;
-        forma();
-        ctx.stroke();
-        ctx.restore();
+      const ahora = performance.now();
+      // Mientras la persona está en OTRO programa se guarda una foto de su pantalla cada medio segundo.
+      // Al volver a Pantalay para dibujar, «congelar» graba esa foto y no a Pantalay mismo (sin efecto espejo).
+      if (vp.videoWidth && ahora - ultimaFija > 500 && (document.hidden || !document.hasFocus())) {
+        fija.width = lienzo.width;
+        fija.height = lienzo.height;
+        fctx.drawImage(vp, 0, 0, fija.width, fija.height);
+        ultimaFija = ahora;
       }
+      if (this.congelar && ultimaFija) ctx.drawImage(fija, 0, 0, lienzo.width, lienzo.height);
+      else ctx.drawImage(vp, 0, 0, lienzo.width, lienzo.height);
+      if (vc) this.pintarBurbuja(ctx, vc, lienzo.width, lienzo.height);
+      pintar(ctx, this.pizarra, lienzo.width, lienzo.height, ahora);
     };
     const codigo = 'let t=setInterval(()=>postMessage(0),1000/30);onmessage=()=>clearInterval(t)';
     this.reloj = new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' })));
     this.reloj.onmessage = dibujar;
     dibujar();
     return lienzo.captureStream(30).getVideoTracks()[0]!;
+  }
+
+  private pintarBurbuja(ctx: CanvasRenderingContext2D, vc: HTMLVideoElement, ancho: number, alto: number) {
+    const { x, y, ancho: bw, alto: bh } = posicionBurbuja(ancho, alto, this.a);
+    const cw = vc.videoWidth || 1;
+    const chh = vc.videoHeight || 1;
+    // Recorte centrado de la cámara con la proporción de la burbuja.
+    const escala = Math.min(cw / bw, chh / bh);
+    const sw = bw * escala;
+    const sh = bh * escala;
+    const forma = () => {
+      ctx.beginPath();
+      if (this.a.burbujaForma === 'circulo') ctx.arc(x + bw / 2, y + bh / 2, bw / 2, 0, Math.PI * 2);
+      else ctx.roundRect(x, y, bw, bh, Math.min(bw, bh) * 0.14);
+    };
+    ctx.save();
+    forma();
+    ctx.clip();
+    // Espejo, como se ve uno en la cámara.
+    ctx.translate(x + bw, y);
+    ctx.scale(-1, 1);
+    ctx.drawImage(vc, (cw - sw) / 2, (chh - sh) / 2, sw, sh, 0, 0, bw, bh);
+    ctx.restore();
+    if (this.a.bordeColores) {
+      // Borde de colores (rosado, naranja, amarillo, lila) que va girando.
+      const g = ctx.createConicGradient((performance.now() / 1000) * 2, x + bw / 2, y + bh / 2);
+      for (const [i, c] of ['#ff4fa3', '#ff9f43', '#ffe14d', '#b46bff', '#ff4fa3'].entries())
+        g.addColorStop(i / 4, c);
+      ctx.save();
+      ctx.lineWidth = Math.max(4, Math.min(bw, bh) * 0.035);
+      ctx.strokeStyle = g;
+      forma();
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   empezar(flujo: MediaStream) {

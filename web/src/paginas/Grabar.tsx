@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
+import { BarraLapices, CapaDibujo, useLapices } from '../componentes/Lapices';
 import { Confirmar } from '../componentes/Modal';
 import { ErrorApi, enlaceVideo, pedir } from '../logica/api';
 import {
@@ -18,6 +19,7 @@ import { textoError, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
 import { abrirVentana, montarBurbuja, type Burbuja } from '../logica/burbuja';
 import { fijarEstadoGrabacion } from '../logica/estadoGrabacion';
+type Niveles = { micro: number; sistema: number };
 import { useSesion } from '../logica/sesion';
 import {
   Subidor,
@@ -38,7 +40,10 @@ function leerAjustes(idioma: 'en' | 'es'): Ajustes {
     const g = JSON.parse(
       localStorage.getItem('pantalai:ajustes-grabar') ?? 'null',
     ) as Partial<Ajustes> | null;
-    return { ...AJUSTES_INICIALES, idiomaVoz: idioma === 'es' ? 'es-ES' : 'en-US', ...(g ?? {}) };
+    const a = { ...AJUSTES_INICIALES, idiomaVoz: idioma === 'es' ? 'es-ES' : 'en-US', ...(g ?? {}) };
+    // Ajustes guardados antes del 20 oct 2026 traían el sonido de la computadora apagado por defecto.
+    if (!(g as { version?: number } | null)?.version) a.audioSistema = true;
+    return a;
   } catch {
     return { ...AJUSTES_INICIALES, idiomaVoz: idioma === 'es' ? 'es-ES' : 'en-US' };
   }
@@ -71,7 +76,11 @@ export function Grabar() {
   const terminarRef = useRef<() => Promise<void>>(async () => undefined);
   const miniaturaInicio = useRef<Blob | null>(null);
   const flotante = useRef<Burbuja | null>(null);
+  const [niveles, setNiveles] = useState<Niveles>({ micro: 0, sistema: 0 });
+  const [sinSonido, setSinSonido] = useState(false);
+  const pararNiveles = useRef<() => void>(() => undefined);
   const pausarRef = useRef<() => void>(() => undefined);
+  const { l: lapices, cambiar: cambiarLapices } = useLapices(grabadora, estado);
   const continuarRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
@@ -80,7 +89,7 @@ export function Grabar() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('pantalai:ajustes-grabar', JSON.stringify(a));
+      localStorage.setItem('pantalai:ajustes-grabar', JSON.stringify({ ...a, version: 2 }));
     } catch {
       /* sin almacenamiento */
     }
@@ -153,6 +162,9 @@ export function Grabar() {
   }, [estado]);
 
   const limpiar = useCallback(() => {
+    pararNiveles.current();
+    pararNiveles.current = () => undefined;
+    setSinSonido(false);
     flotante.current?.cerrar();
     flotante.current = null;
     grabadora.current?.liberar();
@@ -200,6 +212,13 @@ export function Grabar() {
     }
     grabadora.current = g;
     void leerDispositivos();
+    setSinSonido(g.sinSonidoSistema);
+    pararNiveles.current();
+    {
+      // Se mide seguido (cada 50 ms) para no perder las ráfagas; la pantalla se refresca con la caída suave.
+      const id = window.setInterval(() => setNiveles(g.niveles()), 50);
+      pararNiveles.current = () => window.clearInterval(id);
+    }
     if (ventana && g.camara) {
       flotante.current = montarBurbuja(
         ventana,
@@ -333,10 +352,18 @@ export function Grabar() {
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
-  // Atajos mientras graba: Alt+Shift+P pausa, Alt+Shift+S termina.
+  // Atajos mientras graba: Alt+Shift+P pausa, Alt+Shift+S termina, Alt+Shift+D lápices.
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
+      const grabando = estado === 'grabando' || estado === 'pausa';
+      // Cmd/Ctrl+Z deshace el último trazo mientras dibujas.
+      if (grabando && lapices.activo && (e.metaKey || e.ctrlKey) && e.code === 'KeyZ') {
+        e.preventDefault();
+        grabadora.current?.pizarra.deshacer();
+        return;
+      }
       if (!e.altKey || !e.shiftKey) return;
+      if (e.code === 'KeyD' && grabando) cambiarLapices({ activo: !lapices.activo });
       if (e.code === 'KeyP') {
         if (estado === 'grabando') pausarRef.current();
         else if (estado === 'pausa') continuarRef.current();
@@ -345,7 +372,7 @@ export function Grabar() {
     };
     document.addEventListener('keydown', tecla);
     return () => document.removeEventListener('keydown', tecla);
-  }, [estado, terminar]);
+  }, [estado, terminar, lapices.activo, cambiarLapices]);
 
   if (!usuario) return null;
   const cambiar = <K extends keyof Ajustes>(k: K, v: Ajustes[K]) => setA((x) => ({ ...x, [k]: v }));
@@ -568,6 +595,9 @@ export function Grabar() {
         <div className="grabar-en-curso">
           <div className="grabar-previa">
             <video ref={previa} autoPlay muted playsInline />
+            {(estado === 'grabando' || estado === 'pausa') && (
+              <CapaDibujo l={lapices} grabadora={grabadora} video={previa} />
+            )}
             {estado === 'subiendo' && (
               <div className="subiendo-capa" role="status" aria-live="polite">
                 <span className="ruedita" aria-hidden="true" />
@@ -600,6 +630,26 @@ export function Grabar() {
                     : t('grabando')}
             </span>
             <span className="cronometro">{formatoTiempo(segundos)}</span>
+            {enCurso && (
+              <span className="niveles" aria-label={t('nivelesSonido')}>
+                {grabadora.current?.pistaMicro && (
+                  <span className="nivel" title={t('microfono')}>
+                    🎤
+                    <span className="nivel-barra">
+                      <span style={{ width: `${Math.round(niveles.micro * 100)}%` }} />
+                    </span>
+                  </span>
+                )}
+                {grabadora.current?.pistaSistema && (
+                  <span className="nivel" title={t('sonidoComputadora')}>
+                    🔊
+                    <span className="nivel-barra">
+                      <span style={{ width: `${Math.round(niveles.sistema * 100)}%` }} />
+                    </span>
+                  </span>
+                )}
+              </span>
+            )}
             {estado === 'grabando' && (
               <button type="button" className="boton secundario" onClick={() => pausarRef.current()}>
                 ⏸ {t('pausar')}
@@ -612,6 +662,14 @@ export function Grabar() {
             )}
             {(estado === 'grabando' || estado === 'pausa') && (
               <>
+                <button
+                  type="button"
+                  className={`boton ${lapices.activo ? '' : 'secundario'}`}
+                  aria-pressed={lapices.activo}
+                  onClick={() => cambiarLapices({ activo: !lapices.activo })}
+                >
+                  ✏️ {lapices.activo ? t('dejarDeDibujar') : t('dibujar')}
+                </button>
                 <button type="button" className="boton secundario" onClick={() => setConfirmar('reiniciar')}>
                   ↺ {t('reiniciar')}
                 </button>
@@ -629,6 +687,19 @@ export function Grabar() {
               </div>
             )}
           </div>
+          {(estado === 'grabando' || estado === 'pausa') && (
+            <BarraLapices
+              l={lapices}
+              cambiar={cambiarLapices}
+              grabadora={grabadora}
+              pantallaCompleta={grabadora.current?.pantallaCompleta() ?? false}
+            />
+          )}
+          {sinSonido && enCurso && (
+            <div className="tarjeta alerta">
+              <p>{t('sinSonidoSistema')}</p>
+            </div>
+          )}
           {estado === 'fallo' && (
             <div className="tarjeta alerta">
               <p>{t('fallaSubida')}</p>
