@@ -265,7 +265,7 @@ export function Grabar() {
     const url = URL.createObjectURL(s.archivo(g?.tipo.split(';')[0] ?? 'video/webm'));
     const enlace = document.createElement('a');
     enlace.href = url;
-    enlace.download = `pantalai-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.webm`;
+    enlace.download = `pantalay-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.webm`;
     enlace.click();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
@@ -617,7 +617,7 @@ export function Respaldos() {
                 const url = URL.createObjectURL(b);
                 const enlace = document.createElement('a');
                 enlace.href = url;
-                enlace.download = `pantalai-${r.id}.${r.tipo.includes('mp4') ? 'mp4' : 'webm'}`;
+                enlace.download = `pantalay-${r.id}.${r.tipo.includes('mp4') ? 'mp4' : 'webm'}`;
                 enlace.click();
                 setTimeout(() => URL.revokeObjectURL(url), 10_000);
               })

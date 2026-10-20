@@ -77,8 +77,8 @@ export class ErrorIA extends Error {
 
 /** Frase de arranque para que Whisper escriba las muletillas en vez de borrarlas (así se pueden quitar luego). */
 const ARRANQUE: Record<string, string> = {
-  en: 'Umm, let me think like, hmm... Okay, here is what I, uh, mean. PANTALAI.',
-  es: 'Eh, a ver, mmm... bueno, este, lo que quiero decir es, eh, esto. PANTALAI.',
+  en: 'Umm, let me think like, hmm... Okay, here is what I, uh, mean. Pantalay.',
+  es: 'Eh, a ver, mmm... bueno, este, lo que quiero decir es, eh, esto. Pantalay.',
 };
 
 type RespuestaWhisper = {

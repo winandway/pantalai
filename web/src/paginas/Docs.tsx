@@ -12,7 +12,7 @@ export function Docs({ slug }: { slug: string }) {
   const guia = GUIAS.find((g) => g.slug === slug);
 
   useEffect(() => {
-    document.title = guia ? `${guia[idioma].titulo} · PANTALAI Docs` : 'PANTALAI Docs';
+    document.title = guia ? `${guia[idioma].titulo} · Pantalay Docs` : 'Pantalay Docs';
   }, [guia, idioma]);
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {

@@ -9,7 +9,7 @@ export const IDIOMAS: { codigo: Idioma; bandera: string }[] = [
 ];
 
 const en = {
-  marca: 'PANTALAI',
+  marca: 'Pantalay',
   lema: 'Record your screen. Share it in seconds.',
   sublema:
     'Screen, camera and voice in one click. Your link is ready the moment you stop, with live captions, chapters and viewer insights. Free.',
@@ -30,7 +30,7 @@ const en = {
   ocultarClave: 'Hide password',
   crearCuenta: 'Create account',
   yaTengo: 'Already have an account?',
-  noTengo: 'New to PANTALAI?',
+  noTengo: 'New to Pantalay?',
   recuperado: 'We recovered what you were typing.',
   empezarDeNuevo: 'Start over',
   // errores
@@ -157,7 +157,7 @@ const en = {
   atras: 'Back 5 seconds',
   adelante: 'Forward 5 seconds',
   atajos: 'Shortcuts: K play · J/L ±5s · M mute · A captions · S speed · T theater · F full screen',
-  grabadoCon: 'Recorded with PANTALAI',
+  grabadoCon: 'Recorded with Pantalay',
   hazElTuyo: 'Record your own',
   // compartir
   compartirTitulo: 'Share this video',
@@ -258,7 +258,7 @@ const en = {
 type Clave = keyof typeof en;
 
 const es: Record<Clave, string> = {
-  marca: 'PANTALAI',
+  marca: 'Pantalay',
   lema: 'Graba tu pantalla. Compártela en segundos.',
   sublema:
     'Pantalla, cámara y voz con un clic. El enlace está listo en cuanto terminas, con subtítulos en vivo, capítulos y estadísticas de quién lo vio. Gratis.',
@@ -278,7 +278,7 @@ const es: Record<Clave, string> = {
   ocultarClave: 'Ocultar la contraseña',
   crearCuenta: 'Crear cuenta',
   yaTengo: '¿Ya tienes cuenta?',
-  noTengo: '¿Eres nuevo en PANTALAI?',
+  noTengo: '¿Eres nuevo en Pantalay?',
   recuperado: 'Recuperamos lo que estabas escribiendo.',
   empezarDeNuevo: 'Empezar de nuevo',
   'error.credenciales': 'El correo y la contraseña no coinciden.',
@@ -404,7 +404,7 @@ const es: Record<Clave, string> = {
   adelante: 'Adelante 5 segundos',
   atajos:
     'Atajos: K reproducir · J/L ±5 s · M silencio · A subtítulos · S velocidad · T teatro · F pantalla completa',
-  grabadoCon: 'Grabado con PANTALAI',
+  grabadoCon: 'Grabado con Pantalay',
   hazElTuyo: 'Graba el tuyo',
   compartirTitulo: 'Compartir este video',
   quienVe: 'Quién puede verlo',

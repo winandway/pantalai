@@ -54,7 +54,7 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
     try {
       const r = await pedir<{ video: Video }>(`/datos/videos/${id}`);
       setVideo(r.video);
-      document.title = `${r.video.titulo} · PANTALAI`;
+      document.title = `${r.video.titulo} · Pantalay`;
     } catch (e) {
       setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor'));
     }
@@ -160,7 +160,7 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
       <div className="embebido">
         {reproductorEl}
         <a className="marca-embebido" href={enlaceVideo(video.id)} target="_blank" rel="noopener noreferrer">
-          {video.titulo} · PANTALAI
+          {video.titulo} · Pantalay
         </a>
       </div>
     );

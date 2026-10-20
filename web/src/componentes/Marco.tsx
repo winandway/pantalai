@@ -12,7 +12,7 @@ export function Logo() {
         <circle cx="16" cy="14.5" r="5" fill="var(--rojo)" />
         <rect x="11" y="26" width="10" height="2.5" rx="1.25" fill="var(--tinta)" />
       </svg>
-      PANTALAI
+      Pantalay
     </span>
   );
 }
@@ -41,7 +41,7 @@ export function Encabezado() {
         href={usuario ? '/library' : '/'}
         onClick={alClicEnlace}
         className="encabezado-logo"
-        aria-label="PANTALAI"
+        aria-label="Pantalay"
       >
         <Logo />
       </a>

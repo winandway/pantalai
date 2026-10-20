@@ -1,7 +1,12 @@
-# PANTALAI
+# PANTALAI (marca pública: Pantalay)
 
 Grabador de pantalla y cámara en el navegador, con enlace al instante (estilo Loom), de Windoce LLC.
 Las reglas globales de Richard aplican; estas se suman.
+
+**Marca (dictado por Richard el 19 oct 2026):** lo que ve el público se llama **Pantalay** (el dominio
+pantalay.com está libre; pantalai no). Por dentro TODO sigue llamándose PANTALAI: carpeta, repositorio, sitio
+`pantalai` de YaDominios, base, tablas, llaves de almacenamiento del navegador (`pantalai:…`), cabecera
+`x-pantalai` y cookie. Solo se cambia el texto visible (pantallas, Docs, correos, tarjeta para redes).
 
 ## Leer antes de trabajar
 

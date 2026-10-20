@@ -29,7 +29,7 @@ export const GUIAS: Guia[] = [
       titulo: 'Start here: your first video in 5 minutes',
       resumen: 'Create your account, record, let AI do the rest, share and edit — step by step.',
       cuerpo: [
-        '1. Create your account. Open PANTALAI and press Sign up. Write your name, your email and a password of at least 8 characters, and press Create account. You land in your library.',
+        '1. Create your account. Open Pantalay and press Sign up. Write your name, your email and a password of at least 8 characters, and press Create account. You land in your library.',
         '2. Record. Press the red Record button. Choose Screen + Cam, pick your camera and microphone, choose the quality and the language you will speak, and press Start recording. Your browser asks what to share: choose a screen, a window or a tab and press Share. After a 3-second countdown, talk and show what you want.',
         '3. Finish. Press Finish (or “Stop sharing” in the browser bar). Your video is already uploaded and its link is copied: you can paste it anywhere right away.',
         '4. Let AI work. Your video opens and a line at the top shows that AI is working. In about a minute you get a title, a summary, chapters on the progress bar, the tasks you mentioned, and an accurate transcript with captions.',
@@ -42,7 +42,7 @@ export const GUIAS: Guia[] = [
       titulo: 'Empieza aquí: tu primer video en 5 minutos',
       resumen: 'Crea tu cuenta, graba, deja que la IA haga el resto, comparte y edita, paso a paso.',
       cuerpo: [
-        '1. Crea tu cuenta. Abre PANTALAI y toca Crear cuenta. Escribe tu nombre, tu correo y una contraseña de al menos 8 caracteres, y toca Crear cuenta. Llegas a tu biblioteca.',
+        '1. Crea tu cuenta. Abre Pantalay y toca Crear cuenta. Escribe tu nombre, tu correo y una contraseña de al menos 8 caracteres, y toca Crear cuenta. Llegas a tu biblioteca.',
         '2. Graba. Toca el botón rojo Grabar. Elige Pantalla + cámara, escoge tu cámara y tu micrófono, la calidad y el idioma en que vas a hablar, y toca Empezar a grabar. El navegador te pregunta qué compartir: elige una pantalla, una ventana o una pestaña y toca Compartir. Después de la cuenta de 3 segundos, habla y muestra lo que quieras.',
         '3. Termina. Toca Terminar (o «Dejar de compartir» en la barra del navegador). Tu video ya está subido y su enlace copiado: lo puedes pegar donde quieras de inmediato.',
         '4. Deja trabajar a la IA. Se abre tu video y arriba aparece que la IA está trabajando. En más o menos un minuto tienes título, resumen, capítulos en la barra, las tareas que mencionaste y una transcripción precisa con subtítulos.',
@@ -58,23 +58,23 @@ export const GUIAS: Guia[] = [
     icono: '👋',
     imagen: 'video',
     en: {
-      titulo: 'What is PANTALAI',
+      titulo: 'What is Pantalay',
       resumen: 'Record your screen and camera, and share it with a link in seconds.',
       cuerpo: [
-        'PANTALAI is a screen recorder that lives in your browser. There is nothing to install: open the site, press Record, and talk.',
+        'Pantalay is a screen recorder that lives in your browser. There is nothing to install: open the site, press Record, and talk.',
         'When you finish, your video is already uploaded and the link is copied. Paste it in an email, a chat or a ticket, and whoever opens it can watch right away — no account needed.',
         'Every video comes with a live transcript, captions, chapters, comments, reactions and insights about who watched it.',
-        'PANTALAI works best in Chrome or Edge on a computer. Firefox can record too; live transcription needs Chrome or Edge.',
+        'Pantalay works best in Chrome or Edge on a computer. Firefox can record too; live transcription needs Chrome or Edge.',
       ],
     },
     es: {
-      titulo: 'Qué es PANTALAI',
+      titulo: 'Qué es Pantalay',
       resumen: 'Graba tu pantalla y tu cámara, y compártelo con un enlace en segundos.',
       cuerpo: [
-        'PANTALAI es un grabador de pantalla que vive en tu navegador. No hay nada que instalar: abres el sitio, tocas Grabar y hablas.',
+        'Pantalay es un grabador de pantalla que vive en tu navegador. No hay nada que instalar: abres el sitio, tocas Grabar y hablas.',
         'Cuando terminas, el video ya está subido y el enlace copiado. Pégalo en un correo, un chat o un ticket, y quien lo abra lo ve al instante, sin necesidad de cuenta.',
         'Cada video trae transcripción en vivo, subtítulos, capítulos, comentarios, reacciones y estadísticas de quién lo vio.',
-        'PANTALAI funciona mejor en Chrome o Edge en una computadora. Firefox también graba; la transcripción en vivo necesita Chrome o Edge.',
+        'Pantalay funciona mejor en Chrome o Edge en una computadora. Firefox también graba; la transcripción en vivo necesita Chrome o Edge.',
       ],
     },
   },
@@ -116,7 +116,7 @@ export const GUIAS: Guia[] = [
         'Choose the quality: 720p, 1080p HD or 4K. There is no time limit and no watermark.',
         'Press Start recording. Your browser asks which screen, window or tab to share — choose it and press Share. After a 3-second countdown, you are live.',
         'While recording you can Pause, Resume, Restart or Discard. When you are done, press Finish, or press “Stop sharing” in the bar of your browser.',
-        'Shortcuts while the PANTALAI tab is open: Alt + Shift + P pauses or resumes, Alt + Shift + S finishes.',
+        'Shortcuts while the Pantalay tab is open: Alt + Shift + P pauses or resumes, Alt + Shift + S finishes.',
       ],
     },
     es: {
@@ -128,7 +128,7 @@ export const GUIAS: Guia[] = [
         'Elige la calidad: 720p, 1080p HD o 4K. No hay límite de tiempo ni marca de agua.',
         'Toca Empezar a grabar. El navegador te pregunta qué pantalla, ventana o pestaña compartir: elígela y toca Compartir. Tras una cuenta de 3 segundos, estás grabando.',
         'Mientras grabas puedes Pausar, Seguir, Reiniciar o Descartar. Cuando termines, toca Terminar, o toca «Dejar de compartir» en la barra del navegador.',
-        'Atajos con la pestaña de PANTALAI abierta: Alt + Shift + P pausa o sigue, Alt + Shift + S termina.',
+        'Atajos con la pestaña de Pantalay abierta: Alt + Shift + P pausa o sigue, Alt + Shift + S termina.',
       ],
     },
   },
@@ -189,7 +189,7 @@ export const GUIAS: Guia[] = [
       resumen: 'If the internet drops, the recording stays safe on your computer.',
       cuerpo: [
         'Your video uploads while you record, piece by piece. Each piece is also kept on your computer until the upload finishes.',
-        'If the connection fails, PANTALAI keeps trying on its own. If it still cannot finish, you will see Try again and Download recording.',
+        'If the connection fails, Pantalay keeps trying on its own. If it still cannot finish, you will see Try again and Download recording.',
         'If you closed the tab before it finished, open your library: recordings saved on this computer appear at the top, ready to download.',
       ],
     },
@@ -198,7 +198,7 @@ export const GUIAS: Guia[] = [
       resumen: 'Si se cae el internet, la grabación queda a salvo en tu computadora.',
       cuerpo: [
         'El video se sube mientras grabas, por partes. Cada parte también queda guardada en tu computadora hasta que la subida termina.',
-        'Si la conexión falla, PANTALAI sigue intentando solo. Si aun así no puede terminar, verás Intentar otra vez y Descargar la grabación.',
+        'Si la conexión falla, Pantalay sigue intentando solo. Si aun así no puede terminar, verás Intentar otra vez y Descargar la grabación.',
         'Si cerraste la pestaña antes de que terminara, abre tu biblioteca: arriba aparecen las grabaciones guardadas en esta computadora, listas para descargar.',
       ],
     },
@@ -309,7 +309,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'The progress bar is split by chapters: hover a part to see its name.',
         'Shortcuts: K or space plays and pauses, J and L go back and forward 5 seconds, M mutes, A turns captions on or off, S changes the speed, T switches theater mode, F goes full screen and P opens picture-in-picture.',
-        'Speeds go from 0.5× to 2.5×. PANTALAI remembers the speed you like.',
+        'Speeds go from 0.5× to 2.5×. Pantalay remembers the speed you like.',
       ],
     },
     es: {
@@ -318,7 +318,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'La barra de progreso está partida por capítulos: pasa el mouse por una parte para ver su nombre.',
         'Atajos: K o la barra espaciadora reproducen y pausan, J y L van 5 segundos atrás y adelante, M silencia, A enciende o apaga los subtítulos, S cambia la velocidad, T cambia el modo teatro, F pone pantalla completa y P abre la imagen en imagen.',
-        'Las velocidades van de 0.5× a 2.5×. PANTALAI recuerda la velocidad que te gusta.',
+        'Las velocidades van de 0.5× a 2.5×. Pantalay recuerda la velocidad que te gusta.',
       ],
     },
   },
@@ -334,7 +334,7 @@ export const GUIAS: Guia[] = [
         'Open your video and press Edit.',
         'Trim: move Start and End to cut the beginning and the end. “Use current time” takes the minute you are watching.',
         'Cut by transcript: tap a sentence to remove that part. Tap it again to bring it back.',
-        'Remove silences: PANTALAI listens to the audio, finds long pauses and cuts them for you.',
+        'Remove silences: Pantalay listens to the audio, finds long pauses and cuts them for you.',
         'Turn on Preview to watch the final version. Edits never touch your original file, so you can undo anything later. Press Save when you are happy.',
       ],
     },
@@ -345,7 +345,7 @@ export const GUIAS: Guia[] = [
         'Abre tu video y toca Editar.',
         'Recortar: mueve Inicio y Final para quitar el principio y el final. «Usar el minuto actual» toma el minuto que estás viendo.',
         'Cortar con la transcripción: toca una frase para quitar esa parte. Tócala otra vez para devolverla.',
-        'Quitar silencios: PANTALAI escucha el audio, encuentra las pausas largas y las corta por ti.',
+        'Quitar silencios: Pantalay escucha el audio, encuentra las pausas largas y las corta por ti.',
         'Enciende Vista previa para ver cómo queda. Editar nunca toca tu archivo original, así que puedes deshacer cualquier cosa después. Toca Guardar cuando te guste.',
       ],
     },
@@ -356,7 +356,7 @@ export const GUIAS: Guia[] = [
     icono: '📑',
     en: {
       titulo: 'Chapters, title and summary',
-      resumen: 'Let PANTALAI suggest them from what you said, or write your own.',
+      resumen: 'Let Pantalay suggest them from what you said, or write your own.',
       cuerpo: [
         'In the editor, “Suggest title from transcript” proposes a title from your first words. You can change it any time.',
         'Generate chapters splits the video where you paused, using your own words as names. You can rename, add or delete chapters.',
@@ -365,7 +365,7 @@ export const GUIAS: Guia[] = [
     },
     es: {
       titulo: 'Capítulos, título y resumen',
-      resumen: 'Deja que PANTALAI los sugiera con lo que dijiste, o escríbelos tú.',
+      resumen: 'Deja que Pantalay los sugiera con lo que dijiste, o escríbelos tú.',
       cuerpo: [
         'En el editor, «Sugerir título con la transcripción» propone un título con tus primeras palabras. Lo puedes cambiar cuando quieras.',
         'Crear capítulos parte el video donde hiciste pausas, con tus propias palabras como nombre. Puedes renombrar, agregar o borrar capítulos.',
@@ -435,7 +435,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Open your video and press Edit. If AI found filler sounds, you will see “Remove filler words” with how many it found and how many seconds it saves.',
         'Press it and those moments are skipped when people watch. Turn on Preview to hear the result.',
-        'Like every edit in PANTALAI, it never touches the original file: press “Bring back all cuts” to undo it.',
+        'Like every edit in Pantalay, it never touches the original file: press “Bring back all cuts” to undo it.',
       ],
     },
     es: {
@@ -444,7 +444,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Abre tu video y toca Editar. Si la IA encontró muletillas, verás «Quitar muletillas» con cuántas encontró y cuántos segundos ahorra.',
         'Tócalo y esos momentos se saltan cuando alguien lo ve. Enciende Vista previa para escuchar cómo queda.',
-        'Como toda edición en PANTALAI, nunca toca el archivo original: toca «Devolver todos los cortes» para deshacerlo.',
+        'Como toda edición en Pantalay, nunca toca el archivo original: toca «Devolver todos los cortes» para deshacerlo.',
       ],
     },
   },

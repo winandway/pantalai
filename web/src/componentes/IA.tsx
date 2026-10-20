@@ -245,11 +245,11 @@ ${doc.pasos
       }</li>`,
   )
   .join('\n')}
-</ol><p>${escapar(doc.cierre)}</p><p style="color:#6b7280;font-size:13px">PANTALAI · <a href="${enlace}">${enlace}</a></p></body>`;
+</ol><p>${escapar(doc.cierre)}</p><p style="color:#6b7280;font-size:13px">Pantalay · <a href="${enlace}">${enlace}</a></p></body>`;
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${doc.titulo.replace(/[^\p{L}\p{N} _-]/gu, '').slice(0, 60) || 'pantalai'}.html`;
+    a.download = `${doc.titulo.replace(/[^\p{L}\p{N} _-]/gu, '').slice(0, 60) || 'pantalay'}.html`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }

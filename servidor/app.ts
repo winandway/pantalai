@@ -1025,7 +1025,7 @@ app.get('/media/:id/video', async (c) => {
   h.set('Cache-Control', v.privacidad === 'enlace' ? 'private, no-cache' : 'private, no-store');
   h.set('ETag', obj.httpEtag);
   if (descargar) {
-    const nombre = v.titulo.replace(/[^\p{L}\p{N} _-]/gu, '').slice(0, 80) || 'pantalai';
+    const nombre = v.titulo.replace(/[^\p{L}\p{N} _-]/gu, '').slice(0, 80) || 'pantalay';
     h.set(
       'Content-Disposition',
       `attachment; filename="${nombre}.${v.tipo.includes('mp4') ? 'mp4' : 'webm'}"`,
@@ -1061,7 +1061,7 @@ function escaparAtributo(t: string): string {
 }
 
 async function paginaApp(c: C): Promise<Response> {
-  if (!c.env.ASSETS) return c.text('PANTALAI', 200);
+  if (!c.env.ASSETS) return c.text('Pantalay', 200);
   const origen = new URL(c.req.url).origin;
   // La página base es app.html; algunos servidores de estáticos redirigen «/app.html» a «/app»: se sigue una vez.
   let r = await c.env.ASSETS.fetch(new Request(`${origen}/app.html`));
@@ -1070,7 +1070,7 @@ async function paginaApp(c: C): Promise<Response> {
     r = await c.env.ASSETS.fetch(new Request(new URL(destino, origen)));
   if (!r.ok) {
     console.error('página base no encontrada', r.status);
-    return c.text('PANTALAI', 500);
+    return c.text('Pantalay', 500);
   }
   return new Response(r.body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
@@ -1081,8 +1081,8 @@ app.get('/v/:id', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
   if (!v || v.estado !== 'listo' || v.privacidad !== 'enlace') return pagina;
   const origen = new URL(c.req.url).origin;
-  const titulo = escaparAtributo(`${v.titulo} · PANTALAI`);
-  const desc = escaparAtributo(v.descripcion.slice(0, 200) || 'Video on PANTALAI');
+  const titulo = escaparAtributo(`${v.titulo} · Pantalay`);
+  const desc = escaparAtributo(v.descripcion.slice(0, 200) || 'Video on Pantalay');
   const imagen = v.tiene_miniatura ? `${origen}/media/${v.id}/miniatura` : `${origen}/og.png`;
   const html = (await pagina.text())
     .replace(/<title>[^<]*<\/title>/, `<title>${titulo}</title>`)
@@ -1096,7 +1096,7 @@ app.get('/v/:id', async (c) => {
 app.all('/datos/*', (c) => err(c, 404, 'ruta'));
 
 app.get('*', async (c) => {
-  if (!c.env.ASSETS) return c.text('PANTALAI', 200);
+  if (!c.env.ASSETS) return c.text('Pantalay', 200);
   const r = await c.env.ASSETS.fetch(c.req.raw);
   // Copia con cabeceras propias: las del almacén de estáticos no se pueden modificar.
   if (r.status !== 404) return new Response(r.body, r);
