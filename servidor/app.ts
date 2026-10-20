@@ -11,6 +11,17 @@ import {
   sitemap,
 } from './dominio';
 import { cobroActivo, esPlan, limitesDe, PRECIOS, type Limites, type Plan } from './planes';
+import {
+  cancelarAlFinal,
+  crearCliente,
+  crearSuscripcion,
+  ErrorPago,
+  firmaValida,
+  leerAviso,
+  pagoListo,
+  precioDe,
+  type EnvPago,
+} from './pagos';
 import { z } from 'zod';
 import {
   CABECERAS_SEGURIDAD,
@@ -41,7 +52,7 @@ import {
   type Segmento,
 } from './ia/motor';
 
-export type Env = {
+export type Env = EnvPago & {
   DB: D1Database;
   BUCKET: R2Bucket;
   ASSETS?: Fetcher;
@@ -229,7 +240,9 @@ app.use('*', async (c, next) => {
 
 // Las escrituras exigen una cabecera propia: un formulario de otro sitio no la puede mandar.
 app.use('/datos/*', async (c, next) => {
-  if (c.req.method !== 'GET' && c.req.method !== 'HEAD' && c.req.header('x-pantalai') !== '1') {
+  // El aviso de Stripe no trae nuestra cabecera: se protege con su firma (ver /datos/pago/aviso).
+  const esAviso = new URL(c.req.url).pathname === '/datos/pago/aviso';
+  if (!esAviso && c.req.method !== 'GET' && c.req.method !== 'HEAD' && c.req.header('x-pantalai') !== '1') {
     return err(c, 403, 'origen');
   }
   await next();
@@ -269,7 +282,15 @@ app.get('/datos/salud', async (c) => {
     ia.gasto = 'error';
   }
   return c.json(
-    { ok, piezas, ia, turnstile: Boolean(c.env.TURNSTILE_SECRET), commit: COMMIT },
+    {
+      ok,
+      piezas,
+      ia,
+      turnstile: Boolean(c.env.TURNSTILE_SECRET),
+      // Canario del cobro: claves de Stripe puestas (secreta, publicable y la del aviso) y límites encendidos.
+      pago: { listo: pagoListo(c.env), cobro_activo: cobroActivo(c.env) },
+      commit: COMMIT,
+    },
     ok ? 200 : 500,
     {
       'Cache-Control': 'no-store',
@@ -363,9 +384,121 @@ async function planDe(c: C, usuarioId: string): Promise<{ plan: Plan; limites: L
 
 app.get('/datos/plan', requiereSesion, async (c) => {
   const p = await planDe(c, c.get('usuario')!.id);
-  return c.json({ ...p, cobro_activo: cobroActivo(c.env), precios: PRECIOS }, 200, {
-    'Cache-Control': 'no-store',
-  });
+  const s = await c.env.DB.prepare('SELECT ciclo FROM pagos_stripe WHERE usuario_id = ?')
+    .bind(c.get('usuario')!.id)
+    .first<{ ciclo: string | null }>();
+  return c.json(
+    {
+      ...p,
+      ciclo: p.plan === 'starter' ? null : (s?.ciclo ?? null),
+      cobro_activo: cobroActivo(c.env),
+      pago_listo: pagoListo(c.env),
+      precios: PRECIOS,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+// ---------- cobro con Stripe (dentro de la página) ----------
+
+const DIAS_PRUEBA = 14;
+
+app.get('/datos/pago/config', (c) =>
+  c.json(
+    {
+      listo: pagoListo(c.env),
+      publicable: pagoListo(c.env) ? c.env.STRIPE_PUBLICABLE : null,
+      dias_prueba: DIAS_PRUEBA,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  ),
+);
+
+const esquemaSuscribir = z.object({
+  plan: z.enum(['business', 'business_ia']),
+  ciclo: z.enum(['mensual', 'anual']),
+});
+
+app.post('/datos/pago/suscripcion', requiereSesion, async (c) => {
+  if (!pagoListo(c.env)) return err(c, 503, 'pago_apagado');
+  const u = c.get('usuario')!;
+  if (!(await dentroDelLimite(c.env.DB, 'pago', u.id, 10, 60 * 60_000))) return err(c, 429, 'demasiados');
+  const d = await cuerpo(c, esquemaSuscribir);
+  if (!d) return err(c, 400, 'datos');
+  if ((await planDe(c, u.id)).plan === d.plan) return err(c, 409, 'ya_suscrito');
+  try {
+    const fila = await c.env.DB.prepare('SELECT cliente, uso_prueba FROM pagos_stripe WHERE usuario_id = ?')
+      .bind(u.id)
+      .first<{ cliente: string; uso_prueba: number }>();
+    const cliente = fila?.cliente ?? (await crearCliente(c.env, u));
+    const precio = await precioDe(c.env, d.plan, d.ciclo);
+    // La prueba gratis es una sola vez por cuenta.
+    const dias = fila?.uso_prueba ? 0 : DIAS_PRUEBA;
+    const intento = await crearSuscripcion(c.env, cliente, precio, {
+      usuario_id: u.id,
+      plan: d.plan,
+      ciclo: d.ciclo,
+      diasPrueba: dias,
+    });
+    await c.env.DB.prepare(
+      `INSERT INTO pagos_stripe (usuario_id, cliente, suscripcion, ciclo, uso_prueba, actualizado)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (usuario_id) DO UPDATE SET cliente = excluded.cliente, suscripcion = excluded.suscripcion,
+         ciclo = excluded.ciclo, uso_prueba = MAX(pagos_stripe.uso_prueba, excluded.uso_prueba),
+         actualizado = excluded.actualizado`,
+    )
+      .bind(u.id, cliente, intento.suscripcion, d.ciclo, dias > 0 ? 1 : 0, Date.now())
+      .run();
+    return c.json({ ...intento, publicable: c.env.STRIPE_PUBLICABLE, dias_prueba: dias });
+  } catch (e) {
+    console.error('pago: suscripción', e);
+    return err(c, 502, e instanceof ErrorPago ? e.codigo : 'stripe');
+  }
+});
+
+app.post('/datos/pago/cancelar', requiereSesion, async (c) => {
+  const f = await c.env.DB.prepare('SELECT suscripcion FROM pagos_stripe WHERE usuario_id = ?')
+    .bind(c.get('usuario')!.id)
+    .first<{ suscripcion: string | null }>();
+  if (!f?.suscripcion) return err(c, 404, 'no_existe');
+  try {
+    await cancelarAlFinal(c.env, f.suscripcion);
+    return c.json({ ok: true });
+  } catch (e) {
+    console.error('pago: cancelar', e);
+    return err(c, 502, 'stripe');
+  }
+});
+
+// Aviso de Stripe: la única fuente de verdad del plan pagado. Sin firma válida no se toca nada.
+app.post('/datos/pago/aviso', async (c) => {
+  const texto = await c.req.text();
+  if (!(await firmaValida(texto, c.req.header('stripe-signature'), c.env.STRIPE_WEBHOOK_SECRETO)))
+    return err(c, 400, 'firma');
+  let evento: Parameters<typeof leerAviso>[0];
+  try {
+    evento = JSON.parse(texto) as Parameters<typeof leerAviso>[0];
+  } catch {
+    return err(c, 400, 'datos');
+  }
+  const cambio = leerAviso(evento);
+  if (!cambio) return c.json({ ok: true, ignorado: true });
+  const ahora = Date.now();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO suscripciones (usuario_id, plan, fundador, estado, actualizado) VALUES (?, ?, 1, ?, ?)
+       ON CONFLICT (usuario_id) DO UPDATE SET plan = excluded.plan, fundador = 1, estado = excluded.estado,
+         actualizado = excluded.actualizado`,
+    ).bind(cambio.usuario_id, cambio.plan, cambio.activa ? 'activa' : 'inactiva', ahora),
+    c.env.DB.prepare(
+      `INSERT INTO pagos_stripe (usuario_id, cliente, suscripcion, ciclo, actualizado) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (usuario_id) DO UPDATE SET cliente = excluded.cliente, suscripcion = excluded.suscripcion,
+         ciclo = excluded.ciclo, actualizado = excluded.actualizado`,
+    ).bind(cambio.usuario_id, cambio.cliente, cambio.suscripcion, cambio.ciclo, ahora),
+  ]);
+  return c.json({ ok: true });
 });
 
 /** Corta la petición si el plan no incluye la IA. */

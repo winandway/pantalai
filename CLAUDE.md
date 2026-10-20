@@ -14,6 +14,7 @@ pantalay.com está libre; pantalai no). Por dentro TODO sigue llamándose PANTAL
 - `CANDADOS.md` — lo que funciona y no se toca, con su prueba.
 - `PENDIENTES.md` — la fila; los 👤 dependen de Richard.
 - `docs/CONTRATO-YADOMINIOS.md` — cómo se publica.
+- `docs/VERIFICAR-PAGOS.md` — estado real del cobro con Stripe (qué está probado y qué no). Leer antes de hablar de pagos.
 
 ## REA
 

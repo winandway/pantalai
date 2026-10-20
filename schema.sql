@@ -142,3 +142,13 @@ CREATE TABLE IF NOT EXISTS suscripciones (
   estado TEXT NOT NULL DEFAULT 'activa',
   actualizado INTEGER NOT NULL
 );
+
+-- Cliente y suscripción de Stripe de cada cuenta (20 oct 2026). El plan vigente vive en «suscripciones».
+CREATE TABLE IF NOT EXISTS pagos_stripe (
+  usuario_id TEXT PRIMARY KEY,
+  cliente TEXT NOT NULL,
+  suscripcion TEXT,
+  ciclo TEXT,
+  uso_prueba INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);

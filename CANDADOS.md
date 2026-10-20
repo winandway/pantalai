@@ -227,3 +227,12 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   páginas. No tocar el registro TXT de Google en el DNS de pantalay.com: si se borra, se pierde la verificación.
 - Prueba: `pruebas/dominio.test.ts` «C-GOOGLE» (comprobada en rojo quitando la etiqueta). Además, cada publicación
   comprueba en vivo que el sitemap responde y trae pantalay.com (Action `publicar`).
+
+## C-PAGOS (20 oct 2026) — construido, SIN PROBAR con Stripe real
+
+- Cobro dentro de la página con el Payment Element de Stripe (`web/src/paginas/Pagar.tsx`, `servidor/pagos.ts`).
+  Estado y cómo se prueba: `docs/VERIFICAR-PAGOS.md` (leerlo antes de afirmar nada sobre pagos).
+- El plan pagado solo lo enciende el aviso firmado de Stripe. La ruta del aviso no pide la cabecera `x-pantalai`
+  (Stripe no la manda): la protege la firma.
+- Versión de la API fija (`2024-06-20`) para que la factura traiga su PaymentIntent.
+- Prueba: `pruebas/pagos.test.ts` (comprobada en rojo aceptando cualquier firma).

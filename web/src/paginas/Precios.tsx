@@ -174,8 +174,9 @@ export function Precios() {
     m.name = 'robots';
     m.content = 'noindex';
     document.head.appendChild(m);
-    pedir<{ cobro_activo: boolean }>('/datos/plan')
-      .then((r) => setCobro(r.cobro_activo))
+    // Los botones de compra se encienden cuando el cobro con Stripe está conectado.
+    pedir<{ listo: boolean }>('/datos/pago/config')
+      .then((r) => setCobro(r.listo))
       .catch(() => undefined);
     return () => {
       document.head.removeChild(m);
@@ -230,13 +231,17 @@ export function Precios() {
               >
                 {t('preciosContactar')}
               </a>
-            ) : (
-              <button
-                type="button"
+            ) : cobro ? (
+              <a
                 className={`boton ancho ${p.popular ? '' : 'secundario'}`}
-                disabled={!cobro}
+                href={`/checkout?plan=${p.id}&ciclo=${anual ? 'anual' : 'mensual'}`}
+                onClick={alClicEnlace}
               >
-                {cobro ? t('preciosFundadorBoton') : t('preciosProximamente')}
+                {t('preciosFundadorBoton')}
+              </a>
+            ) : (
+              <button type="button" className={`boton ancho ${p.popular ? '' : 'secundario'}`} disabled>
+                {t('preciosProximamente')}
               </button>
             )}
             <p className="precio-suma">{p.suma[idioma]}</p>

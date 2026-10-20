@@ -2364,3 +2364,74 @@ main {
     grid-template-columns: 1fr;
   }
 }
+
+/* Pagar dentro de Pantalay */
+.pagar {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 28px 16px 60px;
+}
+.pagar h1 {
+  margin: 12px 0 10px;
+}
+.pagar-ciclos {
+  display: grid;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  margin: 18px 0 8px;
+}
+.pagar-ciclos legend {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.pagar-ciclo {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.pagar-ciclo.activo {
+  border: 2px solid var(--exito);
+  background: #f2fbf5;
+}
+.pagar-ciclo strong {
+  font-size: 1.3rem;
+  text-align: right;
+}
+.pagar-ciclo strong small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--gris);
+}
+.pagar-detalle {
+  grid-column: 2 / 4;
+  font-size: 13px;
+  color: var(--tinta-suave);
+}
+.pagar-tarjeta {
+  margin: 18px 0 12px;
+}
+.pagar-tarjeta:empty {
+  margin: 0;
+}
+.pagar-hecho {
+  text-align: center;
+  padding-top: 40px;
+}
+.pagar-check {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--exito);
+  color: #fff;
+  font-size: 34px;
+}

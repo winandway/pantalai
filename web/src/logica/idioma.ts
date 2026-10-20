@@ -144,6 +144,25 @@ const en = {
   preciosComparar: 'Compare plans',
   preciosNota:
     'Prices in US dollars. Taxes may apply. Founder pricing is locked for as long as your subscription stays active.',
+  verPlanes: 'See plans',
+  procesandoPago: 'Processing…',
+  pagoListo: 'You’re all set',
+  pagoListoAyuda:
+    'Your {plan} plan is active. Founder pricing is locked in for as long as your plan stays active.',
+  recomendado: 'BEST VALUE',
+  ahorras: 'you save',
+  cancelaCuandoQuieras: 'Cancel anytime',
+  precioListaAyuda: 'Regular price {lista} per user / month. With founder pricing you pay half, for life.',
+  continuarPago: 'Continue to payment',
+  empezarPrueba: 'Start my {dias}-day free trial',
+  pagarAhora: 'Subscribe now',
+  pagoSeguro: 'Secure payment processed by Stripe. Pantalay never sees or stores your card number.',
+  pruebaAyuda:
+    'Free for {dias} days: we only charge your card when the trial ends, and you can cancel before.',
+  'error.tarjeta': 'Your card was declined. Check the details or try another card.',
+  'error.stripe': 'We couldn’t reach the payment service. Try again in a moment.',
+  'error.pago_apagado': 'Paid plans are coming soon.',
+  'error.ya_suscrito': 'You already have this plan.',
   nivelesSonido: 'Sound levels',
   sonidoComputadora: 'Computer sound',
   sinSonidoSistema:
@@ -458,6 +477,26 @@ const es: Record<Clave, string> = {
   preciosComparar: 'Compara los planes',
   preciosNota:
     'Precios en dólares estadounidenses. Pueden aplicar impuestos. El precio de fundador se mantiene mientras tu suscripción siga activa.',
+  verPlanes: 'Ver los planes',
+  procesandoPago: 'Procesando…',
+  pagoListo: 'Todo listo',
+  pagoListoAyuda:
+    'Tu plan {plan} está activo. El precio de fundador queda fijo mientras tu plan siga activo.',
+  recomendado: 'EL MEJOR PRECIO',
+  ahorras: 'ahorras',
+  cancelaCuandoQuieras: 'Cancela cuando quieras',
+  precioListaAyuda:
+    'Precio normal {lista} por usuario al mes. Con el precio de fundador pagas la mitad, de por vida.',
+  continuarPago: 'Seguir al pago',
+  empezarPrueba: 'Empezar mi prueba gratis de {dias} días',
+  pagarAhora: 'Suscribirme ahora',
+  pagoSeguro: 'Pago seguro procesado por Stripe. Pantalay nunca ve ni guarda el número de tu tarjeta.',
+  pruebaAyuda:
+    'Gratis por {dias} días: solo cobramos a tu tarjeta cuando termina la prueba, y puedes cancelar antes.',
+  'error.tarjeta': 'Tu tarjeta fue rechazada. Revisa los datos o prueba con otra tarjeta.',
+  'error.stripe': 'No pudimos conectar con el servicio de pago. Prueba otra vez en un momento.',
+  'error.pago_apagado': 'Los planes pagos llegan muy pronto.',
+  'error.ya_suscrito': 'Ya tienes este plan.',
   nivelesSonido: 'Niveles de sonido',
   sonidoComputadora: 'Sonido de la computadora',
   sinSonidoSistema:
