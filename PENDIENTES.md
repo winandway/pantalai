@@ -2,9 +2,15 @@
 
 ## 👤 Depende de Richard
 
+- 👤 Comprar pantalay.com (14 USD al año en YaDominios). Destraba: conectarlo al sitio y cambiar el pie, la
+  tarjeta para redes y los enlaces a pantalay.com (lo hago yo con la llave del hosting).
+
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
 
 ## De mi lado
+
+- [x] Marca pública Pantalay (19 oct 2026), portada con cabeceras de seguridad, guía «Empieza aquí» con
+      capturas originales tomadas del sitio publicado con la IA real.
 
 - [x] Presupuesto de 10 USD en Google Cloud puesto por Richard (19 oct 2026).
 - [x] Prueba en vivo con IA real en español (C-IA-VIVO) en verde; corregidas las tareas.
