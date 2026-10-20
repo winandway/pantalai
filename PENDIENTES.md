@@ -3,10 +3,11 @@
 ## 👤 Depende de Richard
 
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
-- 👤 Presupuesto de 10 USD en Google Cloud para el proyecto de la llave de Gemini (aviso por correo). El tope
-  duro ya está en el código.
 
 ## De mi lado
+
+- [x] Presupuesto de 10 USD en Google Cloud puesto por Richard (19 oct 2026).
+- [x] Prueba en vivo con IA real en español (C-IA-VIVO) en verde; corregidas las tareas.
 
 - [x] Oído encendido en producción (19 oct 2026): token de Cloudflare «pantalai-whisper» en el sitio; prueba real
       en vivo con voz: transcripción exacta en frases y muletillas «um» y «uh» encontradas.

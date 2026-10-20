@@ -109,7 +109,7 @@ test('IA real en vivo: español, dos pedazos, título, resumen, capítulos, tare
   // Editor: quitar muletillas y guardar.
   await page.goto(`/v/${id}/edit`);
   await page.getByRole('button', { name: /Remove filler words \(/ }).click();
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/v/${id}$`));
   const editado = (await api<{ video: { cortes: unknown[] } }>(page, `/datos/videos/${id}`)).datos.video;
   expect(editado.cortes.length).toBeGreaterThanOrEqual(ia.muletillas.length);

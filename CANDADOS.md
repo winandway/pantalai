@@ -72,3 +72,13 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   cambió. Si la IA falla, el video sigue igual y aparece «Intentar otra vez».
 - Prueba: `e2e/ia.spec.ts` (grabación real, IA simulada) y `pruebas/ia.test.ts` (rutas de punta a punta).
 - Ojo: Whisper suele borrar las muletillas; la frase de arranque (`initial_prompt`) las pide escritas para poder quitarlas.
+
+## C-IA-VIVO (19 oct 2026)
+
+- Protege: la IA REAL en producción, en español, con un video de 2 min 27 s (dos pedazos de audio): título y
+  resumen del tema, capítulos que arrancan en 0, las dos tareas pendientes exactas, muletillas, quitar muletillas
+  en el editor, Generar, comentario anónimo, privacidad y limpieza. Gasta menos de 1 centavo (medido: 0,0036 USD).
+- Cómo se corre: `VIVO=1 URL_BASE=https://pantalai.sitios.dev npx playwright test e2e/vivo.spec.ts`
+- Lo que encontró la primera vez: las «tareas» salían como los pasos del procedimiento y se perdían los pendientes
+  reales. Se arregló definiendo tarea como «trabajo pendiente después del video» en la instrucción de `analizar`.
+  No volver a la definición corta.
