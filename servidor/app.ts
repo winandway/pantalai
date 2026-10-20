@@ -65,6 +65,8 @@ export type Env = EnvPago & {
   IA_TOPE_MINUTOS_DIA?: string;
   /** Códigos de verificación de Google Search Console (meta y archivo), separados por coma. */
   GOOGLE_VERIFICACION?: string;
+  /** Correos de las cuentas superadmin (Soporte), separados por coma. Sin esto el panel no existe para nadie. */
+  SUPERADMIN_CORREOS?: string;
   /** «1» enciende los límites de los planes (solo con la pasarela de pago probada). */
   COBRO_ACTIVO?: string;
 };
@@ -252,6 +254,34 @@ const requiereSesion = async (c: C, next: () => Promise<void>) => {
   if (!c.get('usuario')) return err(c, 401, 'sin_sesion');
   await next();
 };
+
+// ---------- superadmin ----------
+
+/** Superadmin = cuenta con sesión cuyo correo está en la variable del sitio SUPERADMIN_CORREOS. */
+function esSuperadmin(c: C): boolean {
+  const u = c.get('usuario');
+  if (!u) return false;
+  const lista = (c.env.SUPERADMIN_CORREOS ?? '')
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  return lista.includes(u.correo.toLowerCase());
+}
+
+const requiereSuperadmin = async (c: C, next: () => Promise<void>) => {
+  if (!c.get('usuario')) return err(c, 401, 'sin_sesion');
+  // Igual que si no existiera: a nadie más se le confirma que el panel está aquí.
+  if (!esSuperadmin(c)) return err(c, 404, 'ruta');
+  await next();
+};
+
+async function anotarAdmin(c: C, accion: string, objetivo = '') {
+  await c.env.DB.prepare(
+    'INSERT INTO registro_admin (admin_id, accion, objetivo, momento) VALUES (?, ?, ?, ?)',
+  )
+    .bind(c.get('usuario')!.id, accion, objetivo, Date.now())
+    .run();
+}
 
 // ---------- salud y configuración ----------
 
@@ -506,7 +536,101 @@ async function exigirIA(c: C): Promise<Response | null> {
   return (await planDe(c, c.get('usuario')!.id)).limites.ia ? null : err(c, 402, 'plan_ia');
 }
 
-app.get('/datos/yo', (c) => c.json({ usuario: c.get('usuario') }, 200, { 'Cache-Control': 'no-store' }));
+app.get('/datos/yo', (c) =>
+  c.json({ usuario: c.get('usuario'), superadmin: esSuperadmin(c) }, 200, { 'Cache-Control': 'no-store' }),
+);
+
+app.get('/datos/admin/resumen', requiereSuperadmin, async (c) => {
+  const db = c.env.DB;
+  const semana = Date.now() - 7 * 24 * 3600 * 1000;
+  const [u, nuevos, v, planes, ultimos] = await Promise.all([
+    db.prepare('SELECT COUNT(*) AS n FROM usuarios').first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) AS n FROM usuarios WHERE creado > ?').bind(semana).first<{ n: number }>(),
+    db
+      .prepare(
+        `SELECT COUNT(*) AS n, COALESCE(SUM(duracion), 0) AS segundos, COALESCE(SUM(bytes), 0) AS bytes,
+           COALESCE(SUM(CASE WHEN creado > ? THEN 1 ELSE 0 END), 0) AS semana FROM videos`,
+      )
+      .bind(semana)
+      .first<{ n: number; segundos: number; bytes: number; semana: number }>(),
+    db
+      .prepare("SELECT plan, COUNT(*) AS n FROM suscripciones WHERE estado = 'activa' GROUP BY plan")
+      .all<{ plan: string; n: number }>(),
+    db
+      .prepare(
+        `SELECT r.accion, r.objetivo, r.momento, u.nombre FROM registro_admin r
+         LEFT JOIN usuarios u ON u.id = r.admin_id ORDER BY r.id DESC LIMIT 20`,
+      )
+      .all<{ accion: string; objetivo: string; momento: number; nombre: string | null }>(),
+  ]);
+  const pagos = Object.fromEntries(planes.results.map((p) => [p.plan, p.n]));
+  const pagados = Object.values(pagos).reduce((a, b) => a + b, 0);
+  return c.json(
+    {
+      usuarios: u?.n ?? 0,
+      usuarios_semana: nuevos?.n ?? 0,
+      videos: v?.n ?? 0,
+      videos_semana: v?.semana ?? 0,
+      minutos: Math.round((v?.segundos ?? 0) / 60),
+      bytes: v?.bytes ?? 0,
+      planes: { starter: Math.max(0, (u?.n ?? 0) - pagados), ...pagos },
+      registro: ultimos.results,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.get('/datos/admin/usuarios', requiereSuperadmin, async (c) => {
+  const q = `%${(c.req.query('q') ?? '').trim().toLowerCase().slice(0, 100)}%`;
+  const r = await c.env.DB.prepare(
+    `SELECT u.id, u.nombre, u.correo, u.creado,
+       COALESCE(s.plan, 'starter') AS plan, COALESCE(s.estado, '') AS estado,
+       (SELECT COUNT(*) FROM videos v WHERE v.usuario_id = u.id) AS videos,
+       (SELECT COALESCE(SUM(v.duracion), 0) FROM videos v WHERE v.usuario_id = u.id) AS segundos,
+       (SELECT MAX(v.creado) FROM videos v WHERE v.usuario_id = u.id) AS ultimo
+     FROM usuarios u LEFT JOIN suscripciones s ON s.usuario_id = u.id
+     WHERE lower(u.nombre) LIKE ? OR lower(u.correo) LIKE ?
+     ORDER BY u.creado DESC LIMIT 500`,
+  )
+    .bind(q, q)
+    .all();
+  return c.json({ usuarios: r.results }, 200, { 'Cache-Control': 'no-store' });
+});
+
+app.get('/datos/admin/videos', requiereSuperadmin, async (c) => {
+  const q = `%${(c.req.query('q') ?? '').trim().toLowerCase().slice(0, 100)}%`;
+  const usuario = c.req.query('usuario') ?? '';
+  const r = await c.env.DB.prepare(
+    `SELECT v.id, v.titulo, v.estado, v.duracion, v.bytes, v.privacidad, v.tiene_miniatura, v.creado,
+       u.id AS usuario_id, u.nombre AS usuario, u.correo
+     FROM videos v JOIN usuarios u ON u.id = v.usuario_id
+     WHERE (? = '' OR v.usuario_id = ?) AND (lower(v.titulo) LIKE ? OR lower(u.correo) LIKE ?)
+     ORDER BY v.creado DESC LIMIT 300`,
+  )
+    .bind(usuario, usuario, q, q)
+    .all();
+  return c.json({ videos: r.results }, 200, { 'Cache-Control': 'no-store' });
+});
+
+// Mirar un video ajeno queda anotado en el registro.
+app.post('/datos/admin/videos/:id/visto', requiereSuperadmin, async (c) => {
+  const v = await buscarVideo(c, c.req.param('id') ?? '');
+  if (!v) return err(c, 404, 'no_existe');
+  await anotarAdmin(c, 'ver_video', `${v.id} · ${v.titulo}`);
+  return c.json({ ok: true });
+});
+
+// Si un video está mal, se saca del aire (pasa a privado). No se borra nada.
+app.post('/datos/admin/videos/:id/privado', requiereSuperadmin, async (c) => {
+  const v = await buscarVideo(c, c.req.param('id') ?? '');
+  if (!v) return err(c, 404, 'no_existe');
+  await c.env.DB.prepare("UPDATE videos SET privacidad = 'privado', actualizado = ? WHERE id = ?")
+    .bind(Date.now(), v.id)
+    .run();
+  await anotarAdmin(c, 'hacer_privado', `${v.id} · ${v.titulo}`);
+  return c.json({ ok: true });
+});
 
 // ---------- carpetas ----------
 
@@ -1309,7 +1433,7 @@ app.post('/datos/videos/:id/mp4/completar', requiereSesion, async (c) => {
 app.get('/media/:id/video', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
   const u = c.get('usuario');
-  if (!v || v.estado !== 'listo' || !puedeVer(v, u)) return c.notFound();
+  if (!v || v.estado !== 'listo' || !(puedeVer(v, u) || esSuperadmin(c))) return c.notFound();
   const descargar = c.req.query('descargar') === '1';
   if (descargar && !v.permitir_descarga && u?.id !== v.usuario_id) return err(c, 403, 'descarga');
   // La copia MP4 (si ya existe) se usa al pedir formato=mp4 y SIEMPRE al descargar: es la que abren iPhone y Final Cut.
@@ -1360,7 +1484,7 @@ app.get('/media/:id/video', async (c) => {
 
 app.get('/media/:id/miniatura', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
-  if (!v || !v.tiene_miniatura || !puedeVer(v, c.get('usuario'))) return c.notFound();
+  if (!v || !v.tiene_miniatura || !(puedeVer(v, c.get('usuario')) || esSuperadmin(c))) return c.notFound();
   const obj = await c.env.BUCKET.get(claveMiniatura(v.id));
   if (!obj) return c.notFound();
   const h = new Headers();

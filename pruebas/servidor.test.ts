@@ -7,6 +7,7 @@ type Env = {
   BUCKET: ReturnType<typeof almacenFalso>;
   TURNSTILE_SECRET?: string;
   COBRO_ACTIVO?: string;
+  SUPERADMIN_CORREOS?: string;
 };
 let env: Env;
 
@@ -549,5 +550,52 @@ describe('páginas y salud', () => {
   it('las rutas de datos desconocidas dan 404 en JSON', async () => {
     const r = await cliente()('/datos/nada');
     expect(r.status).toBe(404);
+  });
+});
+
+describe('CANDADO C-SUPERADMIN: panel solo para las cuentas Soporte de la lista', () => {
+  it('nadie más lo ve (ni sabe que existe); el superadmin ve usuarios, planes y videos, y todo queda anotado', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com' } as typeof env;
+    const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    const { id } = await videoListo(ana);
+    await ana(`/datos/videos/${id}`, { method: 'PATCH', json: { privacidad: 'privado' } });
+    // Sin sesión: 401. Con una cuenta normal: 404, como si no existiera.
+    expect((await cliente('7.7.7.7')('/datos/admin/resumen')).status).toBe(401);
+    expect((await ana('/datos/admin/resumen')).status).toBe(404);
+    expect((await ana('/datos/admin/usuarios')).status).toBe(404);
+    expect(((await (await ana('/datos/yo')).json()) as { superadmin: boolean }).superadmin).toBe(false);
+
+    const admin = await registrado('Soporte Pantalay', 'Soporte@Example.com', '2.2.2.2');
+    expect(((await (await admin('/datos/yo')).json()) as { superadmin: boolean }).superadmin).toBe(true);
+    const r = (await (await admin('/datos/admin/resumen')).json()) as {
+      usuarios: number;
+      videos: number;
+      planes: Record<string, number>;
+    };
+    expect(r).toMatchObject({ usuarios: 2, videos: 1, planes: { starter: 2 } });
+    const u = (await (await admin('/datos/admin/usuarios?q=ana')).json()) as {
+      usuarios: { correo: string; plan: string; videos: number }[];
+    };
+    expect(u.usuarios).toEqual([
+      expect.objectContaining({ correo: 'ana@example.com', plan: 'starter', videos: 1 }),
+    ]);
+    const v = (await (await admin('/datos/admin/videos')).json()) as {
+      videos: { id: string; privacidad: string }[];
+    };
+    expect(v.videos[0]).toMatchObject({ id, privacidad: 'privado' });
+    // Puede ver el material aunque sea privado; un extraño no.
+    expect((await admin(`/media/${id}/video`)).status).toBe(200);
+    expect((await cliente('8.8.8.8')(`/media/${id}/video`)).status).toBe(404);
+    // Mirar y sacar del aire quedan en el registro.
+    await admin(`/datos/admin/videos/${id}/visto`, { method: 'POST' });
+    await ana(`/datos/videos/${id}`, { method: 'PATCH', json: { privacidad: 'enlace' } });
+    expect((await admin(`/datos/admin/videos/${id}/privado`, { method: 'POST' })).status).toBe(200);
+    const fin = (await (await admin('/datos/admin/resumen')).json()) as { registro: { accion: string }[] };
+    expect(fin.registro.map((x) => x.accion)).toEqual(['hacer_privado', 'ver_video']);
+    expect(
+      (await (await ana(`/datos/videos/${id}`)).json()) as { video: { privacidad: string } },
+    ).toMatchObject({
+      video: { privacidad: 'privado' },
+    });
   });
 });

@@ -236,3 +236,11 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   (Stripe no la manda): la protege la firma.
 - Versión de la API fija (`2024-06-20`) para que la factura traiga su PaymentIntent.
 - Prueba: `pruebas/pagos.test.ts` (comprobada en rojo aceptando cualquier firma).
+
+## C-SUPERADMIN (20 oct 2026)
+
+- Panel `/admin` (`web/src/paginas/Admin.tsx`, rutas `/datos/admin/*` en `servidor/app.ts`). Entra solo una cuenta con
+  sesión cuyo correo esté en la variable del sitio `SUPERADMIN_CORREOS`; a cualquier otra se le responde 404 (no se
+  confirma que exista). El superadmin puede ver los videos privados (solo `/media`); mirar y sacar del aire quedan en
+  la tabla `registro_admin`. No borra nada. Uso: `docs/SUPERADMIN.md`.
+- Prueba: `pruebas/servidor.test.ts` «C-SUPERADMIN» (comprobada en rojo dejando entrar a cualquiera).

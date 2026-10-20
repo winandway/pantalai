@@ -152,3 +152,12 @@ CREATE TABLE IF NOT EXISTS pagos_stripe (
   uso_prueba INTEGER NOT NULL DEFAULT 0,
   actualizado INTEGER NOT NULL
 );
+
+-- Registro de lo que hace el superadmin (20 oct 2026): quién miró qué y cuándo. Se ve en el propio panel.
+CREATE TABLE IF NOT EXISTS registro_admin (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id TEXT NOT NULL,
+  accion TEXT NOT NULL,
+  objetivo TEXT NOT NULL DEFAULT '',
+  momento INTEGER NOT NULL
+);

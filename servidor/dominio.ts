@@ -28,7 +28,7 @@ export function sitemap(): string {
 }
 
 export function robots(): string {
-  return `User-agent: *\nAllow: /\nDisallow: /datos/\nDisallow: /media/\nDisallow: /library\nDisallow: /record\n\nSitemap: ${DOMINIO}/sitemap.xml\n`;
+  return `User-agent: *\nAllow: /\nDisallow: /datos/\nDisallow: /media/\nDisallow: /library\nDisallow: /record\nDisallow: /checkout\n\nSitemap: ${DOMINIO}/sitemap.xml\n`;
 }
 
 // ---------- Google Search Console ----------
@@ -66,7 +66,7 @@ const escapar = (t: string) =>
 
 /** Título y resumen que ve Google en cada página pública (las guías de Docs llevan los suyos). */
 export function metaDeRuta(ruta: string): { titulo: string; descripcion: string; indexar: boolean } | null {
-  if (/^\/(library|record|embed\/|v\/[^/]+\/edit|pricing)/.test(ruta))
+  if (/^\/(library|record|embed\/|v\/[^/]+\/edit|pricing|admin|checkout)/.test(ruta))
     return { titulo: 'Pantalay', descripcion: '', indexar: false };
   if (ruta === '/docs' || ruta === '/docs/')
     return {
