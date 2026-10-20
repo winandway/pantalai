@@ -1,6 +1,7 @@
 // Servidor de PANTALAI. Corre en YaDominios Cloud como _worker.js.
 // Rutas de datos bajo /datos y archivos bajo /media (NUNCA /api: choca con los estáticos).
 import { Hono, type Context } from 'hono';
+import { DOMINIO, redireccion, robots, sitemap } from './dominio';
 import { z } from 'zod';
 import {
   CABECERAS_SEGURIDAD,
@@ -163,6 +164,17 @@ function puedeVer(v: FilaVideo, u: Usuario | null): boolean {
   if (u && u.id === v.usuario_id) return true;
   return v.estado === 'listo' && v.privacidad === 'enlace';
 }
+
+// ---------- dirección principal: pantalay.com ----------
+
+app.use('*', async (c, next) => {
+  const destino = redireccion(c.req.url, c.req.method);
+  if (destino) return c.redirect(destino, 301);
+  await next();
+});
+
+app.get('/sitemap.xml', (c) => c.body(sitemap(), 200, { 'content-type': 'application/xml; charset=utf-8' }));
+app.get('/robots.txt', (c) => c.text(robots()));
 
 // ---------- cabeceras y sesión en todas las peticiones ----------
 
@@ -1180,7 +1192,13 @@ async function paginaApp(c: C): Promise<Response> {
     console.error('página base no encontrada', r.status);
     return c.text('Pantalay', 500);
   }
-  return new Response(r.body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+  // Cada página dice cuál es su dirección oficial (en pantalay.com), aunque se abra desde otra.
+  const ruta = new URL(c.req.url).pathname;
+  const html = (await r.text()).replace(
+    /<link rel="canonical"[^>]*>/,
+    `<link rel="canonical" href="${DOMINIO}${ruta === '/' ? '/' : ruta.replace(/\/$/, '')}" />`,
+  );
+  return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
 // La página pública del video lleva su propia tarjeta para WhatsApp y redes.
@@ -1188,7 +1206,7 @@ app.get('/v/:id', async (c) => {
   const pagina = await paginaApp(c);
   const v = await buscarVideo(c, c.req.param('id'));
   if (!v || v.estado !== 'listo' || v.privacidad !== 'enlace') return pagina;
-  const origen = new URL(c.req.url).origin;
+  const origen = DOMINIO;
   const titulo = escaparAtributo(`${v.titulo} · Pantalay`);
   const desc = escaparAtributo(v.descripcion.slice(0, 200) || 'Video on Pantalay');
   const imagen = v.tiene_miniatura ? `${origen}/media/${v.id}/miniatura` : `${origen}/og.png`;

@@ -5,9 +5,6 @@
 - 👤 Recuperar sus 2 grabaciones de 5 min del 19 oct: abrir la Biblioteca en la MISMA computadora y navegador y
   tocar «Subir otra vez» en «Grabaciones guardadas en esta computadora».
 
-- 👤 Comprar pantalay.com (14 USD al año en YaDominios). Destraba: conectarlo al sitio y cambiar el pie, la
-  tarjeta para redes y los enlaces a pantalay.com (lo hago yo con la llave del hosting).
-
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
 
 ## De mi lado
@@ -34,6 +31,6 @@
 - [x] Lápices para dibujar mientras se graba (20 oct 2026, candado C-LAPICES).
 - [x] Sonido de la computadora encendido por defecto, sin filtros, con medidores y aviso (20 oct 2026, C-SONIDO-COMPUTADORA).
 - [ ] Dibujar ENCIMA de otros programas sin volver a Pantalay, y énfasis del cursor (necesita extensión de Chrome o app de escritorio).
-- [ ] Mapa del sitio (sitemap) con todas las guías de Docs para Google.
+- [x] Mapa del sitio con todas las guías de Docs y pantalay.com como dirección principal (20 oct 2026, C-DOMINIO).
 - [ ] Extensión de Chrome con modo «reporte de error» (consola y red).
 - [ ] Carpetas compartidas y espacios de equipo.

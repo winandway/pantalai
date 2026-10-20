@@ -124,7 +124,7 @@ export function Pie() {
   return (
     <footer className="pie">
       <span>
-        © {new Date().getFullYear()} pantalai.sitios.dev | {t('derechos')}{' '}
+        © {new Date().getFullYear()} pantalay.com | {t('derechos')}{' '}
         <a href="https://windoce.com" target="_blank" rel="noopener noreferrer">
           Windoce LLC
         </a>

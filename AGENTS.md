@@ -28,7 +28,7 @@ analiza su código. Sobre PANTALAI (nuestro) se puede usar todo REA.
 
 ## Publicación
 
-- YaDominios Cloud, sitio `pantalai` → `https://pantalai.sitios.dev`, rama `yapanel-build`
+- YaDominios Cloud, sitio `pantalai` → dirección principal `https://pantalay.com` (desde el 20 oct 2026; `www` y `https://pantalai.sitios.dev` pasan solas a ella con 301, salvo `/datos` y `/media`; ver C-DOMINIO), rama `yapanel-build`
   (la llena el Action `publicar` después de que `verify` da verde).
 - Necesita plan con base de datos (`env.DB`) y almacenamiento (`env.BUCKET`).
 - Prueba local: `npm run build`, `npx wrangler d1 execute pantalai-local --local --file schema.sql`,

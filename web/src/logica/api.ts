@@ -1,4 +1,5 @@
 // Llamadas al servidor. Toda escritura lleva la cabecera propia (el servidor la exige).
+import { origenPublico } from './sitio';
 import type { Capitulo, Segmento, Tramo } from './tiempo';
 
 export class ErrorApi extends Error {
@@ -110,7 +111,7 @@ export type Estadisticas = {
   por_dia: { dia: string; vistas: number }[];
 };
 
-export const enlaceVideo = (id: string) => `${location.origin}/v/${id}`;
+export const enlaceVideo = (id: string) => `${origenPublico()}/v/${id}`;
 export const archivoVideo = (id: string) => `/media/${id}/video`;
 export const miniaturaVideo = (id: string, v = 0) => `/media/${id}/miniatura?v=${v}`;
 

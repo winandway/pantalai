@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 // PRUEBA EN VIVO con la IA de verdad (gasta menos de 1 centavo). Solo corre a propósito:
-//   VIVO=1 URL_BASE=https://pantalai.sitios.dev npx playwright test e2e/vivo.spec.ts
+//   VIVO=1 URL_BASE=https://pantalay.com npx playwright test e2e/vivo.spec.ts
 // Usa un video hablado en español de 2 min 27 s (dos pedazos de audio) con muletillas y dos tareas dichas.
 test.skip(!process.env.VIVO, 'Solo se corre a propósito (VIVO=1): usa la IA real.');
 test.setTimeout(300_000);

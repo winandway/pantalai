@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 
 const [correo, clave, videoEn, videoEs] = process.argv.slice(2);
-const BASE = process.env.URL_BASE ?? 'https://pantalai.sitios.dev';
+const BASE = process.env.URL_BASE ?? 'https://pantalay.com';
 mkdirSync('web/public/capturas', { recursive: true });
 mkdirSync('docs/capturas', { recursive: true });
 

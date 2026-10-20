@@ -24,6 +24,7 @@ import { buscarEnTranscripcion, formatoTiempo, segmentoActual, textoPlano } from
 import { copiar } from './Biblioteca';
 import { AvisoIA, Generar, Tareas } from '../componentes/IA';
 import { PreparadorMp4 } from '../componentes/Mp4';
+import { origenPublico } from '../logica/sitio';
 import { BotonDescargar } from '../componentes/Descargar';
 import type { EstadoIA } from '../logica/ia';
 
@@ -696,7 +697,7 @@ function Compartir({
   const avisar = useAviso();
   const [desdeAhora, setDesdeAhora] = useState(false);
   const enlace = `${enlaceVideo(video.id)}${desdeAhora && ahora > 1 ? `?t=${Math.floor(ahora)}` : ''}`;
-  const codigo = `<div style="position:relative;padding-bottom:${video.ancho && video.alto ? ((video.alto / video.ancho) * 100).toFixed(2) : '56.25'}%;height:0"><iframe src="${location.origin}/embed/${video.id}" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+  const codigo = `<div style="position:relative;padding-bottom:${video.ancho && video.alto ? ((video.alto / video.ancho) * 100).toFixed(2) : '56.25'}%;height:0"><iframe src="${origenPublico()}/embed/${video.id}" style="position:absolute;inset:0;width:100%;height:100%;border:0" allow="fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
   async function ajuste(datos: Partial<Video>) {
     try {
       const r = await pedir<{ video: Video }>(`/datos/videos/${video.id}`, { method: 'PATCH', json: datos });

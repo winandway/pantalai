@@ -190,3 +190,16 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `pruebas/recorte.test.ts`, `pruebas/servidor.test.ts` (comprobada en rojo quitando la firma) y
   `e2e/recortar.spec.ts` (graba 10 s, recorta a unos 5 s, guarda y mide el MP4 descargado; comprobada en rojo
   quitando el `trim`: salía de 10,3 s).
+
+## C-DOMINIO (20 oct 2026)
+
+- pantalay.com es la dirección principal (`servidor/dominio.ts`). Las páginas pedidas por `pantalai.sitios.dev` o
+  `www.pantalay.com` pasan con 301 a `https://pantalay.com` con la misma ruta y los mismos parámetros: los enlaces
+  viejos siguen sirviendo. `/datos` y `/media` NO se redirigen (reproductores insertados y descargas viejas).
+- Los enlaces para compartir y el código para insertar salen siempre con pantalay.com (`web/src/logica/sitio.ts`),
+  también desde la dirección vieja; en la computadora local salen con la dirección local.
+- Tarjeta para redes (`og:url`, `og:image`), `canonical` de cada página (lo pone `paginaApp`), `sitemap.xml` con
+  todas las guías de Docs, `robots.txt` y el pie de página dicen pantalay.com.
+- Al entrar por la dirección vieja la sesión no viaja (las cookies son de cada dirección): hay que volver a entrar
+  una vez en pantalay.com.
+- Prueba: `pruebas/dominio.test.ts` (comprobada en rojo vaciando la lista de direcciones viejas).
