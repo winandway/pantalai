@@ -19,7 +19,9 @@ export default tseslint.config(
   },
   {
     files: ['scripts/**/*.mjs'],
-    languageOptions: { globals: { process: 'readonly', console: 'readonly', setTimeout: 'readonly', localStorage: 'readonly' } },
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly', setTimeout: 'readonly', localStorage: 'readonly', fetch: 'readonly', atob: 'readonly', document: 'readonly', URL: 'readonly', Blob: 'readonly' },
+    },
   },
   prettier,
 );
