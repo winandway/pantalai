@@ -237,10 +237,14 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Versión de la API fija (`2024-06-20`) para que la factura traiga su PaymentIntent.
 - Prueba: `pruebas/pagos.test.ts` (comprobada en rojo aceptando cualquier firma).
 
-## C-SUPERADMIN (20 oct 2026)
+## C-SUPERADMIN (20 oct 2026, endurecido el mismo día a pedido de Richard)
 
-- Panel `/admin` (`web/src/paginas/Admin.tsx`, rutas `/datos/admin/*` en `servidor/app.ts`). Entra solo una cuenta con
-  sesión cuyo correo esté en la variable del sitio `SUPERADMIN_CORREOS`; a cualquier otra se le responde 404 (no se
-  confirma que exista). El superadmin puede ver los videos privados (solo `/media`); mirar y sacar del aire quedan en
-  la tabla `registro_admin`. No borra nada. Uso: `docs/SUPERADMIN.md`.
-- Prueba: `pruebas/servidor.test.ts` «C-SUPERADMIN» (comprobada en rojo dejando entrar a cualquiera).
+- El panel vive SOLO en una dirección secreta (variable secreta del sitio `SUPERADMIN_RUTA`; respaldo en
+  `~/.config/pantalai/superadmin-ruta`; NUNCA en el código ni en git). `/admin` y cualquier otra dirección bajo
+  `/panel/` dan 404 y se anotan como intento. El bundle del navegador no conoce la dirección: la página la toma de su
+  propia dirección y la manda en la cabecera `x-panel`, que el servidor compara en tiempo fijo.
+- Hace falta además la sesión de un correo de `SUPERADMIN_CORREOS`. Al entrar, el servidor devuelve `panel` y la
+  página lleva directo ahí. Videos privados: solo con la firma del día que entrega el panel (`?panel=`).
+- Límite de intentos, registro en `registro_admin` (intentos, vistas, sacar del aire), `no-referrer`, `no-store` y
+  `noindex` en la página del panel. Uso y capas: `docs/SUPERADMIN.md`.
+- Prueba: `pruebas/servidor.test.ts` «C-SUPERADMIN» (comprobada en rojo quitando la comprobación de la cabecera).

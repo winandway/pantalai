@@ -67,6 +67,10 @@ export type Env = EnvPago & {
   GOOGLE_VERIFICACION?: string;
   /** Correos de las cuentas superadmin (Soporte), separados por coma. Sin esto el panel no existe para nadie. */
   SUPERADMIN_CORREOS?: string;
+  /** Dirección secreta del panel de superadmin (secreta). */
+  SUPERADMIN_RUTA?: string;
+  /** Días gratis de la primera suscripción (0 = cobra al momento). */
+  PAGO_DIAS_PRUEBA?: string;
   /** «1» enciende los límites de los planes (solo con la pasarela de pago probada). */
   COBRO_ACTIVO?: string;
 };
@@ -257,21 +261,70 @@ const requiereSesion = async (c: C, next: () => Promise<void>) => {
 
 // ---------- superadmin ----------
 
-/** Superadmin = cuenta con sesión cuyo correo está en la variable del sitio SUPERADMIN_CORREOS. */
-function esSuperadmin(c: C): boolean {
-  const u = c.get('usuario');
-  if (!u) return false;
-  const lista = (c.env.SUPERADMIN_CORREOS ?? '')
+/** Correo en la lista del sitio (SUPERADMIN_CORREOS). */
+function correoSuperadmin(env: Env, correo: string): boolean {
+  return (env.SUPERADMIN_CORREOS ?? '')
     .split(',')
     .map((x) => x.trim().toLowerCase())
-    .filter(Boolean);
-  return lista.includes(u.correo.toLowerCase());
+    .filter(Boolean)
+    .includes(correo.toLowerCase());
 }
 
+/**
+ * La dirección secreta del panel (variable del sitio SUPERADMIN_RUTA, secreta, nunca en el código ni en git).
+ * Sin ella, o si es corta, el panel no existe para nadie.
+ */
+export function rutaPanel(env: { SUPERADMIN_RUTA?: string }): string | null {
+  const r = (env.SUPERADMIN_RUTA ?? '').trim().replace(/\/+$/, '');
+  return /^\/[A-Za-z0-9/_-]{16,200}$/.test(r) ? r : null;
+}
+
+/** Superadmin = sesión abierta + correo en la lista + el panel tiene su dirección secreta configurada. */
+function esSuperadmin(c: C): boolean {
+  const u = c.get('usuario');
+  return Boolean(u && rutaPanel(c.env) && correoSuperadmin(c.env, u.correo));
+}
+
+/** Firma corta para que el superadmin vea un video privado desde el panel (vale hoy y para ese video). */
+async function firmaPanel(
+  env: Env,
+  videoId: string,
+  dia = Math.floor(Date.now() / 86_400_000),
+): Promise<string> {
+  return (await sha256(`${rutaPanel(env)}|${videoId}|${dia}`)).slice(0, 32);
+}
+
+async function firmaPanelValida(env: Env, videoId: string, firma: string | undefined): Promise<boolean> {
+  if (!firma || !rutaPanel(env)) return false;
+  const hoy = Math.floor(Date.now() / 86_400_000);
+  for (const d of [hoy, hoy - 1]) if (iguales(await firmaPanel(env, videoId, d), firma)) return true;
+  return false;
+}
+
+async function anotarIntento(c: C, detalle: string) {
+  // Se anotan los primeros intentos de cada dirección de internet; si alguien insiste sin parar, no llena la base.
+  if (!(await dentroDelLimite(c.env.DB, 'intento', ip(c), 30, 15 * 60 * 1000))) return;
+  await c.env.DB.prepare(
+    'INSERT INTO registro_admin (admin_id, accion, objetivo, momento) VALUES (?, ?, ?, ?)',
+  )
+    .bind(c.get('usuario')?.id ?? 'sin_sesion', 'intento', `${ip(c)} · ${detalle}`.slice(0, 300), Date.now())
+    .run();
+}
+
+/**
+ * Los datos del panel piden TRES cosas: ser superadmin, mandar la dirección secreta en la cabecera «x-panel»
+ * (la página la toma de su propia dirección) y no estar golpeando la puerta. Si falla algo: 404, como si el
+ * panel no existiera, y el intento queda anotado.
+ */
 const requiereSuperadmin = async (c: C, next: () => Promise<void>) => {
-  if (!c.get('usuario')) return err(c, 401, 'sin_sesion');
-  // Igual que si no existiera: a nadie más se le confirma que el panel está aquí.
-  if (!esSuperadmin(c)) return err(c, 404, 'ruta');
+  if (!(await dentroDelLimite(c.env.DB, 'panel', ip(c), 60, 15 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const ruta = rutaPanel(c.env);
+  const enviada = c.req.header('x-panel') ?? '';
+  if (!ruta || !esSuperadmin(c) || !iguales(enviada.replace(/\/+$/, ''), ruta)) {
+    await anotarIntento(c, new URL(c.req.url).pathname);
+    return err(c, 404, 'ruta');
+  }
   await next();
 };
 
@@ -386,7 +439,9 @@ app.post('/datos/entrar', async (c) => {
     .first<Usuario & { clave_hash: string; clave_sal: string }>();
   if (!u || !iguales(await hashClave(d.clave, u.clave_sal), u.clave_hash)) return err(c, 401, 'credenciales');
   await abrirSesion(c, u.id);
-  return c.json({ usuario: { id: u.id, correo: u.correo, nombre: u.nombre } });
+  // Al superadmin se le dice adónde ir: directo a su panel secreto.
+  const panel = rutaPanel(c.env) && correoSuperadmin(c.env, u.correo) ? rutaPanel(c.env) : null;
+  return c.json({ usuario: { id: u.id, correo: u.correo, nombre: u.nombre }, panel });
 });
 
 app.post('/datos/salir', async (c) => {
@@ -432,14 +487,18 @@ app.get('/datos/plan', requiereSesion, async (c) => {
 
 // ---------- cobro con Stripe (dentro de la página) ----------
 
-const DIAS_PRUEBA = 14;
+/** Días gratis de la primera suscripción. Se cambia con la variable del sitio PAGO_DIAS_PRUEBA (0 = sin prueba). */
+function diasPrueba(env: Env): number {
+  const n = Number(env.PAGO_DIAS_PRUEBA ?? 14);
+  return Number.isInteger(n) && n >= 0 && n <= 60 ? n : 14;
+}
 
 app.get('/datos/pago/config', (c) =>
   c.json(
     {
       listo: pagoListo(c.env),
       publicable: pagoListo(c.env) ? c.env.STRIPE_PUBLICABLE : null,
-      dias_prueba: DIAS_PRUEBA,
+      dias_prueba: diasPrueba(c.env),
     },
     200,
     { 'Cache-Control': 'no-store' },
@@ -465,7 +524,7 @@ app.post('/datos/pago/suscripcion', requiereSesion, async (c) => {
     const cliente = fila?.cliente ?? (await crearCliente(c.env, u));
     const precio = await precioDe(c.env, d.plan, d.ciclo);
     // La prueba gratis es una sola vez por cuenta.
-    const dias = fila?.uso_prueba ? 0 : DIAS_PRUEBA;
+    const dias = fila?.uso_prueba ? 0 : diasPrueba(c.env);
     const intento = await crearSuscripcion(c.env, cliente, precio, {
       usuario_id: u.id,
       plan: d.plan,
@@ -537,7 +596,15 @@ async function exigirIA(c: C): Promise<Response | null> {
 }
 
 app.get('/datos/yo', (c) =>
-  c.json({ usuario: c.get('usuario'), superadmin: esSuperadmin(c) }, 200, { 'Cache-Control': 'no-store' }),
+  c.json(
+    {
+      usuario: c.get('usuario'),
+      superadmin: esSuperadmin(c),
+      panel: esSuperadmin(c) ? rutaPanel(c.env) : null,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  ),
 );
 
 app.get('/datos/admin/resumen', requiereSuperadmin, async (c) => {
@@ -610,7 +677,11 @@ app.get('/datos/admin/videos', requiereSuperadmin, async (c) => {
   )
     .bind(usuario, usuario, q, q)
     .all();
-  return c.json({ videos: r.results }, 200, { 'Cache-Control': 'no-store' });
+  // Cada video trae su firma del día: con ella el panel puede mostrar también los privados.
+  const videos = await Promise.all(
+    (r.results as { id: string }[]).map(async (v) => ({ ...v, firma: await firmaPanel(c.env, v.id) })),
+  );
+  return c.json({ videos }, 200, { 'Cache-Control': 'no-store' });
 });
 
 // Mirar un video ajeno queda anotado en el registro.
@@ -618,7 +689,7 @@ app.post('/datos/admin/videos/:id/visto', requiereSuperadmin, async (c) => {
   const v = await buscarVideo(c, c.req.param('id') ?? '');
   if (!v) return err(c, 404, 'no_existe');
   await anotarAdmin(c, 'ver_video', `${v.id} · ${v.titulo}`);
-  return c.json({ ok: true });
+  return c.json({ ok: true, firma: await firmaPanel(c.env, v.id) });
 });
 
 // Si un video está mal, se saca del aire (pasa a privado). No se borra nada.
@@ -1433,7 +1504,12 @@ app.post('/datos/videos/:id/mp4/completar', requiereSesion, async (c) => {
 app.get('/media/:id/video', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
   const u = c.get('usuario');
-  if (!v || v.estado !== 'listo' || !(puedeVer(v, u) || esSuperadmin(c))) return c.notFound();
+  if (
+    !v ||
+    v.estado !== 'listo' ||
+    !(puedeVer(v, u) || (esSuperadmin(c) && (await firmaPanelValida(c.env, v.id, c.req.query('panel')))))
+  )
+    return c.notFound();
   const descargar = c.req.query('descargar') === '1';
   if (descargar && !v.permitir_descarga && u?.id !== v.usuario_id) return err(c, 403, 'descarga');
   // La copia MP4 (si ya existe) se usa al pedir formato=mp4 y SIEMPRE al descargar: es la que abren iPhone y Final Cut.
@@ -1484,7 +1560,15 @@ app.get('/media/:id/video', async (c) => {
 
 app.get('/media/:id/miniatura', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
-  if (!v || !v.tiene_miniatura || !(puedeVer(v, c.get('usuario')) || esSuperadmin(c))) return c.notFound();
+  if (
+    !v ||
+    !v.tiene_miniatura ||
+    !(
+      puedeVer(v, c.get('usuario')) ||
+      (esSuperadmin(c) && (await firmaPanelValida(c.env, v.id, c.req.query('panel'))))
+    )
+  )
+    return c.notFound();
   const obj = await c.env.BUCKET.get(claveMiniatura(v.id));
   if (!obj) return c.notFound();
   const h = new Headers();
@@ -1540,6 +1624,33 @@ app.get('/v/:id', async (c) => {
     .replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${imagen}">`)
     .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="${origen}/v/${v.id}">`);
   return c.html(html);
+});
+
+// Panel de superadmin: SOLO en su dirección secreta y SOLO con la sesión del superadmin. Cualquier otra dirección
+// bajo /panel, o la vieja /admin, responde «404» igual que una página que no existe, y el intento queda anotado.
+async function noExiste(c: C): Promise<Response> {
+  const r = await paginaApp(c);
+  return new Response(r.body, { status: 404, headers: r.headers });
+}
+
+app.get('/admin', async (c) => (await anotarIntento(c, '/admin'), noExiste(c)));
+app.get('/admin/*', async (c) => (await anotarIntento(c, new URL(c.req.url).pathname), noExiste(c)));
+app.get('/panel/*', async (c) => {
+  const ruta = rutaPanel(c.env);
+  const pedida = new URL(c.req.url).pathname.replace(/\/+$/, '');
+  if (!ruta || !esSuperadmin(c) || !iguales(pedida, ruta)) {
+    if (!(await dentroDelLimite(c.env.DB, 'panel', ip(c), 60, 15 * 60 * 1000)))
+      return err(c, 429, 'demasiados');
+    await anotarIntento(c, pedida);
+    return noExiste(c);
+  }
+  const r = await paginaApp(c);
+  const h = new Headers(r.headers);
+  // La dirección secreta no viaja a otros sitios, no se guarda en caché y no la indexa nadie.
+  h.set('Referrer-Policy', 'no-referrer');
+  h.set('Cache-Control', 'no-store');
+  h.set('X-Robots-Tag', 'noindex, nofollow');
+  return new Response(r.body, { status: 200, headers: h });
 });
 
 app.all('/datos/*', (c) => err(c, 404, 'ruta'));

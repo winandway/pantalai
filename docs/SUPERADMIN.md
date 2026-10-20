@@ -9,12 +9,23 @@ grabando**, y poder mirar ese material para comprobar que nada sale mal hecho en
 
 ## Cómo se entra
 
-1. Entra a pantalay.com con tu cuenta de Soporte (el correo tiene que estar en la lista del servidor, ver abajo).
-2. Abre tu nombre arriba a la derecha y toca **🛡️ Superadmin**. La dirección es `https://pantalay.com/admin`.
-3. Si no estás en la lista, la página responde «404», como si no existiera: nadie más se entera de que está ahí.
+1. Entra a pantalay.com con tu cuenta (la que está en la lista del servidor) por la página normal de **Entrar**.
+2. Al entrar, Pantalay te lleva **solo** a la dirección secreta del panel. También está en tu menú de arriba a la
+   derecha, «🛡️ Superadmin», que solo ve el superadmin.
+3. La dirección secreta NO está en el código, ni en git, ni en este documento. Vive en la variable secreta del sitio
+   **SUPERADMIN_RUTA** y, como respaldo, en la carpeta privada de la computadora (`~/.config/pantalai/superadmin-ruta`).
 
-Quién puede entrar lo decide la variable del sitio **SUPERADMIN_CORREOS** (correos separados por coma) en
-YaDominios Cloud. La cuenta tiene que llamarse con la palabra **Soporte** (regla de las cuentas nuestras).
+## Seguridad (por qué nadie más entra)
+
+| Capa                            | Qué hace                                                                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dirección secreta               | El panel solo existe en una dirección larga que no se publica. `/admin` y cualquier otra dirección bajo `/panel/` responden «404», igual que una página que no existe |
+| Cuenta de la lista              | Además hay que tener la sesión abierta de un correo de **SUPERADMIN_CORREOS**                                                                                         |
+| Doble comprobación en los datos | Cada pedido de datos del panel manda la dirección secreta y el servidor la compara (en tiempo fijo). Sin ella: 404                                                    |
+| Videos privados                 | Se ven solo con una firma del día que da el panel; la sesión sola no alcanza                                                                                          |
+| Límite de intentos              | Quien golpea la puerta muchas veces queda frenado (429)                                                                                                               |
+| Registro                        | Cada intento fallido (con su dirección de internet), cada video mirado y cada video sacado del aire quedan anotados y se ven en el panel                              |
+| Sin rastro                      | La página del panel no se guarda en caché, no la indexa Google y no manda su dirección a otros sitios                                                                 |
 
 ## Qué se ve
 

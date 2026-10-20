@@ -42,6 +42,8 @@ type FilaVideo = {
   usuario_id: string;
   usuario: string;
   correo: string;
+  /** Firma del día para ver el video aunque sea privado. */
+  firma: string;
 };
 
 const NOMBRE_PLAN: Record<string, string> = {
@@ -50,6 +52,9 @@ const NOMBRE_PLAN: Record<string, string> = {
   business_ia: 'Business + AI',
   enterprise: 'Enterprise',
 };
+
+/** El servidor exige la dirección secreta en cada pedido del panel: la página la toma de su propia dirección. */
+const panel = () => ({ 'x-panel': location.pathname });
 
 export function tamano(bytes: number): string {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
@@ -71,11 +76,12 @@ export function Admin() {
   const [sacar, setSacar] = useState<FilaVideo | null>(null);
 
   useEffect(() => {
-    if (!cargando && !usuario) navegar('/login?volver=/admin', true);
+    // Sin sesión no se dice nada de esta página: se va a entrar como siempre.
+    if (!cargando && !usuario) navegar('/login', true);
   }, [cargando, usuario]);
 
   const cargarResumen = useCallback(() => {
-    pedir<Resumen>('/datos/admin/resumen')
+    pedir<Resumen>('/datos/admin/resumen', { headers: panel() })
       .then(setResumen)
       .catch((e) => {
         if (e instanceof ErrorApi && (e.codigo === 'ruta' || e.codigo === 'no_existe')) setNegado(true);
@@ -90,12 +96,13 @@ export function Admin() {
     const id = setTimeout(() => {
       const b = encodeURIComponent(q);
       if (vista === 'usuarios')
-        void pedir<{ usuarios: FilaUsuario[] }>(`/datos/admin/usuarios?q=${b}`).then((r) =>
-          setUsuarios(r.usuarios),
+        void pedir<{ usuarios: FilaUsuario[] }>(`/datos/admin/usuarios?q=${b}`, { headers: panel() }).then(
+          (r) => setUsuarios(r.usuarios),
         );
       else
         void pedir<{ videos: FilaVideo[] }>(
           `/datos/admin/videos?q=${b}&usuario=${encodeURIComponent(deUsuario?.id ?? '')}`,
+          { headers: panel() },
         ).then((r) => setVideos(r.videos));
     }, 250);
     return () => clearTimeout(id);
@@ -110,7 +117,7 @@ export function Admin() {
 
   function mirar(v: FilaVideo) {
     setAbierto(v);
-    void pedir(`/datos/admin/videos/${v.id}/visto`, { method: 'POST' }).then(cargarResumen);
+    void pedir(`/datos/admin/videos/${v.id}/visto`, { method: 'POST', headers: panel() }).then(cargarResumen);
   }
 
   if (negado)
@@ -252,7 +259,7 @@ export function Admin() {
                   aria-label={t('adminMirar')}
                 >
                   {v.tiene_miniatura ? (
-                    <img src={`/media/${v.id}/miniatura`} alt="" loading="lazy" />
+                    <img src={`/media/${v.id}/miniatura?panel=${v.firma}`} alt="" loading="lazy" />
                   ) : (
                     <span>▶</span>
                   )}
@@ -293,7 +300,12 @@ export function Admin() {
                 {t('cerrar')}
               </button>
             </div>
-            <video src={`/media/${abierto.id}/video?formato=webm`} controls autoPlay playsInline />
+            <video
+              src={`/media/${abierto.id}/video?formato=webm&panel=${abierto.firma}`}
+              controls
+              autoPlay
+              playsInline
+            />
             <p className="ayuda">
               {abierto.usuario} · {abierto.correo} · {t('adminQuedaAnotado')}
             </p>
@@ -310,10 +322,12 @@ export function Admin() {
           si={() => {
             const v = sacar;
             setSacar(null);
-            void pedir(`/datos/admin/videos/${v.id}/privado`, { method: 'POST' }).then(() => {
-              setVideos((l) => l.map((x) => (x.id === v.id ? { ...x, privacidad: 'privado' } : x)));
-              cargarResumen();
-            });
+            void pedir(`/datos/admin/videos/${v.id}/privado`, { method: 'POST', headers: panel() }).then(
+              () => {
+                setVideos((l) => l.map((x) => (x.id === v.id ? { ...x, privacidad: 'privado' } : x)));
+                cargarResumen();
+              },
+            );
           }}
         />
       )}

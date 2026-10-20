@@ -32,7 +32,13 @@ export async function pedir<T>(ruta: string, opciones: RequestInit & { json?: un
   return datos;
 }
 
-export type Usuario = { id: string; correo: string; nombre: string; superadmin?: boolean };
+export type Usuario = {
+  id: string;
+  correo: string;
+  nombre: string;
+  superadmin?: boolean;
+  panel?: string | null;
+};
 
 export type Superposicion = {
   tipo: 'texto' | 'flecha' | 'recuadro' | 'difuminar';

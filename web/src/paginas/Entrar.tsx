@@ -73,16 +73,20 @@ export function Entrar({ registro }: { registro: boolean }) {
     setError('');
     setEnviando(true);
     try {
-      const r = await pedir<{ usuario: Usuario }>(registro ? '/datos/registro' : '/datos/entrar', {
-        method: 'POST',
-        json: registro
-          ? { nombre: b.valor.nombre, correo: b.valor.correo, clave }
-          : { correo: b.valor.correo, clave },
-        headers: escudo.pase ? { 'x-turnstile': escudo.pase } : undefined,
-      });
+      const r = await pedir<{ usuario: Usuario; panel?: string | null }>(
+        registro ? '/datos/registro' : '/datos/entrar',
+        {
+          method: 'POST',
+          json: registro
+            ? { nombre: b.valor.nombre, correo: b.valor.correo, clave }
+            : { correo: b.valor.correo, clave },
+          headers: escudo.pase ? { 'x-turnstile': escudo.pase } : undefined,
+        },
+      );
       b.limpiar();
-      setUsuario(r.usuario);
-      navegar(new URLSearchParams(location.search).get('volver') || '/library', true);
+      setUsuario({ ...r.usuario, superadmin: Boolean(r.panel), panel: r.panel ?? null });
+      // El superadmin entra directo a su panel secreto.
+      navegar(r.panel || new URLSearchParams(location.search).get('volver') || '/library', true);
     } catch (err) {
       setError(textoError(t, err instanceof ErrorApi ? err.codigo : 'servidor'));
       escudo.reiniciar();

@@ -96,8 +96,12 @@ export function Encabezado() {
                   <a role="menuitem" href="/library" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
                     {t('biblioteca')}
                   </a>
-                  {usuario.superadmin && (
-                    <a role="menuitem" href="/admin" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
+                  {usuario.panel && (
+                    <a
+                      role="menuitem"
+                      href={usuario.panel}
+                      onClick={(e) => (setMenu(false), alClicEnlace(e))}
+                    >
                       🛡️ {t('superadmin')}
                     </a>
                   )}

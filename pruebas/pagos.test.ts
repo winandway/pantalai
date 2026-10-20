@@ -225,6 +225,18 @@ describe('CANDADO C-PAGOS: cobro con Stripe dentro de la página', () => {
     expect((await plan()).plan).toBe('starter');
   });
 
+  it('con PAGO_DIAS_PRUEBA=0 se cobra al momento, sin días gratis', async () => {
+    const llamadas = stripeFalso();
+    env = { ...env, PAGO_DIAS_PRUEBA: '0' };
+    const c = cliente();
+    await c('/datos/registro', {
+      method: 'POST',
+      json: { nombre: 'Ana', correo: 'ana@example.com', clave: 'clave-segura-1' },
+    });
+    await c('/datos/pago/suscripcion', { method: 'POST', json: { plan: 'business_ia', ciclo: 'mensual' } });
+    expect(llamadas.find((l) => l.ruta === 'subscriptions')!.cuerpo).not.toContain('trial_period_days');
+  });
+
   it('sin las claves de Stripe el cobro está apagado y lo dice el canario', async () => {
     env = { DB: baseFalsa(), BUCKET: almacenFalso() };
     const c = cliente();

@@ -26,14 +26,20 @@
 | Prueba gratis 14 días y cobro al terminar        | USD    | ❌ sin probar  | ❌ sin probar | —                      |
 | Cancelar al final del periodo                    | USD    | ❌ sin probar  | ❌ sin probar | —                      |
 
-## Cómo se prueba (cuando lleguen las claves)
+## Cómo se prueba (decidido por Richard el 20 oct 2026)
 
-1. Modo de prueba: guardar las claves de prueba en el sitio, crear el aviso (webhook) apuntando a
-   `https://pantalay.com/datos/pago/aviso` y guardar su secreto.
-2. Comprar Business + AI anual con la tarjeta 4242 4242 4242 4242: el plan debe cambiar a Business + AI en segundos.
-3. Repetir con la tarjeta que pide verificación del banco (4000 0025 0000 3155) y con una rechazada (4000 0000 0000 0002).
-4. Cancelar desde Stripe: el aviso tiene que devolver la cuenta a Starter.
-5. Con las claves reales: una compra real del equipo, ver el cobro en Stripe, el plan activo, y reembolsar.
-6. Recién ahí: `COBRO_ACTIVO=1`, la página de precios al menú y al mapa del sitio.
+**Solo en vivo, con la clave REAL de Stripe. No se usa modo de prueba.**
+
+1. Guardar la clave restringida real (rk_live) y la publicable (pk_live) en las variables del sitio, crear el aviso
+   (webhook) apuntando a `https://pantalay.com/datos/pago/aviso` y guardar su secreto.
+2. Richard hace una compra real de **un mes** (Business + AI mensual, 12 USD, o Business, 9 USD) con su tarjeta, y la
+   graba en video para mostrarle a la gente cómo se paga.
+   Ojo: la primera suscripción de cada cuenta trae 14 días gratis y ese día no cobra. Para que el video muestre el
+   cobro del mes en el momento, antes de la compra se pone la variable del sitio `PAGO_DIAS_PRUEBA=0` (y después se
+   vuelve a 14 o se borra).
+3. Comprobar: el cobro (o la tarjeta guardada) en el panel de Stripe, el plan activo en Pantalay y en el superadmin,
+   y la factura enviada por Stripe.
+4. Cancelar al final del periodo desde Stripe y ver que el aviso devuelve la cuenta a Starter cuando termina.
+5. Anotar fecha y compra en la tabla de arriba. Recién ahí: `COBRO_ACTIVO=1` y la página de precios al menú.
 
 Pruebas automáticas: `pruebas/pagos.test.ts` (Stripe simulado; firma comprobada en rojo).

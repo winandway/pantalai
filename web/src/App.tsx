@@ -24,8 +24,12 @@ export function App() {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    pedir<{ usuario: Usuario | null; superadmin?: boolean }>('/datos/yo')
-      .then((r) => setUsuario(r.usuario ? { ...r.usuario, superadmin: Boolean(r.superadmin) } : null))
+    pedir<{ usuario: Usuario | null; superadmin?: boolean; panel?: string | null }>('/datos/yo')
+      .then((r) =>
+        setUsuario(
+          r.usuario ? { ...r.usuario, superadmin: Boolean(r.superadmin), panel: r.panel ?? null } : null,
+        ),
+      )
       .catch(() => setUsuario(null))
       .finally(() => setCargando(false));
   }, []);
@@ -71,7 +75,8 @@ export function App() {
   else if (ruta === '/record') pagina = <Grabar />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
   else if (ruta === '/pricing') pagina = <Precios />;
-  else if (ruta === '/admin') pagina = <Admin />;
+  // El panel vive en una dirección secreta bajo /panel/: la valida el servidor, aquí no se conoce.
+  else if (partes[0] === 'panel' && partes.length > 1) pagina = <Admin />;
   else if (ruta === '/checkout' || ruta === '/checkout/done') pagina = <Pagar />;
   else if (ruta === '/') pagina = <Inicio />;
   else pagina = <NoEncontrado />;

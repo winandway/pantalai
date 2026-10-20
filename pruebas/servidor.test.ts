@@ -8,6 +8,7 @@ type Env = {
   TURNSTILE_SECRET?: string;
   COBRO_ACTIVO?: string;
   SUPERADMIN_CORREOS?: string;
+  SUPERADMIN_RUTA?: string;
 };
 let env: Env;
 
@@ -553,49 +554,80 @@ describe('páginas y salud', () => {
   });
 });
 
-describe('CANDADO C-SUPERADMIN: panel solo para las cuentas Soporte de la lista', () => {
-  it('nadie más lo ve (ni sabe que existe); el superadmin ve usuarios, planes y videos, y todo queda anotado', async () => {
+describe('CANDADO C-SUPERADMIN: panel en dirección secreta, solo para las cuentas de la lista', () => {
+  const RUTA = '/panel/prueba-secreta-1234567';
+  const conPanel = { headers: { 'x-panel': RUTA } };
+
+  it('sin la dirección secreta, el panel no existe para nadie (ni para el superadmin)', async () => {
     env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com' } as typeof env;
+    const admin = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    expect((await admin('/datos/admin/resumen', conPanel)).status).toBe(404);
+    expect(((await (await admin('/datos/yo')).json()) as { panel: string | null }).panel).toBeNull();
+  });
+
+  it('la puerta: dirección secreta + cuenta de la lista + cabecera; todo lo demás es 404 y queda anotado', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com', SUPERADMIN_RUTA: RUTA } as typeof env;
     const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
     const { id } = await videoListo(ana);
     await ana(`/datos/videos/${id}`, { method: 'PATCH', json: { privacidad: 'privado' } });
-    // Sin sesión: 401. Con una cuenta normal: 404, como si no existiera.
-    expect((await cliente('7.7.7.7')('/datos/admin/resumen')).status).toBe(401);
-    expect((await ana('/datos/admin/resumen')).status).toBe(404);
-    expect((await ana('/datos/admin/usuarios')).status).toBe(404);
-    expect(((await (await ana('/datos/yo')).json()) as { superadmin: boolean }).superadmin).toBe(false);
+
+    // La vieja /admin y cualquier otra dirección bajo /panel: 404, como una página que no existe.
+    expect((await cliente('7.7.7.7')('/admin')).status).toBe(404);
+    expect((await cliente('7.7.7.7')('/panel/otra-cosa-cualquiera')).status).toBe(404);
+    expect((await cliente('7.7.7.7')(RUTA)).status).toBe(404);
+    expect((await ana(RUTA)).status).toBe(404);
+    // Los datos: sin sesión, cuenta normal, o superadmin sin la cabecera correcta → 404.
+    expect((await cliente('7.7.7.7')('/datos/admin/resumen', conPanel)).status).toBe(404);
+    expect((await ana('/datos/admin/resumen', conPanel)).status).toBe(404);
+    expect(((await (await ana('/datos/yo')).json()) as { panel: string | null }).panel).toBeNull();
 
     const admin = await registrado('Soporte Pantalay', 'Soporte@Example.com', '2.2.2.2');
-    expect(((await (await admin('/datos/yo')).json()) as { superadmin: boolean }).superadmin).toBe(true);
-    const r = (await (await admin('/datos/admin/resumen')).json()) as {
+    expect((await admin('/datos/admin/resumen')).status).toBe(404);
+    expect((await admin('/datos/admin/resumen', { headers: { 'x-panel': '/admin' } })).status).toBe(404);
+    // Al entrar, el servidor le dice adónde ir.
+    const entrar = await cliente('2.2.2.3')('/datos/entrar', {
+      method: 'POST',
+      json: { correo: 'soporte@example.com', clave: 'clave-segura-1' },
+    });
+    expect(((await entrar.json()) as { panel: string }).panel).toBe(RUTA);
+    const pagina = await admin(RUTA);
+    expect(pagina.status).toBe(200);
+    expect(pagina.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(pagina.headers.get('x-robots-tag')).toContain('noindex');
+
+    const r = (await (await admin('/datos/admin/resumen', conPanel)).json()) as {
       usuarios: number;
       videos: number;
       planes: Record<string, number>;
+      registro: { accion: string }[];
     };
     expect(r).toMatchObject({ usuarios: 2, videos: 1, planes: { starter: 2 } });
-    const u = (await (await admin('/datos/admin/usuarios?q=ana')).json()) as {
+    // Los intentos de antes quedaron anotados.
+    expect(r.registro.filter((x) => x.accion === 'intento').length).toBeGreaterThanOrEqual(6);
+
+    const u = (await (await admin('/datos/admin/usuarios?q=ana', conPanel)).json()) as {
       usuarios: { correo: string; plan: string; videos: number }[];
     };
     expect(u.usuarios).toEqual([
       expect.objectContaining({ correo: 'ana@example.com', plan: 'starter', videos: 1 }),
     ]);
-    const v = (await (await admin('/datos/admin/videos')).json()) as {
-      videos: { id: string; privacidad: string }[];
+    const v = (await (await admin('/datos/admin/videos', conPanel)).json()) as {
+      videos: { id: string; privacidad: string; firma: string }[];
     };
     expect(v.videos[0]).toMatchObject({ id, privacidad: 'privado' });
-    // Puede ver el material aunque sea privado; un extraño no.
-    expect((await admin(`/media/${id}/video`)).status).toBe(200);
-    expect((await cliente('8.8.8.8')(`/media/${id}/video`)).status).toBe(404);
-    // Mirar y sacar del aire quedan en el registro.
-    await admin(`/datos/admin/videos/${id}/visto`, { method: 'POST' });
+    // El video privado se ve SOLO con la firma del panel; la sesión sola no alcanza.
+    expect((await admin(`/media/${id}/video`)).status).toBe(404);
+    expect((await admin(`/media/${id}/video?panel=${v.videos[0]!.firma}`)).status).toBe(200);
+    expect((await cliente('8.8.8.8')(`/media/${id}/video?panel=${v.videos[0]!.firma}`)).status).toBe(404);
+
+    await admin(`/datos/admin/videos/${id}/visto`, { method: 'POST', ...conPanel });
     await ana(`/datos/videos/${id}`, { method: 'PATCH', json: { privacidad: 'enlace' } });
-    expect((await admin(`/datos/admin/videos/${id}/privado`, { method: 'POST' })).status).toBe(200);
-    const fin = (await (await admin('/datos/admin/resumen')).json()) as { registro: { accion: string }[] };
-    expect(fin.registro.map((x) => x.accion)).toEqual(['hacer_privado', 'ver_video']);
-    expect(
-      (await (await ana(`/datos/videos/${id}`)).json()) as { video: { privacidad: string } },
-    ).toMatchObject({
-      video: { privacidad: 'privado' },
-    });
+    expect((await admin(`/datos/admin/videos/${id}/privado`, { method: 'POST', ...conPanel })).status).toBe(
+      200,
+    );
+    const fin = (await (await admin('/datos/admin/resumen', conPanel)).json()) as {
+      registro: { accion: string }[];
+    };
+    expect(fin.registro.slice(0, 2).map((x) => x.accion)).toEqual(['hacer_privado', 'ver_video']);
   });
 });
