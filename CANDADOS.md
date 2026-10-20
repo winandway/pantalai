@@ -215,3 +215,12 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   de grabar: tope de minutos (se detiene y guarda), calidad máxima y lápices. La marca la manda `/datos/videos/:id`.
 - El plan de cada cuenta vive en la tabla `suscripciones` (sin fila = Starter). La llenará la pasarela.
 - Prueba: `pruebas/servidor.test.ts` «C-PLANES» (comprobada en rojo haciendo que el plan nunca limite).
+
+## C-GOOGLE (20 oct 2026)
+
+- Listo para Google Search Console (`servidor/dominio.ts`, guía en `docs/GOOGLE-SEARCH-CONSOLE.md`): mapa del sitio,
+  robots, canonical, título y resumen propios en cada guía de Docs (`prepararCabecera`), `noindex` en lo privado.
+- Verificación: por DNS (TXT, sin código) o con la variable del sitio `GOOGLE_VERIFICACION`, que pone la etiqueta
+  `google-site-verification` en todas las páginas y responde el archivo `google<código>.html`. NO quitar la variable
+  después de verificar: Google vuelve a comprobarla y, si falta, se pierde la verificación.
+- Prueba: `pruebas/dominio.test.ts` «C-GOOGLE» (comprobada en rojo quitando la etiqueta).

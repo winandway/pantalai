@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import app from '../servidor/app';
-import { DOMINIO, redireccion, robots, rutasPublicas, sitemap } from '../servidor/dominio';
+import {
+  archivoGoogle,
+  codigosGoogle,
+  DOMINIO,
+  prepararCabecera,
+  redireccion,
+  robots,
+  rutasPublicas,
+  sitemap,
+} from '../servidor/dominio';
 import { origenPublico } from '../web/src/logica/sitio';
 import { baseFalsa, almacenFalso } from './falsos';
 
@@ -39,5 +48,38 @@ describe('CANDADO C-DOMINIO: pantalay.com es la dirección principal', () => {
     expect(origenPublico('https://www.pantalay.com')).toBe('https://pantalay.com');
     expect(origenPublico('https://pantalay.com')).toBe('https://pantalay.com');
     expect(origenPublico('http://127.0.0.1:8787')).toBe('http://127.0.0.1:8787');
+  });
+});
+
+describe('CANDADO C-GOOGLE: listo para verificar en Google Search Console', () => {
+  it('limpia los códigos: acepta el nombre del archivo o el contenido de la etiqueta', () => {
+    expect(codigosGoogle('google1a2b3c4d5e6f.html, AbC-dEf_123456')).toEqual([
+      '1a2b3c4d5e6f',
+      'AbC-dEf_123456',
+    ]);
+    expect(codigosGoogle(undefined)).toEqual([]);
+    expect(codigosGoogle('"><script>')).toEqual([]);
+  });
+
+  it('el archivo de Google responde solo con un código configurado', async () => {
+    const e = { ...env, GOOGLE_VERIFICACION: 'google1a2b3c4d5e6f.html' };
+    const r = await app.request('https://pantalay.com/google1a2b3c4d5e6f.html', {}, e);
+    expect(r.status).toBe(200);
+    expect(await r.text()).toBe('google-site-verification: google1a2b3c4d5e6f.html');
+    expect((await app.request('https://pantalay.com/googleotro123456.html', {}, e)).status).toBe(404);
+    expect(archivoGoogle('google1a2b3c4d5e6f.html', [])).toBeNull();
+  });
+
+  it('la cabecera lleva la etiqueta de Google, y cada guía su título y resumen', () => {
+    const base =
+      '<html><head><title>Pantalay</title><meta name="description" content="x" /><meta property="og:title" content="x" /><meta property="og:description" content="x" /><meta property="og:url" content="x" /></head></html>';
+    const h = prepararCabecera(base, '/docs/trim-video', ['AbC123456']);
+    expect(h).toContain('<meta name="google-site-verification" content="AbC123456" />');
+    expect(h).toContain('<title>Trim the start and end of a video · Pantalay Docs</title>');
+    expect(h).toContain('<meta property="og:url" content="https://pantalay.com/docs/trim-video" />');
+    expect(h).not.toContain('noindex');
+    expect(prepararCabecera(base, '/library', [])).toContain('<meta name="robots" content="noindex" />');
+    expect(prepararCabecera(base, '/pricing', [])).toContain('noindex');
+    expect(prepararCabecera(base, '/', [])).toBe(base);
   });
 });

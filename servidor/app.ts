@@ -1,7 +1,15 @@
 // Servidor de PANTALAI. Corre en YaDominios Cloud como _worker.js.
 // Rutas de datos bajo /datos y archivos bajo /media (NUNCA /api: choca con los estáticos).
 import { Hono, type Context } from 'hono';
-import { DOMINIO, redireccion, robots, sitemap } from './dominio';
+import {
+  archivoGoogle,
+  codigosGoogle,
+  DOMINIO,
+  prepararCabecera,
+  redireccion,
+  robots,
+  sitemap,
+} from './dominio';
 import { cobroActivo, esPlan, limitesDe, PRECIOS, type Limites, type Plan } from './planes';
 import { z } from 'zod';
 import {
@@ -44,6 +52,8 @@ export type Env = {
   GEMINI_API_KEY?: string;
   IA_TOPE_USD_MES?: string;
   IA_TOPE_MINUTOS_DIA?: string;
+  /** Códigos de verificación de Google Search Console (meta y archivo), separados por coma. */
+  GOOGLE_VERIFICACION?: string;
   /** «1» enciende los límites de los planes (solo con la pasarela de pago probada). */
   COBRO_ACTIVO?: string;
 };
@@ -180,6 +190,10 @@ app.use('*', async (c, next) => {
 
 app.get('/sitemap.xml', (c) => c.body(sitemap(), 200, { 'content-type': 'application/xml; charset=utf-8' }));
 app.get('/robots.txt', (c) => c.text(robots()));
+app.get('/:archivo{google[A-Za-z0-9_-]+\\.html}', (c) => {
+  const texto = archivoGoogle(c.req.param('archivo'), codigosGoogle(c.env.GOOGLE_VERIFICACION));
+  return texto ? c.text(texto) : c.notFound();
+});
 
 // ---------- cabeceras y sesión en todas las peticiones ----------
 
@@ -1242,9 +1256,13 @@ async function paginaApp(c: C): Promise<Response> {
   }
   // Cada página dice cuál es su dirección oficial (en pantalay.com), aunque se abra desde otra.
   const ruta = new URL(c.req.url).pathname;
-  const html = (await r.text()).replace(
-    /<link rel="canonical"[^>]*>/,
-    `<link rel="canonical" href="${DOMINIO}${ruta === '/' ? '/' : ruta.replace(/\/$/, '')}" />`,
+  const html = prepararCabecera(
+    (await r.text()).replace(
+      /<link rel="canonical"[^>]*>/,
+      `<link rel="canonical" href="${DOMINIO}${ruta === '/' ? '/' : ruta.replace(/\/$/, '')}" />`,
+    ),
+    ruta,
+    codigosGoogle(c.env.GOOGLE_VERIFICACION),
   );
   return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
