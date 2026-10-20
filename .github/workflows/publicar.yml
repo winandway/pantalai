@@ -44,10 +44,16 @@ jobs:
             sleep 30
           done
           echo "$R"
-          for r in / /docs /docs/record-your-screen /login /signup /datos/salud; do
+          for r in / /docs /docs/record-your-screen /login /signup /datos/salud /sitemap.xml /robots.txt; do
             c=$(curl -s -o /dev/null -w "%{http_code}" "https://pantalay.com$r")
             echo "$r $c"; [ "$c" = "200" ] || exit 1
           done
+          # Google ya tiene enviado este mapa (20 oct 2026): tiene que seguir con pantalay.com y todas las guías.
+          M=$(curl -s https://pantalay.com/sitemap.xml)
+          n=$(echo "$M" | grep -c "<loc>https://pantalay.com/")
+          echo "sitemap: $n páginas"; [ "$n" -ge 25 ] || exit 1
+          echo "$M" | grep -q "sitios.dev" && exit 1
+          curl -s https://pantalay.com/robots.txt | grep -q "Sitemap: https://pantalay.com/sitemap.xml" || exit 1
         env:
           VERSION: ${{ github.event.workflow_run.head_sha }}
         timeout-minutes: 25

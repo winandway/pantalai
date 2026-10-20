@@ -83,3 +83,14 @@ describe('CANDADO C-GOOGLE: listo para verificar en Google Search Console', () =
     expect(prepararCabecera(base, '/', [])).toBe(base);
   });
 });
+
+describe('CANDADO C-GOOGLE: el mapa que Google ya tiene enviado no pierde páginas', () => {
+  it('trae la portada, Docs y TODAS las guías, sin duplicados', async () => {
+    const { GUIAS } = await import('../web/src/paginas/guias');
+    const xml = sitemap();
+    for (const g of GUIAS) expect(xml).toContain(`<loc>https://pantalay.com/docs/${g.slug}</loc>`);
+    const locs = xml.match(/<loc>[^<]+<\/loc>/g)!;
+    expect(new Set(locs).size).toBe(locs.length);
+    expect(locs.length).toBeGreaterThanOrEqual(25);
+  });
+});

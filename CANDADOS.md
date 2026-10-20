@@ -223,4 +223,7 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Verificación: por DNS (TXT, sin código) o con la variable del sitio `GOOGLE_VERIFICACION`, que pone la etiqueta
   `google-site-verification` en todas las páginas y responde el archivo `google<código>.html`. NO quitar la variable
   después de verificar: Google vuelve a comprobarla y, si falta, se pierde la verificación.
-- Prueba: `pruebas/dominio.test.ts` «C-GOOGLE» (comprobada en rojo quitando la etiqueta).
+- Estado: verificado por Richard el 20 oct 2026 (propiedad de dominio, por DNS) y sitemap enviado: «Correcto», 25
+  páginas. No tocar el registro TXT de Google en el DNS de pantalay.com: si se borra, se pierde la verificación.
+- Prueba: `pruebas/dominio.test.ts` «C-GOOGLE» (comprobada en rojo quitando la etiqueta). Además, cada publicación
+  comprueba en vivo que el sitemap responde y trae pantalay.com (Action `publicar`).

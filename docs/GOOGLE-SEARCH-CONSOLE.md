@@ -1,6 +1,9 @@
 # Pantalay en Google Search Console
 
 > Preparado el 20 de octubre de 2026. Todo lo técnico ya está publicado y comprobado en vivo en pantalay.com.
+>
+> ✅ **HECHO el 20 oct 2026:** Richard verificó pantalay.com (propiedad de dominio) y envió el sitemap. Google lo
+> leyó ese mismo día: estado «Correcto», 25 páginas descubiertas. **No hay que volver a hacerlo.**
 
 ## Lo que ya está listo en el sitio
 

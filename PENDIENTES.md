@@ -7,6 +7,10 @@
 
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
 
+## Hecho por Richard
+
+- ✅ 20 oct 2026: pantalay.com verificado en Google Search Console y sitemap enviado (Correcto, 25 páginas).
+
 ## De mi lado
 
 - [x] Partes de subida iguales (grabaciones largas), vista previa con imagen, burbuja flotante, forma vertical,
