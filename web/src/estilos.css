@@ -2211,3 +2211,156 @@ main {
 .hecho-con:hover {
   color: var(--rojo);
 }
+
+/* Precios (como la página de Loom: tarjetas, ciclo de cobro y tabla) */
+.precios {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 40px 16px 60px;
+}
+.precios h1 {
+  text-align: center;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  margin: 0 0 10px;
+}
+.precios-fundador {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 18px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #fff7e0;
+  color: #6b4b00;
+  font-weight: 600;
+}
+.precios-ciclo {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+.precios-ciclo label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.etiqueta-ahorro {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #e6f6ec;
+  color: var(--exito);
+  font-size: 12px;
+  font-weight: 700;
+}
+.precios-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.precio-tarjeta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 22px;
+  border: 1px solid var(--borde);
+  border-radius: 22px;
+  background: var(--fondo);
+}
+.precio-tarjeta.popular {
+  border: 2px solid #b46bff;
+  background: #f6f0ff;
+}
+.precio-popular {
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: #e8dcff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.precio-tarjeta h2 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+}
+.precio-frase {
+  min-height: 3em;
+  color: var(--tinta-suave);
+  margin: 0 0 14px;
+}
+.precio-monto {
+  min-height: 74px;
+  margin-bottom: 14px;
+}
+.precio-monto strong {
+  font-size: 2rem;
+}
+.precio-monto s {
+  color: var(--gris);
+  font-size: 1.1rem;
+}
+.precio-monto small {
+  display: block;
+  color: var(--gris);
+  font-size: 13px;
+}
+.precio-suma {
+  margin: 18px 0 8px;
+  font-weight: 700;
+}
+.precio-tarjeta ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 7px;
+  font-size: 15px;
+}
+.precios-comparar {
+  text-align: center;
+  margin: 50px 0 16px;
+}
+.precios-tabla-marco {
+  overflow-x: auto;
+}
+.precios-tabla {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.precios-tabla th,
+.precios-tabla td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde);
+  text-align: center;
+}
+.precios-tabla th[scope='row'] {
+  text-align: left;
+  font-weight: 500;
+}
+.precios-tabla tr.grupo th {
+  text-align: left;
+  padding-top: 22px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-bottom: 2px solid var(--tinta);
+}
+.precios-tabla td {
+  color: var(--gris);
+}
+.precios-tabla td.si {
+  color: var(--exito);
+  font-weight: 700;
+}
+@media (max-width: 1000px) {
+  .precios-tarjetas {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .precios-tarjetas {
+    grid-template-columns: 1fr;
+  }
+}

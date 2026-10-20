@@ -1,3 +1,4 @@
+import { Precios } from './paginas/Precios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProveedorAviso } from './componentes/Aviso';
 import { Encabezado, Pie } from './componentes/Marco';
@@ -67,6 +68,7 @@ export function App() {
   else if (ruta === '/library') pagina = <Biblioteca />;
   else if (ruta === '/record') pagina = <Grabar />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
+  else if (ruta === '/pricing') pagina = <Precios />;
   else if (ruta === '/') pagina = <Inicio />;
   else pagina = <NoEncontrado />;
 

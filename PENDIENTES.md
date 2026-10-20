@@ -34,3 +34,7 @@
 - [x] Mapa del sitio con todas las guías de Docs y pantalay.com como dirección principal (20 oct 2026, C-DOMINIO).
 - [ ] Extensión de Chrome con modo «reporte de error» (consola y red).
 - [ ] Carpetas compartidas y espacios de equipo.
+- [ ] Cobro: conectar Stripe (suscripción mensual y anual, prueba de 14 días, precio de fundador), llenar
+      `suscripciones`, probar de punta a punta y recién ahí encender `COBRO_ACTIVO=1` y anunciar la página de precios
+      (`/pricing`, hoy oculta con noindex). Falta también limitar en Starter la miniatura a elección y el botón de acción.
+- [ ] Los cortes del MEDIO (silencios, cortar por texto) todavía no salen en el MP4 descargado; las puntas sí.

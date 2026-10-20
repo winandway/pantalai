@@ -126,6 +126,24 @@ const en = {
   dibujarAyuda: 'Draw on the preview: it shows up in your video right away.',
   congelarAyuda:
     'You’re sharing your entire screen, so Pantalay itself would show up while you draw. “Freeze” keeps the last image of the app you were showing and draws on top of it.',
+  preciosTitulo: 'Choose the plan that fits your needs.',
+  preciosFundador:
+    'Founder pricing: 50% off for life. Subscribe during our launch and keep half price forever, as long as your plan stays active.',
+  preciosCobro: 'Bill me',
+  preciosMensual: 'Monthly',
+  preciosAnual: 'Annually',
+  preciosAhorro: 'SAVE UP TO 17%',
+  preciosPopular: 'MOST POPULAR',
+  preciosHablemos: 'Let’s talk',
+  preciosPorUsuario: 'per user / month',
+  preciosAlAno: 'per user / year',
+  preciosEmpezarGratis: 'Sign up free',
+  preciosContactar: 'Contact us',
+  preciosFundadorBoton: 'Get founder pricing',
+  preciosProximamente: 'Coming soon',
+  preciosComparar: 'Compare plans',
+  preciosNota:
+    'Prices in US dollars. Taxes may apply. Founder pricing is locked for as long as your subscription stays active.',
   nivelesSonido: 'Sound levels',
   sonidoComputadora: 'Computer sound',
   sinSonidoSistema:
@@ -422,6 +440,24 @@ const es: Record<Clave, string> = {
   dibujarAyuda: 'Dibuja sobre la vista previa: sale en tu video al instante.',
   congelarAyuda:
     'Estás compartiendo la pantalla completa, así que Pantalay mismo saldría mientras dibujas. «Congelar» deja la última imagen del programa que estabas mostrando y dibuja encima.',
+  preciosTitulo: 'Elige el plan que se ajusta a lo que necesitas.',
+  preciosFundador:
+    'Precio de fundador: 50 % de descuento de por vida. Suscríbete durante el lanzamiento y paga la mitad para siempre, mientras tu plan siga activo.',
+  preciosCobro: 'Cobro',
+  preciosMensual: 'Mensual',
+  preciosAnual: 'Anual',
+  preciosAhorro: 'AHORRA HASTA 17 %',
+  preciosPopular: 'EL MÁS POPULAR',
+  preciosHablemos: 'Hablemos',
+  preciosPorUsuario: 'por usuario al mes',
+  preciosAlAno: 'por usuario al año',
+  preciosEmpezarGratis: 'Empieza gratis',
+  preciosContactar: 'Contáctanos',
+  preciosFundadorBoton: 'Quiero el precio de fundador',
+  preciosProximamente: 'Próximamente',
+  preciosComparar: 'Compara los planes',
+  preciosNota:
+    'Precios en dólares estadounidenses. Pueden aplicar impuestos. El precio de fundador se mantiene mientras tu suscripción siga activa.',
   nivelesSonido: 'Niveles de sonido',
   sonidoComputadora: 'Sonido de la computadora',
   sinSonidoSistema:
