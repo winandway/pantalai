@@ -871,27 +871,101 @@ main {
     linear-gradient(var(--borde), var(--borde)) 6% 24% / 60% 4% no-repeat,
     linear-gradient(var(--borde), var(--borde)) 6% 34% / 50% 4% no-repeat;
 }
-.camara-previa {
+@property --giro {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.camara-previa-marco {
   position: absolute;
-  object-fit: cover;
-  aspect-ratio: 1;
-  transform: scaleX(-1);
+  overflow: hidden;
   background: var(--tinta);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  display: grid;
 }
-.camara-previa.forma-circulo {
-  border-radius: 50%;
+.camara-previa-marco.con-borde {
+  padding: 3px;
+  background: conic-gradient(from var(--giro), #ff4fa3, #ff9f43, #ffe14d, #b46bff, #ff4fa3);
+  animation: girar-borde 3s linear infinite;
 }
-.camara-previa.forma-cuadrado {
-  border-radius: 12%;
+@keyframes girar-borde {
+  to {
+    --giro: 360deg;
+  }
 }
-.modo-camara .camara-previa {
-  inset: 0;
+.camara-previa {
   width: 100%;
   height: 100%;
-  aspect-ratio: auto;
+  object-fit: cover;
+  transform: scaleX(-1);
+  background: var(--tinta);
+  display: block;
+}
+.camara-previa-marco.forma-circulo,
+.camara-previa-marco.forma-circulo .camara-previa {
+  border-radius: 50%;
+}
+.camara-previa-marco.forma-cuadrado,
+.camara-previa-marco.forma-vertical {
+  border-radius: 14%;
+}
+.camara-previa-marco.forma-vertical {
+  border-radius: 12% / 7%;
+}
+.camara-previa-marco.forma-cuadrado .camara-previa {
+  border-radius: 12%;
+}
+.camara-previa-marco.forma-vertical .camara-previa {
+  border-radius: 11% / 6%;
+}
+.camara-previa-marco.completa {
+  inset: 0;
   border-radius: 0;
   box-shadow: none;
+  padding: 0;
+}
+.camara-previa-marco.completa .camara-previa {
+  border-radius: 0;
+}
+.opcion-ancha {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.subiendo-capa {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(10, 11, 14, 0.78);
+  color: #fff;
+  text-align: center;
+  padding: 16px;
+}
+.subiendo-capa strong {
+  font-size: 1.3rem;
+}
+.ayuda-clara {
+  color: #c9ccd3;
+  font-size: 0.9rem;
+}
+.ruedita {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 5px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--exito);
+  animation: ruedita 0.9s linear infinite;
+}
+@keyframes ruedita {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.grabando-ahora {
+  animation: latido 1.2s infinite;
 }
 .ajustes-burbuja {
   display: grid;

@@ -143,6 +143,8 @@ export const GUIAS: Guia[] = [
         'In Screen + Cam mode, the preview on the right shows where your bubble will be.',
         'Change the bubble size (small, medium or large), the shape (circle or square) and the corner where it sits.',
         'The bubble is mirrored, like a mirror, so it feels natural when you point at things.',
+        'Shapes: circle, square, or vertical (like a short). Turn on “Animated color border” for a moving pink-orange-yellow edge.',
+        'Floating bubble (Chrome and Edge): your camera opens in a small window that stays on top of every app, like Loom. Drag it anywhere by its top bar while you talk; it has the timer, pause and finish. Share your “Entire screen” so the bubble appears in the video.',
       ],
     },
     es: {
@@ -152,6 +154,8 @@ export const GUIAS: Guia[] = [
         'En el modo Pantalla + cámara, la vista previa de la derecha muestra dónde va a quedar tu burbuja.',
         'Cambia el tamaño (chica, mediana o grande), la forma (círculo o cuadrado) y la esquina donde va.',
         'La burbuja se ve en espejo, como te ves en un espejo, para que señalar las cosas se sienta natural.',
+        'Formas: círculo, cuadrado o vertical (tipo short). Enciende «Borde de colores animado» para un borde rosado, naranja y amarillo que va girando.',
+        'Burbuja flotante (Chrome y Edge): tu cámara se abre en una ventanita que queda encima de todos los programas, como en Loom. Arrástrala a donde quieras por su barra de arriba mientras hablas; trae el tiempo, pausar y terminar. Comparte la «Pantalla completa» para que la burbuja salga en el video.',
       ],
     },
   },
@@ -190,7 +194,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Your video uploads while you record, piece by piece. Each piece is also kept on your computer until the upload finishes.',
         'If the connection fails, Pantalay keeps trying on its own. If it still cannot finish, you will see Try again and Download recording.',
-        'If you closed the tab before it finished, open your library: recordings saved on this computer appear at the top, ready to download.',
+        'If you closed the tab before it finished, open your library: recordings saved on this computer appear at the top. Press “Upload again” to finish uploading them, or download them.',
       ],
     },
     es: {
@@ -199,7 +203,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'El video se sube mientras grabas, por partes. Cada parte también queda guardada en tu computadora hasta que la subida termina.',
         'Si la conexión falla, Pantalay sigue intentando solo. Si aun así no puede terminar, verás Intentar otra vez y Descargar la grabación.',
-        'Si cerraste la pestaña antes de que terminara, abre tu biblioteca: arriba aparecen las grabaciones guardadas en esta computadora, listas para descargar.',
+        'Si cerraste la pestaña antes de que terminara, abre tu biblioteca: arriba aparecen las grabaciones guardadas en esta computadora. Toca «Subir otra vez» para terminar de subirlas, o descárgalas.',
       ],
     },
   },

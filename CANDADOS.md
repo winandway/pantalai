@@ -102,3 +102,29 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Comprobación: `e2e/grabar.spec.ts` (con `GUARDAR_MP4=archivo` guarda el MP4); el archivo lo abre AVFoundation
   (lo que usa Final Cut): `avconvert --source x.mp4 --preset PresetPassthrough --output y.mov` termina sin error.
 - Prueba: `pruebas/servidor.test.ts` › CANDADO MP4.
+
+## C-PARTES-IGUALES (19 oct 2026)
+
+- Qué se rompió: dos grabaciones de 5 minutos quedaron «subiendo» para siempre y salió «La subida no terminó».
+  Causa: R2 exige que TODAS las partes de una subida, menos la última, midan exactamente lo mismo. Se cortaban
+  partes de tamaño variable (≥ 5 MiB) y además la primera crecía al escribirle la duración. Las grabaciones cortas
+  (1 o 2 partes) nunca lo mostraban. Reproducido en local: partes [5.2, 5.7, 1] MB → error 10048; [5, 5, 1] → ok.
+- Arreglo: `Subidor.cortar()` corta exactamente `parteMinima` y guarda el sobrante; la duración solo se escribe si
+  hay 1 o 2 partes. El servidor responde 409 «partes» (no 500) si el cierre falla. «Subir otra vez» recupera las
+  grabaciones guardadas en la computadora. El almacén falso de las pruebas aplica la misma regla.
+- Prueba: `pruebas/subida.test.ts` › CANDADO partes iguales; `pruebas/falsos.ts` rechaza partes desiguales.
+
+## C-VISTA-PREVIA (19 oct 2026)
+
+- Qué se rompió: la vista previa salía negra mientras se grababa (REA lo capturó: evidencia
+  `ev_5a0eb24ce41fb55688c0b263c2248babb8a0c1c5cfd71ee0b50dc16befaf559d`). Se conectaba la imagen a un video que
+  todavía no estaba en pantalla.
+- Arreglo: se conecta en un efecto cuando el estado ya no es «ajustes».
+- Prueba: `e2e/grabar.spec.ts` comprueba que la vista previa tiene imagen y que arriba dice «Recording».
+
+## C-BURBUJA-FLOTANTE (19 oct 2026)
+
+- La burbuja flotante usa Document Picture-in-Picture: la ventanita se abre PRIMERO en el clic de «Empezar»
+  (Chrome exige el gesto) y después se pide la pantalla. En ese modo se graba la pantalla tal cual (la burbuja
+  está en ella) y no se compone en lienzo. Si la ventanita no se puede abrir, se vuelve a la burbuja dentro del
+  video (lienzo). Probado en Chrome visible: ventanita con cámara, forma vertical y borde animado.

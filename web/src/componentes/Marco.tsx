@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useIdioma } from '../logica/idioma';
 import { alClicEnlace, useRuta } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
+import { useEstadoGrabacion } from '../logica/estadoGrabacion';
+import { formatoTiempo } from '../logica/tiempo';
 import { SelectorIdioma } from './SelectorIdioma';
 
 export function Logo() {
@@ -20,6 +22,7 @@ export function Logo() {
 export function Encabezado() {
   const { t, idioma, cambiar } = useIdioma();
   const { usuario, salir, cargando } = useSesion();
+  const grabacion = useEstadoGrabacion();
   const ruta = useRuta();
   const [menu, setMenu] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
@@ -59,9 +62,21 @@ export function Encabezado() {
         <SelectorIdioma idioma={idioma} cambiar={cambiar} />
         {!cargando && usuario && (
           <>
-            <a href="/record" onClick={alClicEnlace} className="boton grabar-boton">
-              <span className="punto-rojo" aria-hidden="true" /> {t('grabar')}
-            </a>
+            {grabacion.grabando ? (
+              <a
+                href="/record"
+                onClick={alClicEnlace}
+                className="boton grabar-boton grabando-ahora"
+                aria-live="polite"
+              >
+                <span className="punto-rojo" aria-hidden="true" />{' '}
+                {grabacion.pausa ? t('enPausa') : t('grabandoAhora')} {formatoTiempo(grabacion.segundos)}
+              </a>
+            ) : (
+              <a href="/record" onClick={alClicEnlace} className="boton grabar-boton">
+                <span className="punto-rojo" aria-hidden="true" /> {t('grabar')}
+              </a>
+            )}
             <div className="cuenta" ref={caja}>
               <button
                 type="button"

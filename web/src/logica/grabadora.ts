@@ -14,8 +14,12 @@ export type Ajustes = {
   audioSistema: boolean;
   calidad: Calidad;
   burbujaTamano: 'chico' | 'mediano' | 'grande';
-  burbujaForma: 'circulo' | 'cuadrado';
+  burbujaForma: 'circulo' | 'cuadrado' | 'vertical';
   esquina: Esquina;
+  /** Burbuja en una ventanita flotante encima de todos los programas (como Loom). */
+  flotante: boolean;
+  /** Borde de colores que va girando alrededor de la burbuja. */
+  bordeColores: boolean;
   transcribir: boolean;
   idiomaVoz: string; // 'en-US' | 'es-ES' ...
 };
@@ -29,6 +33,8 @@ export const AJUSTES_INICIALES: Ajustes = {
   burbujaTamano: 'mediano',
   burbujaForma: 'circulo',
   esquina: 'abajo-izq',
+  flotante: true,
+  bordeColores: true,
   transcribir: true,
   idiomaVoz: 'en-US',
 };
@@ -58,13 +64,34 @@ export function puedeGrabarPantalla(): boolean {
   );
 }
 
-/** Dónde va la burbuja dentro del lienzo. */
-export function posicionBurbuja(ancho: number, alto: number, a: Pick<Ajustes, 'burbujaTamano' | 'esquina'>) {
-  const lado = Math.round(Math.min(ancho, alto) * BURBUJA[a.burbujaTamano]);
+/** Medidas de la burbuja: cuadrada para círculo y cuadrado, 9:16 (tipo short) para vertical. */
+export function medidaBurbuja(base: number, forma: Ajustes['burbujaForma']): { ancho: number; alto: number } {
+  if (forma === 'vertical') {
+    const alto = Math.round(base * 1.45);
+    return { ancho: Math.round((alto * 9) / 16), alto };
+  }
+  return { ancho: base, alto: base };
+}
+
+/** Dónde va la burbuja dentro del lienzo. «lado» queda por compatibilidad (= ancho). */
+export function posicionBurbuja(
+  ancho: number,
+  alto: number,
+  a: Pick<Ajustes, 'burbujaTamano' | 'esquina'> & { burbujaForma?: Ajustes['burbujaForma'] },
+) {
+  const m = medidaBurbuja(
+    Math.round(Math.min(ancho, alto) * BURBUJA[a.burbujaTamano]),
+    a.burbujaForma ?? 'circulo',
+  );
   const margen = Math.round(Math.min(ancho, alto) * 0.03);
-  const x = a.esquina.endsWith('izq') ? margen : ancho - lado - margen;
-  const y = a.esquina.startsWith('abajo') ? alto - lado - margen : margen;
-  return { x, y, lado };
+  const x = a.esquina.endsWith('izq') ? margen : ancho - m.ancho - margen;
+  const y = a.esquina.startsWith('abajo') ? alto - m.alto - margen : margen;
+  return { x, y, lado: m.ancho, ancho: m.ancho, alto: m.alto };
+}
+
+/** La ventanita flotante existe en Chrome y Edge de computadora. */
+export function puedeFlotar(): boolean {
+  return typeof window !== 'undefined' && 'documentPictureInPicture' in window;
 }
 
 type Eventos = {
@@ -111,6 +138,10 @@ export class Grabadora {
   ancho = 0;
   alto = 0;
   previa: MediaStream | null = null;
+  /** En modo flotante: la cámara que se muestra en la ventanita. */
+  camara: MediaStream | null = null;
+  /** La ventanita flotante, abierta por la página antes de pedir la pantalla. */
+  ventanaFlotante: Window | null = null;
   private videoPantalla: HTMLVideoElement | null = null;
   private videoCamara: HTMLVideoElement | null = null;
 
@@ -178,7 +209,14 @@ export class Grabadora {
     }
 
     let video: MediaStreamTrack;
-    if (pantalla && camara) video = await this.componer(pantalla, camara);
+    if (pantalla && camara && this.a.flotante && this.ventanaFlotante) {
+      // Modo flotante: la burbuja vive en su ventanita encima de todo y la graba la propia pantalla.
+      this.camara = camara;
+      video = pantalla.getVideoTracks()[0]!;
+      const s = video.getSettings();
+      this.ancho = s.width ?? 0;
+      this.alto = s.height ?? 0;
+    } else if (pantalla && camara) video = await this.componer(pantalla, camara);
     else {
       video = (pantalla ?? camara)!.getVideoTracks()[0]!;
       const s = video.getSettings();
@@ -218,20 +256,38 @@ export class Grabadora {
         lienzo.height = vp.videoHeight;
       }
       ctx.drawImage(vp, 0, 0, lienzo.width, lienzo.height);
-      const { x, y, lado } = posicionBurbuja(lienzo.width, lienzo.height, this.a);
+      const { x, y, ancho: bw, alto: bh } = posicionBurbuja(lienzo.width, lienzo.height, this.a);
       const cw = vc.videoWidth || 1;
       const chh = vc.videoHeight || 1;
-      const corte = Math.min(cw, chh);
+      // Recorte centrado de la cámara con la proporción de la burbuja.
+      const escala = Math.min(cw / bw, chh / bh);
+      const sw = bw * escala;
+      const sh = bh * escala;
+      const forma = () => {
+        ctx.beginPath();
+        if (this.a.burbujaForma === 'circulo') ctx.arc(x + bw / 2, y + bh / 2, bw / 2, 0, Math.PI * 2);
+        else ctx.roundRect(x, y, bw, bh, Math.min(bw, bh) * 0.14);
+      };
       ctx.save();
-      ctx.beginPath();
-      if (this.a.burbujaForma === 'circulo') ctx.arc(x + lado / 2, y + lado / 2, lado / 2, 0, Math.PI * 2);
-      else ctx.roundRect(x, y, lado, lado, lado * 0.12);
+      forma();
       ctx.clip();
       // Espejo, como se ve uno en la cámara.
-      ctx.translate(x + lado, y);
+      ctx.translate(x + bw, y);
       ctx.scale(-1, 1);
-      ctx.drawImage(vc, (cw - corte) / 2, (chh - corte) / 2, corte, corte, 0, 0, lado, lado);
+      ctx.drawImage(vc, (cw - sw) / 2, (chh - sh) / 2, sw, sh, 0, 0, bw, bh);
       ctx.restore();
+      if (this.a.bordeColores) {
+        // Borde de colores (rosado, naranja, amarillo, lila) que va girando.
+        const g = ctx.createConicGradient((performance.now() / 1000) * 2, x + bw / 2, y + bh / 2);
+        for (const [i, c] of ['#ff4fa3', '#ff9f43', '#ffe14d', '#b46bff', '#ff4fa3'].entries())
+          g.addColorStop(i / 4, c);
+        ctx.save();
+        ctx.lineWidth = Math.max(4, Math.min(bw, bh) * 0.035);
+        ctx.strokeStyle = g;
+        forma();
+        ctx.stroke();
+        ctx.restore();
+      }
     };
     const codigo = 'let t=setInterval(()=>postMessage(0),1000/30);onmessage=()=>clearInterval(t)';
     this.reloj = new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' })));

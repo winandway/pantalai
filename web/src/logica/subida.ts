@@ -46,13 +46,20 @@ export class Subidor {
     this.pendiente.push(pedazo);
     this.pendienteBytes += pedazo.size;
     this.total += pedazo.size;
-    if (this.pendienteBytes >= this.o.parteMinima) this.cortar();
+    while (this.pendienteBytes >= this.o.parteMinima) this.cortar();
   }
 
+  /**
+   * CANDADO C-PARTES-IGUALES: el almacén (R2) exige que TODAS las partes, menos la última, midan EXACTAMENTE lo
+   * mismo. Por eso se corta justo en «parteMinima» y lo que sobra queda para la siguiente parte.
+   * (Antes se cortaban partes de tamaños distintos y las grabaciones largas no se podían cerrar.)
+   */
   private cortar() {
-    const blob = new Blob(this.pendiente);
-    this.pendiente = [];
-    this.pendienteBytes = 0;
+    const junto = new Blob(this.pendiente);
+    const blob = junto.slice(0, this.o.parteMinima);
+    const resto = junto.slice(this.o.parteMinima);
+    this.pendiente = resto.size ? [resto] : [];
+    this.pendienteBytes = resto.size;
     if (!this.primera) {
       this.primera = blob;
       return;
@@ -102,7 +109,10 @@ export class Subidor {
       else if (resto.size) this.encolar(this.siguiente++, resto);
     }
     let primera = this.primera!;
-    if (arreglarPrimera) {
+    // La duración se escribe en la primera parte, que crece unos bytes. Solo se puede si la primera es la única
+    // parte «no final» (grabación de 1 o 2 partes); con más partes rompería la regla de partes iguales.
+    // En ese caso el reproductor usa la duración guardada y la copia MP4 trae la suya.
+    if (arreglarPrimera && this.siguiente <= 3) {
       try {
         const arreglada = await arreglarPrimera(primera);
         if (arreglada.size >= primera.size) {
@@ -121,6 +131,40 @@ export class Subidor {
   archivo(tipo: string): Blob {
     return new Blob(this.todo, { type: tipo });
   }
+}
+
+/**
+ * Sube de nuevo una grabación guardada en esta computadora (por ejemplo, una que no terminó de subir).
+ * Crea un video nuevo, sube en partes iguales y lo cierra. Devuelve el id nuevo.
+ */
+export async function subirGrabacion(
+  archivo: Blob,
+  duracion: number,
+  idioma: 'en' | 'es',
+  progreso?: (subidos: number, total: number) => void,
+  llamar: typeof pedir = pedir,
+): Promise<string> {
+  const r = await llamar<{ id: string; parte_minima: number }>('/datos/videos', {
+    method: 'POST',
+    json: { tipo: archivo.type.split(';')[0] || 'video/webm', idioma },
+  });
+  const subidor = new Subidor({
+    videoId: r.id,
+    parteMinima: r.parte_minima,
+    progreso,
+    subirParte: async (videoId, n, datos) =>
+      (
+        await llamar<{ parte: ParteSubida }>(`/datos/videos/${videoId}/partes/${n}`, {
+          method: 'PUT',
+          body: datos,
+          headers: { 'content-type': 'application/octet-stream' },
+        })
+      ).parte,
+  });
+  subidor.agregar(archivo);
+  const partes = await subidor.terminar();
+  await llamar(`/datos/videos/${r.id}/completar`, { method: 'POST', json: { partes, duracion } });
+  return r.id;
 }
 
 // ---------- respaldo en el navegador ----------

@@ -15,9 +15,19 @@ test('grabar, subir y ver un video', async ({ page }) => {
   await page.getByText('Screen + Cam').click();
   await page.getByRole('button', { name: 'Start recording' }).click();
   await expect(page.getByText('Recording', { exact: true })).toBeVisible({ timeout: 15_000 });
+  // CANDADO C-VISTA-PREVIA: mientras se graba, la vista previa tiene imagen (antes quedaba en negro).
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Boolean((document.querySelector('.grabar-previa video') as HTMLVideoElement | null)?.srcObject),
+      ),
+    )
+    .toBe(true);
+  // El botón de arriba dice «Recording» con el tiempo, no «Record».
+  await expect(page.locator('.encabezado .grabando-ahora')).toContainText('Recording');
   await page.waitForTimeout(7000);
   await page.getByRole('button', { name: /Pause/ }).click();
-  await expect(page.getByText('Paused')).toBeVisible();
+  await expect(page.locator('.barra-grabacion .indicador')).toHaveText('Paused');
   await page.waitForTimeout(1500);
   await page.getByRole('button', { name: /Resume/ }).click();
   await page.waitForTimeout(2000);

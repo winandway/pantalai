@@ -102,6 +102,13 @@ export function almacenFalso() {
         async complete(partes: { partNumber: number; etag: string }[]) {
           const s = subidas.get(id);
           if (!s) throw new Error('subida no existe');
+          // Igual que R2: todas las partes menos la última miden lo mismo y al menos 5 MiB.
+          const tamanos = partes.map((p) => s.partes.get(p.partNumber)?.length ?? 0);
+          const noFinales = tamanos.slice(0, -1);
+          if (noFinales.some((t) => t !== noFinales[0] || t < 5 * 1024 * 1024))
+            throw new Error(
+              'completeMultipartUpload: There was a problem with the multipart upload. (10048)',
+            );
           const trozos = partes.map((p) => {
             const t = s.partes.get(p.partNumber);
             if (!t || p.etag !== `etag-${p.partNumber}`) throw new Error(`parte ${p.partNumber} inválida`);

@@ -491,7 +491,13 @@ app.post('/datos/videos/:id/completar', requiereSesion, async (c) => {
   if (!d) return err(c, 400, 'datos');
   const partes = [...d.partes].sort((a, b) => a.partNumber - b.partNumber);
   const subida = c.env.BUCKET.resumeMultipartUpload(claveVideo(v.id), v.subida_id);
-  const obj = await subida.complete(partes);
+  let obj: R2Object;
+  try {
+    obj = await subida.complete(partes);
+  } catch (e) {
+    console.error('no se pudo cerrar la subida', v.id, partes.length, e);
+    return err(c, 409, 'partes');
+  }
   const ahora = Date.now();
   await c.env.DB.prepare(
     `UPDATE videos SET estado = 'listo', bytes = ?, duracion = ?, transcripcion = ?, titulo = COALESCE(?, titulo),

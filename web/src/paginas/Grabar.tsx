@@ -9,16 +9,20 @@ import {
   Grabadora,
   dispositivos,
   posicionBurbuja,
+  puedeFlotar,
   puedeGrabarPantalla,
   reconocimientoDisponible,
   type Ajustes,
 } from '../logica/grabadora';
 import { textoError, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
+import { abrirVentana, montarBurbuja, type Burbuja } from '../logica/burbuja';
+import { fijarEstadoGrabacion } from '../logica/estadoGrabacion';
 import { useSesion } from '../logica/sesion';
 import {
   Subidor,
   borrarRespaldo,
+  subirGrabacion,
   leerRespaldo,
   listarRespaldos,
   respaldarPedazo,
@@ -66,6 +70,9 @@ export function Grabar() {
   const camaraPrevia = useRef<HTMLVideoElement>(null);
   const terminarRef = useRef<() => Promise<void>>(async () => undefined);
   const miniaturaInicio = useRef<Blob | null>(null);
+  const flotante = useRef<Burbuja | null>(null);
+  const pausarRef = useRef<() => void>(() => undefined);
+  const continuarRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     if (!cargando && !usuario) navegar('/login?volver=/record', true);
@@ -119,6 +126,22 @@ export function Grabar() {
     return () => clearInterval(i);
   }, [estado]);
 
+  // La vista previa se conecta cuando el video ya está en pantalla (antes quedaba en negro: se conectaba
+  // a un elemento que todavía no existía). Candado C-VISTA-PREVIA.
+  useEffect(() => {
+    if (estado === 'ajustes' || !previa.current || !grabadora.current?.previa) return;
+    if (previa.current.srcObject !== grabadora.current.previa)
+      previa.current.srcObject = grabadora.current.previa;
+  }, [estado]);
+
+  // La burbuja flotante y el encabezado muestran el tiempo y el estado.
+  useEffect(() => {
+    const enCurso = estado === 'grabando' || estado === 'pausa' || estado === 'cuenta';
+    fijarEstadoGrabacion({ grabando: enCurso, pausa: estado === 'pausa', segundos });
+    if (estado === 'grabando' || estado === 'pausa') flotante.current?.actualizar(segundos, estado);
+  }, [estado, segundos]);
+  useEffect(() => () => fijarEstadoGrabacion({ grabando: false, pausa: false, segundos: 0 }), []);
+
   // Aviso antes de cerrar la pestaña con una grabación en curso.
   useEffect(() => {
     if (estado === 'ajustes') return;
@@ -130,6 +153,8 @@ export function Grabar() {
   }, [estado]);
 
   const limpiar = useCallback(() => {
+    flotante.current?.cerrar();
+    flotante.current = null;
     grabadora.current?.liberar();
     grabadora.current = null;
     subidor.current = null;
@@ -146,6 +171,9 @@ export function Grabar() {
       setError(t('navegadorNoSirve'));
       return;
     }
+    // La ventanita flotante se abre PRIMERO, con el gesto del clic (Chrome lo exige).
+    const ventana =
+      a.modo === 'pantalla_camara' && a.flotante && puedeFlotar() ? await abrirVentana(a) : null;
     const g = new Grabadora(a, {
       pedazo: (b) => {
         subidor.current?.agregar(b);
@@ -159,9 +187,11 @@ export function Grabar() {
         if (motivo === 'pantalla_cerrada') void terminarRef.current();
       },
     });
+    g.ventanaFlotante = ventana;
     try {
       flujo.current = await g.preparar();
     } catch (e) {
+      ventana?.close();
       g.liberar();
       const nombre = (e as DOMException)?.name;
       if (nombre !== 'AbortError' && !(nombre === 'NotAllowedError' && a.modo !== 'camara'))
@@ -170,7 +200,19 @@ export function Grabar() {
     }
     grabadora.current = g;
     void leerDispositivos();
-    if (previa.current) previa.current.srcObject = g.previa;
+    if (ventana && g.camara) {
+      flotante.current = montarBurbuja(
+        ventana,
+        g.camara,
+        a,
+        {
+          pausar: () => pausarRef.current(),
+          continuar: () => continuarRef.current(),
+          terminar: () => void terminarRef.current(),
+        },
+        { pausar: t('pausar'), continuar: t('continuar'), terminar: t('terminar') },
+      );
+    } else ventana?.close();
     // El video se crea en el servidor durante la cuenta regresiva: así el enlace existe desde el primer segundo.
     try {
       const r = await pedir<{ id: string; parte_minima: number }>('/datos/videos', {
@@ -197,6 +239,7 @@ export function Grabar() {
     setEstado('cuenta');
     for (let n = 3; n > 0; n--) {
       setCuenta(n);
+      flotante.current?.actualizar(0, 'cuenta', n);
       await new Promise((r) => setTimeout(r, 1000));
       if (!grabadora.current) return; // se descartó durante la cuenta
     }
@@ -220,6 +263,8 @@ export function Grabar() {
     const id = videoId.current;
     if (!g || !s || !id) return;
     setEstado('subiendo');
+    flotante.current?.cerrar();
+    flotante.current = null;
     const miniatura = miniaturaInicio.current ?? (await g.miniatura().catch(() => null));
     const duracion = await g.terminar('usuario');
     const segmentos = g.segmentos;
@@ -251,6 +296,14 @@ export function Grabar() {
     }
   }, [a.idiomaVoz, avisar, limpiar, t]);
   terminarRef.current = terminar;
+  pausarRef.current = () => {
+    grabadora.current?.pausar();
+    setEstado('pausa');
+  };
+  continuarRef.current = () => {
+    grabadora.current?.continuar();
+    setEstado('grabando');
+  };
 
   async function descartar() {
     const id = videoId.current;
@@ -285,13 +338,8 @@ export function Grabar() {
     const tecla = (e: KeyboardEvent) => {
       if (!e.altKey || !e.shiftKey) return;
       if (e.code === 'KeyP') {
-        if (estado === 'grabando') {
-          grabadora.current?.pausar();
-          setEstado('pausa');
-        } else if (estado === 'pausa') {
-          grabadora.current?.continuar();
-          setEstado('grabando');
-        }
+        if (estado === 'grabando') pausarRef.current();
+        else if (estado === 'pausa') continuarRef.current();
       }
       if (e.code === 'KeyS' && (estado === 'grabando' || estado === 'pausa')) void terminar();
     };
@@ -433,22 +481,21 @@ export function Grabar() {
             <div className={`maqueta-pantalla modo-${a.modo}`}>
               {a.modo !== 'camara' && <div className="maqueta-escritorio" aria-hidden="true" />}
               {a.modo !== 'pantalla' && (
-                <video
-                  ref={camaraPrevia}
-                  autoPlay
-                  muted
-                  playsInline
-                  className={`camara-previa forma-${a.burbujaForma}`}
+                <div
+                  className={`camara-previa-marco forma-${a.burbujaForma} ${a.bordeColores && a.modo !== 'camara' ? 'con-borde' : ''} ${a.modo === 'camara' ? 'completa' : ''}`}
                   style={
                     a.modo === 'camara'
                       ? undefined
                       : {
                           left: `${(burbuja.x / 320) * 100}%`,
                           top: `${(burbuja.y / 180) * 100}%`,
-                          width: `${(burbuja.lado / 320) * 100}%`,
+                          width: `${(burbuja.ancho / 320) * 100}%`,
+                          height: `${(burbuja.alto / 180) * 100}%`,
                         }
                   }
-                />
+                >
+                  <video ref={camaraPrevia} autoPlay muted playsInline className="camara-previa" />
+                </div>
               )}
             </div>
             {a.modo === 'pantalla_camara' && (
@@ -474,6 +521,7 @@ export function Grabar() {
                   >
                     <option value="circulo">{t('circulo')}</option>
                     <option value="cuadrado">{t('cuadrado')}</option>
+                    <option value="vertical">{t('vertical')}</option>
                   </select>
                 </div>
                 <div className="campo">
@@ -489,6 +537,27 @@ export function Grabar() {
                     <option value="arriba-der">↗</option>
                   </select>
                 </div>
+                <label className="interruptor opcion-ancha">
+                  <input
+                    type="checkbox"
+                    checked={a.bordeColores}
+                    onChange={(e) => cambiar('bordeColores', e.target.checked)}
+                  />
+                  {t('bordeColores')}
+                </label>
+                {puedeFlotar() && (
+                  <label className="interruptor opcion-ancha">
+                    <input
+                      type="checkbox"
+                      checked={a.flotante}
+                      onChange={(e) => cambiar('flotante', e.target.checked)}
+                    />
+                    {t('burbujaFlotante')}
+                  </label>
+                )}
+                {puedeFlotar() && a.flotante && (
+                  <p className="ayuda opcion-ancha">{t('burbujaFlotanteAyuda')}</p>
+                )}
               </div>
             )}
           </section>
@@ -499,6 +568,15 @@ export function Grabar() {
         <div className="grabar-en-curso">
           <div className="grabar-previa">
             <video ref={previa} autoPlay muted playsInline />
+            {estado === 'subiendo' && (
+              <div className="subiendo-capa" role="status" aria-live="polite">
+                <span className="ruedita" aria-hidden="true" />
+                <strong>
+                  {progreso >= 0.999 ? t('procesando') : `${t('subiendo')} ${Math.round(progreso * 100)} %`}
+                </strong>
+                <span className="ayuda-clara">{t('subiendoAyuda')}</span>
+              </div>
+            )}
             {estado === 'cuenta' && (
               <div className="cuenta-regresiva" aria-live="assertive">
                 <span>{t('cuentaRegresiva')}</span>
@@ -523,20 +601,12 @@ export function Grabar() {
             </span>
             <span className="cronometro">{formatoTiempo(segundos)}</span>
             {estado === 'grabando' && (
-              <button
-                type="button"
-                className="boton secundario"
-                onClick={() => (grabadora.current?.pausar(), setEstado('pausa'))}
-              >
+              <button type="button" className="boton secundario" onClick={() => pausarRef.current()}>
                 ⏸ {t('pausar')}
               </button>
             )}
             {estado === 'pausa' && (
-              <button
-                type="button"
-                className="boton secundario"
-                onClick={() => (grabadora.current?.continuar(), setEstado('grabando'))}
-              >
+              <button type="button" className="boton secundario" onClick={() => continuarRef.current()}>
                 ▶ {t('continuar')}
               </button>
             )}
@@ -606,6 +676,28 @@ export function Grabar() {
 export function Respaldos() {
   const { t, idioma } = useIdioma();
   const [lista, setLista] = useState<Respaldo[]>([]);
+  const [subiendo, setSubiendo] = useState<string | null>(null);
+  const [avance, setAvance] = useState(0);
+  const avisar = useAviso();
+  async function reintentar(r: Respaldo) {
+    setSubiendo(r.id);
+    setAvance(0);
+    try {
+      const archivo = await leerRespaldo(r.id, r.tipo);
+      const nuevo = await subirGrabacion(archivo, r.duracion, idioma, (s, total) =>
+        setAvance(Math.round((s / Math.max(1, total)) * 100)),
+      );
+      // El video a medias del servidor se cancela y el respaldo local se borra: ya está a salvo arriba.
+      await pedir(`/datos/videos/${r.id}/cancelar`, { method: 'POST' }).catch(() => undefined);
+      await borrarRespaldo(r.id);
+      navegar(`/v/${nuevo}`);
+    } catch (e) {
+      console.error('subir otra vez', e);
+      avisar(t('fallaSubida'));
+    } finally {
+      setSubiendo(null);
+    }
+  }
   useEffect(() => {
     void listarRespaldos().then(setLista);
   }, []);
@@ -619,6 +711,14 @@ export function Respaldos() {
           <span>
             {new Date(r.creado).toLocaleString(idioma)} · {formatoTiempo(r.duracion)}
           </span>
+          <button
+            type="button"
+            className="boton chico"
+            disabled={subiendo === r.id}
+            onClick={() => void reintentar(r)}
+          >
+            {subiendo === r.id ? `${t('subiendo')} ${avance} %` : t('subirOtraVez')}
+          </button>
           <button
             type="button"
             className="boton secundario chico"
