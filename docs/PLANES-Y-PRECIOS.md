@@ -5,7 +5,8 @@
 > (texto y tabla completa) y `ev_14d56c90325d61dd9e573bf91f6be3d2cccf4fb20f04e105f59bbf083d102b2d` (captura,
 > guardada en `docs/investigacion-rea/loom-precios.png`).
 >
-> **Los precios finales los decide Richard.** Esto es la recomendación.
+> **Aprobado por Richard el 20 de octubre de 2026**, con el plan gratis igual al de Loom: 25 videos y 5 minutos por
+> grabación (no 50 y 10). Construido en `servidor/planes.ts` y en la página `/pricing`, apagado hasta tener el cobro.
 
 ---
 
@@ -48,9 +49,7 @@ para quien se suscriba durante la promoción de lanzamiento.
 | Precio de lista anual                              | 0 USD       | ~~15 USD~~ al mes               | ~~20 USD~~ al mes              |                |
 | **Precio de fundador anual**                       | **0 USD**   | **7,50 USD** al mes (90 al año) | **10 USD** al mes (120 al año) |                |
 
-**Recomendación sobre el plan gratis:** darlo **más generoso que Loom**: 50 videos y 10 minutos por grabación (Loom
-da 25 y 5). Somos menos conocidos; un plan gratis mejor es lo que hace que alguien cambie de herramienta. El que
-necesita más paga Business.
+**Plan gratis (decidido por Richard):** igual al de Loom, 25 videos y 5 minutos por grabación.
 
 **Qué es la promoción, en palabras para la página:**
 «Founder pricing: 50% off for life. Subscribe during our launch and keep half price forever, as long as your plan
@@ -215,7 +214,7 @@ S = Starter · B = Business · B+IA = Business + AI · E = Enterprise
 ## 4. Qué entra en cada plan nuestro (lo que se pondría en las tarjetas)
 
 **Starter — 0 USD.** «Empieza a comunicarte con video.»
-50 videos · 10 minutos por grabación · hasta 1080p · pantalla y cámara · sonido de la computadora · transcripción
+25 videos · 5 minutos por grabación · hasta 720p · pantalla y cámara · sonido de la computadora · transcripción
 en vivo · comentarios y emojis · títulos automáticos · copia MP4 · marca «Hecho con Pantalay».
 
 **Business — 9 USD con el precio de fundador (lista 18).** «Videos sin límite y edición para avanzar más rápido.»
@@ -256,7 +255,7 @@ los videos viejos; con precios de 7,50 a 12 USD queda mucho margen, aunque algui
    anuncia ni se mandan clientes hasta probarlo de punta a punta (regla de pagos).
 2. **El tope de IA de 10 USD al mes** es para las pruebas. Con clientes de Business + AI hay que subirlo, y eso es
    decisión de Richard, con el costo por escrito (candado C-IA-GASTO).
-3. **Hoy todo es gratis y sin límite.** Al poner los límites del plan gratis (50 videos, 10 minutos), las cuentas que
+3. **Hoy todo es gratis y sin límite.** Al poner los límites del plan gratis (25 videos, 5 minutos), las cuentas que
    ya existen tienen que conservar sus videos. Recomiendo que las cuentas creadas antes del lanzamiento queden como
    fundadoras.
 4. **Lo que Loom tiene en Starter y nosotros no** (equipos, bibliotecas compartidas, capturas, grabar reuniones):
