@@ -26,6 +26,14 @@ const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
       'Viewers react and comment at the exact second. You see everything in one place.',
     ],
     ['Viewer insights', 'Views, average watch time, completion rate and button clicks for every video.'],
+    [
+      'AI writes the rest',
+      'Title, summary, chapters and tasks appear on their own. Remove filler words in one click.',
+    ],
+    [
+      'Video to document',
+      'Turn any video into a step-by-step procedure, guide or bug report, with a screenshot per step.',
+    ],
   ],
   es: [
     [
@@ -67,8 +75,8 @@ export function Inicio() {
           <a className="boton grande" href="/signup" onClick={alClicEnlace}>
             <span className="punto-rojo" aria-hidden="true" /> {t('empezar')}
           </a>
-          <a className="boton secundario grande" href="/docs" onClick={alClicEnlace}>
-            {t('docs')}
+          <a className="boton secundario grande" href="/docs/start-here" onClick={alClicEnlace}>
+            {idioma === 'es' ? 'Cómo empezar' : 'How to start'}
           </a>
         </div>
         <p className="ayuda">{t('limiteSinLimite')}</p>

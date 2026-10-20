@@ -92,7 +92,14 @@ export function Docs({ slug }: { slug: string }) {
               </figure>
             )}
             {guia[idioma].cuerpo.map((p, i) => (
-              <p key={i}>{p}</p>
+              <div key={i}>
+                <p>{p}</p>
+                {guia.imagenes?.[i] && (
+                  <figure className="docs-captura">
+                    <img src={`/capturas/${guia.imagenes[i]}-${idioma}.webp`} alt="" loading="lazy" />
+                  </figure>
+                )}
+              </div>
             ))}
           </>
         ) : slug ? (

@@ -4,6 +4,8 @@ export type Guia = {
   seccion: 'empezar' | 'grabar' | 'compartir' | 'editar' | 'ia' | 'cuenta';
   icono: string;
   imagen?: string;
+  /** Una captura después de cada párrafo (misma posición que «cuerpo»); null = sin captura. */
+  imagenes?: (string | null)[];
   en: { titulo: string; resumen: string; cuerpo: string[] };
   es: { titulo: string; resumen: string; cuerpo: string[] };
 };
@@ -18,6 +20,38 @@ export const SECCIONES: Record<Guia['seccion'], { en: string; es: string; icono:
 };
 
 export const GUIAS: Guia[] = [
+  {
+    slug: 'start-here',
+    seccion: 'empezar',
+    icono: '🚀',
+    imagenes: ['crear-cuenta', 'grabar', null, 'video', 'compartir', 'editar', 'generar'],
+    en: {
+      titulo: 'Start here: your first video in 5 minutes',
+      resumen: 'Create your account, record, let AI do the rest, share and edit — step by step.',
+      cuerpo: [
+        '1. Create your account. Open PANTALAI and press Sign up. Write your name, your email and a password of at least 8 characters, and press Create account. You land in your library.',
+        '2. Record. Press the red Record button. Choose Screen + Cam, pick your camera and microphone, choose the quality and the language you will speak, and press Start recording. Your browser asks what to share: choose a screen, a window or a tab and press Share. After a 3-second countdown, talk and show what you want.',
+        '3. Finish. Press Finish (or “Stop sharing” in the browser bar). Your video is already uploaded and its link is copied: you can paste it anywhere right away.',
+        '4. Let AI work. Your video opens and a line at the top shows that AI is working. In about a minute you get a title, a summary, chapters on the progress bar, the tasks you mentioned, and an accurate transcript with captions.',
+        '5. Share. Press Share to choose who can watch, start at a specific minute, copy the link or the embed code, or send it by email or WhatsApp.',
+        '6. Edit if you want. Press Edit to trim the start and the end, remove filler words or silences with one click, cut sentences from the transcript, and add text, arrows, boxes, blur or a button. Your original file is never touched.',
+        '7. Turn it into a document. Press Generate, pick a template like “Step-by-step procedure”, and get every step with its minute and a screenshot. Copy it or download it.',
+      ],
+    },
+    es: {
+      titulo: 'Empieza aquí: tu primer video en 5 minutos',
+      resumen: 'Crea tu cuenta, graba, deja que la IA haga el resto, comparte y edita, paso a paso.',
+      cuerpo: [
+        '1. Crea tu cuenta. Abre PANTALAI y toca Crear cuenta. Escribe tu nombre, tu correo y una contraseña de al menos 8 caracteres, y toca Crear cuenta. Llegas a tu biblioteca.',
+        '2. Graba. Toca el botón rojo Grabar. Elige Pantalla + cámara, escoge tu cámara y tu micrófono, la calidad y el idioma en que vas a hablar, y toca Empezar a grabar. El navegador te pregunta qué compartir: elige una pantalla, una ventana o una pestaña y toca Compartir. Después de la cuenta de 3 segundos, habla y muestra lo que quieras.',
+        '3. Termina. Toca Terminar (o «Dejar de compartir» en la barra del navegador). Tu video ya está subido y su enlace copiado: lo puedes pegar donde quieras de inmediato.',
+        '4. Deja trabajar a la IA. Se abre tu video y arriba aparece que la IA está trabajando. En más o menos un minuto tienes título, resumen, capítulos en la barra, las tareas que mencionaste y una transcripción precisa con subtítulos.',
+        '5. Comparte. Toca Compartir para elegir quién puede verlo, hacer que empiece en un minuto exacto, copiar el enlace o el código para insertar, o mandarlo por correo o WhatsApp.',
+        '6. Edita si quieres. Toca Editar para recortar el inicio y el final, quitar muletillas o silencios con un clic, cortar frases desde la transcripción y agregar textos, flechas, recuadros, difuminado o un botón. Tu archivo original nunca se toca.',
+        '7. Conviértelo en un documento. Toca Generar, elige una plantilla como «Procedimiento paso a paso» y recibe cada paso con su minuto y una captura. Cópialo o descárgalo.',
+      ],
+    },
+  },
   {
     slug: 'what-is-pantalai',
     seccion: 'empezar',
@@ -46,6 +80,7 @@ export const GUIAS: Guia[] = [
   },
   {
     slug: 'create-account',
+    imagen: 'crear-cuenta',
     seccion: 'empezar',
     icono: '🔑',
     en: {
@@ -219,6 +254,7 @@ export const GUIAS: Guia[] = [
   },
   {
     slug: 'comments-and-reactions',
+    imagen: 'video',
     seccion: 'compartir',
     icono: '😮',
     en: {
@@ -364,6 +400,7 @@ export const GUIAS: Guia[] = [
   },
   {
     slug: 'ai-title-summary-chapters',
+    imagen: 'video',
     seccion: 'ia',
     icono: '✨',
     en: {
@@ -389,6 +426,7 @@ export const GUIAS: Guia[] = [
   },
   {
     slug: 'ai-remove-filler-words',
+    imagen: 'editar',
     seccion: 'ia',
     icono: '🧹',
     en: {
@@ -412,6 +450,7 @@ export const GUIAS: Guia[] = [
   },
   {
     slug: 'ai-generate-documents',
+    imagen: 'generar',
     seccion: 'ia',
     icono: '📄',
     en: {
