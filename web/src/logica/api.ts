@@ -48,6 +48,7 @@ export type Superposicion = {
 export type Video = {
   id: string;
   tiene_mp4?: boolean;
+  marca?: boolean;
   titulo: string;
   descripcion: string;
   estado: string;
@@ -128,3 +129,13 @@ export function visitante(): string {
     return 'anonimo00';
   }
 }
+
+/** Lo que permite el plan de la cuenta (lo manda /datos/plan; con el cobro apagado, todo). */
+export type LimitesPlan = {
+  videos: number | null;
+  minutos: number | null;
+  calidad: '720' | '1080' | '2160';
+  ia: boolean;
+  lapices: boolean;
+  marca: boolean;
+};

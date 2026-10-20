@@ -44,6 +44,13 @@ const en = {
   'error.sin_sesion': 'Your session ended. Log in again.',
   'error.no_existe': 'This video doesn’t exist or is private.',
   'error.servidor': 'Something went wrong on our side. Try again.',
+  'error.limite_videos':
+    'You reached the 25 videos of the free plan. Archive or delete one, or upgrade to Business for unlimited videos.',
+  'error.plan_ia': 'AI tools are part of Business + AI.',
+  hechoCon: 'Made with Pantalay',
+  limiteMinutos:
+    'The free plan records up to 5 minutes per video. Your recording stopped and is being saved.',
+  soloBusiness: 'Business',
   // biblioteca
   todos: 'All videos',
   carpetas: 'Folders',
@@ -335,6 +342,13 @@ const es: Record<Clave, string> = {
   'error.sin_sesion': 'Tu sesión terminó. Entra otra vez.',
   'error.no_existe': 'Este video no existe o es privado.',
   'error.servidor': 'Algo falló de nuestro lado. Prueba otra vez.',
+  'error.limite_videos':
+    'Llegaste a los 25 videos del plan gratis. Archiva o borra uno, o pasa a Business para tener videos ilimitados.',
+  'error.plan_ia': 'Las herramientas de IA son parte de Business + AI.',
+  hechoCon: 'Hecho con Pantalay',
+  limiteMinutos:
+    'El plan gratis graba hasta 5 minutos por video. Tu grabación se detuvo y se está guardando.',
+  soloBusiness: 'Business',
   todos: 'Todos los videos',
   carpetas: 'Carpetas',
   nuevaCarpeta: 'Nueva carpeta',

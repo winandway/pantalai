@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import app, { PARTE_MIN } from '../servidor/app';
 import { almacenFalso, baseFalsa } from './falsos';
 
-type Env = { DB: D1Database; BUCKET: ReturnType<typeof almacenFalso>; TURNSTILE_SECRET?: string };
+type Env = {
+  DB: D1Database;
+  BUCKET: ReturnType<typeof almacenFalso>;
+  TURNSTILE_SECRET?: string;
+  COBRO_ACTIVO?: string;
+};
 let env: Env;
 
 beforeEach(() => {
@@ -305,6 +310,44 @@ describe('videos', () => {
     expect((await c(`/media/${id}/video?descargar=1`)).headers.get('content-type')).toBe('video/mp4');
     // Sin cambios, no se rehace.
     expect((await subirCopia()).ya).toBe(true);
+  });
+
+  it('CANDADO C-PLANES: con el cobro apagado nada limita; encendido, Starter tiene 25 videos, sin IA y con marca', async () => {
+    const c = await registrado();
+    const nuevo = () => c('/datos/videos', { method: 'POST', json: { tipo: 'video/webm' } });
+    const plan = async () =>
+      (await (await c('/datos/plan')).json()) as {
+        plan: string;
+        cobro_activo: boolean;
+        limites: { videos: number | null; ia: boolean; marca: boolean; calidad: string };
+      };
+    // Apagado (como hoy): todo permitido.
+    expect(await plan()).toMatchObject({
+      plan: 'starter',
+      cobro_activo: false,
+      limites: { videos: null, ia: true },
+    });
+    for (let i = 0; i < 26; i++) expect((await nuevo()).status).toBe(201);
+    // Encendido: Starter.
+    env.COBRO_ACTIVO = '1';
+    expect((await plan()).limites).toMatchObject({ videos: 25, ia: false, marca: true, calidad: '720' });
+    const r = await nuevo();
+    expect(r.status).toBe(402);
+    expect(((await r.json()) as { error: string }).error).toBe('limite_videos');
+    // La IA de análisis pide Business + AI.
+    env.COBRO_ACTIVO = '';
+    const v = await videoListo(c);
+    env.COBRO_ACTIVO = '1';
+    expect((await c(`/datos/videos/${v.id}/ia/analizar`, { method: 'POST' })).status).toBe(402);
+    const pagina = (await (await c(`/datos/videos/${v.id}`)).json()) as { video: { marca: boolean } };
+    expect(pagina.video.marca).toBe(true);
+    // Con Business + AI pagado: sin límites ni marca.
+    const yo = (await (await c('/datos/yo')).json()) as { usuario: { id: string } };
+    await env.DB.prepare('INSERT INTO suscripciones (usuario_id, plan, actualizado) VALUES (?, ?, ?)')
+      .bind(yo.usuario.id, 'business_ia', Date.now())
+      .run();
+    expect((await plan()).limites).toMatchObject({ videos: null, ia: true, marca: false, calidad: '2160' });
+    expect((await nuevo()).status).toBe(201);
   });
 
   it('el nombre del archivo descargado aguanta tildes y letras de otros idiomas', async () => {

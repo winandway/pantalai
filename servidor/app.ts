@@ -2,6 +2,7 @@
 // Rutas de datos bajo /datos y archivos bajo /media (NUNCA /api: choca con los estáticos).
 import { Hono, type Context } from 'hono';
 import { DOMINIO, redireccion, robots, sitemap } from './dominio';
+import { cobroActivo, esPlan, limitesDe, PRECIOS, type Limites, type Plan } from './planes';
 import { z } from 'zod';
 import {
   CABECERAS_SEGURIDAD,
@@ -43,6 +44,8 @@ export type Env = {
   GEMINI_API_KEY?: string;
   IA_TOPE_USD_MES?: string;
   IA_TOPE_MINUTOS_DIA?: string;
+  /** «1» enciende los límites de los planes (solo con la pasarela de pago probada). */
+  COBRO_ACTIVO?: string;
 };
 
 type Usuario = { id: string; correo: string; nombre: string };
@@ -121,9 +124,11 @@ function jsonSeguro(texto: string): unknown {
   }
 }
 
-function videoPublico(v: FilaVideo, autor: string, esDueno: boolean, tieneMp4 = false) {
+function videoPublico(v: FilaVideo, autor: string, esDueno: boolean, tieneMp4 = false, marca = false) {
   return {
     tiene_mp4: tieneMp4,
+    /** «Hecho con Pantalay» (plan gratis del dueño, solo con el cobro encendido). */
+    marca,
     id: v.id,
     titulo: v.titulo,
     descripcion: v.descripcion,
@@ -330,6 +335,30 @@ app.post('/datos/salir', async (c) => {
   return c.json({ ok: true });
 });
 
+// ---------- planes ----------
+
+async function planDe(c: C, usuarioId: string): Promise<{ plan: Plan; limites: Limites }> {
+  const f = await c.env.DB.prepare(
+    "SELECT plan FROM suscripciones WHERE usuario_id = ? AND estado = 'activa'",
+  )
+    .bind(usuarioId)
+    .first<{ plan: string }>();
+  const plan: Plan = esPlan(f?.plan) ? f.plan : 'starter';
+  return { plan, limites: limitesDe(plan, cobroActivo(c.env)) };
+}
+
+app.get('/datos/plan', requiereSesion, async (c) => {
+  const p = await planDe(c, c.get('usuario')!.id);
+  return c.json({ ...p, cobro_activo: cobroActivo(c.env), precios: PRECIOS }, 200, {
+    'Cache-Control': 'no-store',
+  });
+});
+
+/** Corta la petición si el plan no incluye la IA. */
+async function exigirIA(c: C): Promise<Response | null> {
+  return (await planDe(c, c.get('usuario')!.id)).limites.ia ? null : err(c, 402, 'plan_ia');
+}
+
 app.get('/datos/yo', (c) => c.json({ usuario: c.get('usuario') }, 200, { 'Cache-Control': 'no-store' }));
 
 // ---------- carpetas ----------
@@ -441,6 +470,13 @@ const esquemaNuevo = z.object({
 app.post('/datos/videos', requiereSesion, async (c) => {
   const d = await cuerpo(c, esquemaNuevo);
   if (!d) return err(c, 400, 'datos');
+  const { limites } = await planDe(c, c.get('usuario')!.id);
+  if (limites.videos !== null) {
+    const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM videos WHERE usuario_id = ?')
+      .bind(c.get('usuario')!.id)
+      .first<{ n: number }>();
+    if ((n?.n ?? 0) >= limites.videos) return err(c, 402, 'limite_videos');
+  }
   const id = nuevoId(20);
   const tipo = d.tipo.split(';')[0]!;
   const subida = await c.env.BUCKET.createMultipartUpload(claveVideo(id), {
@@ -558,7 +594,15 @@ app.get('/datos/videos/:id', async (c) => {
     .bind(v.usuario_id)
     .first<{ nombre: string }>();
   return c.json(
-    { video: videoPublico(v, autor?.nombre ?? '', u?.id === v.usuario_id, await tieneMp4(c, v)) },
+    {
+      video: videoPublico(
+        v,
+        autor?.nombre ?? '',
+        u?.id === v.usuario_id,
+        await tieneMp4(c, v),
+        (await planDe(c, v.usuario_id)).limites.marca,
+      ),
+    },
     200,
     {
       'Cache-Control': 'no-store',
@@ -966,6 +1010,8 @@ app.post('/datos/videos/:id/ia/transcribir', requiereSesion, async (c) => {
 });
 
 app.post('/datos/videos/:id/ia/analizar', requiereSesion, async (c) => {
+  const sinPlan = await exigirIA(c);
+  if (sinPlan) return sinPlan;
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
   const f = await filaIA(c, v.id);
@@ -1014,6 +1060,8 @@ const esquemaGenerar = z.object({
 });
 
 app.post('/datos/videos/:id/ia/generar', requiereSesion, async (c) => {
+  const sinPlan = await exigirIA(c);
+  if (sinPlan) return sinPlan;
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
   const d = await cuerpo(c, esquemaGenerar);

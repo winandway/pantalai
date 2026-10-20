@@ -2198,3 +2198,16 @@ main {
   pointer-events: none;
   z-index: 3;
 }
+
+/* «Hecho con Pantalay» (plan gratis) */
+.hecho-con {
+  display: inline-block;
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta-suave);
+  text-decoration: none;
+}
+.hecho-con:hover {
+  color: var(--rojo);
+}

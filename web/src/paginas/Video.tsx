@@ -24,7 +24,7 @@ import { buscarEnTranscripcion, formatoTiempo, segmentoActual, textoPlano } from
 import { copiar } from './Biblioteca';
 import { AvisoIA, Generar, Tareas } from '../componentes/IA';
 import { PreparadorMp4 } from '../componentes/Mp4';
-import { origenPublico } from '../logica/sitio';
+import { DOMINIO, origenPublico } from '../logica/sitio';
 import { BotonDescargar } from '../componentes/Descargar';
 import type { EstadoIA } from '../logica/ia';
 
@@ -164,7 +164,7 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
       <div className="embebido">
         {reproductorEl}
         <a className="marca-embebido" href={enlaceVideo(video.id)} target="_blank" rel="noopener noreferrer">
-          {video.titulo} · Pantalay
+          {video.marca ? `${video.titulo} · ${t('hechoCon')}` : video.titulo}
         </a>
       </div>
     );
@@ -255,6 +255,11 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
         )}
 
         {reproductorEl}
+        {video.marca && (
+          <a className="hecho-con" href={`${DOMINIO}/?ref=video`} target="_blank" rel="noopener noreferrer">
+            ▶ {t('hechoCon')}
+          </a>
+        )}
 
         <div className="reacciones" role="group" aria-label="Reactions">
           {EMOJIS.map((e) => (

@@ -133,3 +133,12 @@ CREATE TABLE IF NOT EXISTS video_mp4_recorte (
   video_id TEXT PRIMARY KEY,
   firma TEXT NOT NULL
 );
+
+-- Plan de cada cuenta (20 oct 2026). Sin fila = Starter. La llena la pasarela de pago cuando esté conectada.
+CREATE TABLE IF NOT EXISTS suscripciones (
+  usuario_id TEXT PRIMARY KEY,
+  plan TEXT NOT NULL DEFAULT 'starter',
+  fundador INTEGER NOT NULL DEFAULT 0,
+  estado TEXT NOT NULL DEFAULT 'activa',
+  actualizado INTEGER NOT NULL
+);

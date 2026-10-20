@@ -203,3 +203,15 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Al entrar por la dirección vieja la sesión no viaja (las cookies son de cada dirección): hay que volver a entrar
   una vez en pantalay.com.
 - Prueba: `pruebas/dominio.test.ts` (comprobada en rojo vaciando la lista de direcciones viejas).
+
+## C-PLANES (20 oct 2026)
+
+- Planes aprobados por Richard (`servidor/planes.ts`, detalle en `docs/PLANES-Y-PRECIOS.md`): Starter gratis con
+  25 videos, 5 minutos por grabación, hasta 720p, sin IA de análisis, sin lápices y con «Hecho con Pantalay»;
+  Business y Business + AI sin límites (precio de lista de Loom, precio de fundador a la mitad de por vida).
+- Los límites SOLO se aplican con la variable del sitio `COBRO_ACTIVO=1`. Se enciende recién con la pasarela de pago
+  probada de punta a punta (regla de pagos). Apagado, todos tienen todo, como hasta hoy.
+- Dónde se aplican: crear video (402 `limite_videos`), análisis y documentos con IA (402 `plan_ia`), y en la pantalla
+  de grabar: tope de minutos (se detiene y guarda), calidad máxima y lápices. La marca la manda `/datos/videos/:id`.
+- El plan de cada cuenta vive en la tabla `suscripciones` (sin fila = Starter). La llenará la pasarela.
+- Prueba: `pruebas/servidor.test.ts` «C-PLANES» (comprobada en rojo haciendo que el plan nunca limite).

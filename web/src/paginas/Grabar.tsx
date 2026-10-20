@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { LimitesPlan } from '../logica/api';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
@@ -135,6 +136,21 @@ export function Grabar() {
     return () => clearInterval(i);
   }, [estado]);
 
+  // Límites del plan (solo con el cobro encendido; si no, el servidor manda «sin límite»).
+  const [limites, setLimites] = useState<LimitesPlan | null>(null);
+  useEffect(() => {
+    pedir<{ limites: LimitesPlan }>('/datos/plan')
+      .then((r) => setLimites(r.limites))
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    if (estado !== 'grabando' || !limites?.minutos) return;
+    if (segundos >= limites.minutos * 60) {
+      avisar(t('limiteMinutos'));
+      void terminarRef.current();
+    }
+  }, [estado, segundos, limites, avisar, t]);
+
   // La vista previa se conecta cuando el video ya está en pantalla (antes quedaba en negro: se conectaba
   // a un elemento que todavía no existía). Candado C-VISTA-PREVIA.
   useEffect(() => {
@@ -183,10 +199,13 @@ export function Grabar() {
       setError(t('navegadorNoSirve'));
       return;
     }
+    // El plan gratis graba hasta 720p.
+    const ajustes =
+      limites && Number(a.calidad) > Number(limites.calidad) ? { ...a, calidad: limites.calidad } : a;
     // La ventanita flotante se abre PRIMERO, con el gesto del clic (Chrome lo exige).
     const ventana =
       a.modo === 'pantalla_camara' && a.flotante && puedeFlotar() ? await abrirVentana(a) : null;
-    const g = new Grabadora(a, {
+    const g = new Grabadora(ajustes, {
       pedazo: (b) => {
         subidor.current?.agregar(b);
         if (respaldo.current) {
@@ -460,8 +479,12 @@ export function Grabar() {
                 onChange={(e) => cambiar('calidad', e.target.value as Ajustes['calidad'])}
               >
                 <option value="720">720p</option>
-                <option value="1080">1080p HD</option>
-                <option value="2160">4K</option>
+                <option value="1080" disabled={limites?.calidad === '720'}>
+                  1080p HD{limites?.calidad === '720' ? ` · ${t('soloBusiness')}` : ''}
+                </option>
+                <option value="2160" disabled={limites?.calidad === '720'}>
+                  4K{limites?.calidad === '720' ? ` · ${t('soloBusiness')}` : ''}
+                </option>
               </select>
             </div>
             <label className="interruptor">
@@ -666,6 +689,8 @@ export function Grabar() {
                   type="button"
                   className={`boton ${lapices.activo ? '' : 'secundario'}`}
                   aria-pressed={lapices.activo}
+                  disabled={limites?.lapices === false}
+                  title={limites?.lapices === false ? t('soloBusiness') : undefined}
                   onClick={() => cambiarLapices({ activo: !lapices.activo })}
                 >
                   ✏️ {lapices.activo ? t('dejarDeDibujar') : t('dibujar')}
