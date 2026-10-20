@@ -24,6 +24,7 @@ import { buscarEnTranscripcion, formatoTiempo, segmentoActual, textoPlano } from
 import { copiar } from './Biblioteca';
 import { AvisoIA, Generar, Tareas } from '../componentes/IA';
 import { PreparadorMp4 } from '../componentes/Mp4';
+import { BotonDescargar } from '../componentes/Descargar';
 import type { EstadoIA } from '../logica/ia';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '👏', '🔥', '🙌'];
@@ -38,7 +39,8 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
   const [reacciones, setReacciones] = useState<{ emoji: string; segundo: number }[]>([]);
   const [pestana, setPestana] = useState<Pestana>('transcripcion');
-  const [panel, setPanel] = useState(true);
+  // En el celular el video va primero y la transcripción se abre solo si la persona la pide.
+  const [panel, setPanel] = useState(() => typeof window === 'undefined' || window.innerWidth > 900);
   const [teatro, setTeatro] = useState(false);
   const [ahora, setAhora] = useState(0);
   const [compartir, setCompartir] = useState(false);
@@ -208,13 +210,7 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
               </button>
             )}
             {(video.permitir_descarga || video.es_dueno) && (
-              <a
-                className="boton secundario"
-                href={`${archivoVideo(video.id)}?descargar=1`}
-                title={video.tiene_mp4 ? 'MP4' : 'WebM'}
-              >
-                ⬇ {video.tiene_mp4 ? t('descargarMp4') : t('descargar')}
-              </a>
+              <BotonDescargar id={video.id} titulo={video.titulo} tieneMp4={Boolean(video.tiene_mp4)} />
             )}
             {video.es_dueno && (
               <MenuPuntos
@@ -447,8 +443,13 @@ function PanelTranscripcion({ video, ahora, ir }: { video: Video; ahora: number;
   const actual = segmentoActual(video.transcripcion, ahora);
   const coincidencias = new Set(buscarEnTranscripcion(video.transcripcion, q));
   const lista = useRef<HTMLDivElement>(null);
+  // CANDADO C-VIDEO-A-LA-VISTA: la transcripción sigue la frase que suena moviendo SOLO su propia lista,
+  // nunca la página (antes, en el celular, la página saltaba a la transcripción y el video se perdía de vista).
   useEffect(() => {
-    lista.current?.querySelector('.actual')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const caja = lista.current;
+    const fila = caja?.querySelector<HTMLElement>('.actual');
+    if (!caja || !fila || caja.scrollHeight <= caja.clientHeight) return;
+    caja.scrollTo({ top: fila.offsetTop - caja.offsetTop - caja.clientHeight / 3, behavior: 'smooth' });
   }, [actual]);
   if (!video.transcripcion.length) return <p className="vacio">{t('sinTranscripcion')}</p>;
   return (

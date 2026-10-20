@@ -1857,6 +1857,13 @@ main {
     border-left: 0;
     border-top: 1px solid var(--borde);
   }
+  .mostrar-panel {
+    position: static;
+    margin: 0 16px 16px;
+  }
+  .transcripcion-lista {
+    max-height: 50vh;
+  }
   .video-cabecera {
     flex-direction: column;
   }
@@ -1948,4 +1955,16 @@ main {
   width: 100%;
   border: 1px solid var(--borde);
   border-radius: 8px;
+}
+
+.no-se-ve {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  color: #fff;
+  background: rgba(10, 11, 14, 0.85);
+  font-weight: 600;
 }

@@ -128,3 +128,16 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   (Chrome exige el gesto) y después se pide la pantalla. En ese modo se graba la pantalla tal cual (la burbuja
   está en ella) y no se compone en lienzo. Si la ventanita no se puede abrir, se vuelve a la burbuja dentro del
   video (lienzo). Probado en Chrome visible: ventanita con cámara, forma vertical y borde animado.
+
+## C-VIDEO-A-LA-VISTA (19 oct 2026)
+
+- Qué se rompió: en el iPhone, al darle play al enlace compartido, la página saltaba sola a la transcripción y el
+  video quedaba fuera de la vista (medido con WebKit: la página bajaba 482 puntos). La transcripción seguía la frase
+  que suena con `scrollIntoView`, que mueve la página entera.
+- Arreglo: la lista de la transcripción se mueve sola por dentro (`scrollTo` de la lista, nunca de la página); en el
+  celular el panel de transcripción y comentarios arranca cerrado («Transcripción y comentarios»); la pantalla
+  completa usa el reproductor propio del iPhone (`webkitEnterFullscreen`); si un equipo no puede reproducir el video
+  (Safari sin copia MP4) se avisa en vez de mostrar un reproductor muerto.
+- En el celular, «Descargar MP4» → «Guardar en Fotos» abre el menú de compartir (Web Share) para que el video quede
+  en Fotos, no perdido en Archivos.
+- Prueba: `e2e/iphone.spec.ts` (motor de Safari, iPhone 15 Pro). Comprobada en rojo el 19 oct 2026 (saltó 121 puntos).

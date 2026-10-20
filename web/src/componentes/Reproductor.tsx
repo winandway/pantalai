@@ -70,6 +70,12 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
   const [cargado, setCargado] = useState(0);
   const [flotantes, setFlotantes] = useState<{ id: number; emoji: string }[]>([]);
   const [interaccion, setInteraccion] = useState(true);
+  // Safari (iPhone) no reproduce WebM: si todavía no hay copia MP4, se avisa en vez de mostrar un reproductor muerto.
+  const [noSeVe, setNoSeVe] = useState(false);
+  useEffect(() => {
+    const v = el.current;
+    setNoSeVe(Boolean(v && !video.tiene_mp4 && v.canPlayType('video/webm') === ''));
+  }, [video.tiene_mp4]);
 
   const duracion = Number.isFinite(duracionReal) && duracionReal > 0 ? duracionReal : video.duracion;
   const ocultos = useMemo<Tramo[]>(
@@ -139,8 +145,15 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
     if (v) v.currentTime = Math.min(Math.max(0, v.currentTime + d), duracion);
   }
   function completa() {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void caja.current?.requestFullscreen?.();
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+      return;
+    }
+    // iPhone no deja poner en pantalla completa un bloque de la página: solo el video, con su reproductor propio.
+    const v = el.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (caja.current?.requestFullscreen)
+      void caja.current.requestFullscreen().catch(() => v?.webkitEnterFullscreen?.());
+    else v?.webkitEnterFullscreen?.();
   }
 
   useEffect(() => {
@@ -263,6 +276,7 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
           </div>
         ))}
         {encima}
+        {noSeVe && <div className="no-se-ve">{t('noSeVeAqui')}</div>}
         <div className="flotantes" aria-hidden="true">
           {flotantes.map((f) => (
             <span key={f.id}>{f.emoji}</span>
