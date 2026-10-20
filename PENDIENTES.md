@@ -3,8 +3,8 @@
 ## 👤 Depende de Richard
 
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
-- 👤 Llave de la API de Gemini (plan de pago, proyecto «pantalai») y presupuesto de 10 USD en Google Cloud.
-  Destraba: título, resumen, capítulos, tareas y el botón Generar. (IA aprobada por Richard el 19 oct 2026.)
+- 👤 Presupuesto de 10 USD en Google Cloud para el proyecto de la llave de Gemini (aviso por correo). El tope
+  duro ya está en el código.
 
 ## De mi lado
 
