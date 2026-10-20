@@ -14,3 +14,4 @@ test-results
 playwright-report
 .claude/
 docs/CUENTAS-Y-PAGOS-PROVEEDORES.md
+.codex/

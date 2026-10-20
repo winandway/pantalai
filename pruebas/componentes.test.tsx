@@ -53,6 +53,14 @@ describe('CANDADO borrar dentro de los tres puntos', () => {
   });
 });
 
+describe('portada', () => {
+  it('las funciones de la portada son las mismas en los dos idiomas', async () => {
+    const { FUNCIONES } = await import('../web/src/paginas/Inicio');
+    expect(FUNCIONES.es).toHaveLength(FUNCIONES.en.length);
+    expect(FUNCIONES.en.length).toBeGreaterThanOrEqual(8);
+  });
+});
+
 describe('idioma y grabadora', () => {
   it('los dos idiomas tienen los mismos textos', () => {
     expect(Object.keys(TEXTOS.es).sort()).toEqual(Object.keys(TEXTOS.en).sort());

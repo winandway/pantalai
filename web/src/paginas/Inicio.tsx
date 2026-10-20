@@ -3,7 +3,7 @@ import { useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 
-const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
+export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
   en: [
     [
       'Screen + camera',
@@ -56,6 +56,14 @@ const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
     [
       'Estadísticas',
       'Vistas, tiempo promedio, cuántos lo vieron completo y clics en tu botón, video por video.',
+    ],
+    [
+      'La IA escribe lo demás',
+      'Título, resumen, capítulos y tareas aparecen solos. Quita las muletillas con un clic.',
+    ],
+    [
+      'De video a documento',
+      'Convierte cualquier video en un procedimiento, una guía o un reporte de error, con una captura por paso.',
     ],
   ],
 };
