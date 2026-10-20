@@ -1641,7 +1641,8 @@ app.get('/panel/*', async (c) => {
   if (!ruta || !esSuperadmin(c) || !iguales(pedida, ruta)) {
     if (!(await dentroDelLimite(c.env.DB, 'panel', ip(c), 60, 15 * 60 * 1000)))
       return err(c, 429, 'demasiados');
-    await anotarIntento(c, pedida);
+    // La dirección secreta nunca se escribe en el registro: se anota que alguien sin permiso la usó.
+    await anotarIntento(c, ruta && iguales(pedida, ruta) ? 'dirección secreta, sin permiso' : pedida);
     return noExiste(c);
   }
   const r = await paginaApp(c);

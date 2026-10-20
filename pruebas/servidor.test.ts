@@ -599,11 +599,13 @@ describe('CANDADO C-SUPERADMIN: panel en dirección secreta, solo para las cuent
       usuarios: number;
       videos: number;
       planes: Record<string, number>;
-      registro: { accion: string }[];
+      registro: { accion: string; objetivo: string }[];
     };
     expect(r).toMatchObject({ usuarios: 2, videos: 1, planes: { starter: 2 } });
     // Los intentos de antes quedaron anotados.
     expect(r.registro.filter((x) => x.accion === 'intento').length).toBeGreaterThanOrEqual(6);
+    // …y la dirección secreta nunca queda escrita en el registro.
+    expect(JSON.stringify(r.registro)).not.toContain(RUTA);
 
     const u = (await (await admin('/datos/admin/usuarios?q=ana', conPanel)).json()) as {
       usuarios: { correo: string; plan: string; videos: number }[];
