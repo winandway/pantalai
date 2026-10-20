@@ -49,6 +49,32 @@ test('grabar, subir y ver un video', async ({ page }) => {
   );
   expect(Number.isFinite(duracion)).toBe(true);
   expect(duracion).toBeGreaterThan(7);
+
+  // CANDADO C-MP4: si el navegador puede codificar H.264 + AAC, al abrir el video se arma y sube la copia MP4,
+  // y «Descargar» entrega ese MP4 (el que abren iPhone, Final Cut y YouTube).
+  const puede = await page.evaluate(async () => {
+    try {
+      const v = await VideoEncoder.isConfigSupported({ codec: 'avc1.42001f', width: 640, height: 480 });
+      const a = await AudioEncoder.isConfigSupported({
+        codec: 'mp4a.40.2',
+        sampleRate: 48000,
+        numberOfChannels: 2,
+      });
+      return Boolean(v.supported && a.supported);
+    } catch {
+      return false;
+    }
+  });
+  if (puede) {
+    await expect(page.getByRole('link', { name: /Download MP4/ })).toBeVisible({ timeout: 60_000 });
+    const descarga = await page.request.get(`/media/${id}/video?descargar=1`);
+    expect(descarga.headers()['content-type']).toBe('video/mp4');
+    const cuerpo = await descarga.body();
+    expect(cuerpo.subarray(4, 8).toString()).toBe('ftyp');
+    if (process.env.GUARDAR_MP4) (await import('node:fs')).writeFileSync(process.env.GUARDAR_MP4, cuerpo);
+  } else {
+    console.log('Este navegador no codifica H.264/AAC: se omite la parte MP4.');
+  }
   await page.evaluate(() => {
     const v = document.querySelector('.reproductor video') as HTMLVideoElement;
     v.currentTime = 4;

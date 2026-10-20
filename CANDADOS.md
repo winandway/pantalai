@@ -90,3 +90,15 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   `app.html` (`scripts/empaquetar.mjs` falla si aparece un index.html) y el programa la entrega en toda ruta.
 - Prueba: `pruebas/servidor.test.ts` › CANDADO portada segura, y en vivo: `curl -sI https://pantalai.sitios.dev/`
   debe mostrar Content-Security-Policy.
+
+## C-MP4 (19 oct 2026)
+
+- Qué se rompió: el video grabado (WebM VP9) no abría en Final Cut ni se reproducía en iPhone (el motor de Safari da
+  «formato no soportado»). Comprobado con WebKit: WebM → error 4; MP4 → se reproduce.
+- Arreglo: al abrir su video, el navegador del dueño lo convierte a MP4 (H.264 + AAC, índice al principio) con la
+  librería `mediabunny` y el codificador del equipo, y lo sube por partes (`/datos/videos/:id/mp4…`, tabla
+  `video_mp4`, objeto `videos/{id}/video.mp4`). El reproductor pone el MP4 primero y «Descargar» entrega el MP4.
+  El original WebM sigue en ⋮ → «Descargar el original».
+- Comprobación: `e2e/grabar.spec.ts` (con `GUARDAR_MP4=archivo` guarda el MP4); el archivo lo abre AVFoundation
+  (lo que usa Final Cut): `avconvert --source x.mp4 --preset PresetPassthrough --output y.mov` termina sin error.
+- Prueba: `pruebas/servidor.test.ts` › CANDADO MP4.

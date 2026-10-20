@@ -46,6 +46,7 @@ export type Superposicion = {
 
 export type Video = {
   id: string;
+  tiene_mp4?: boolean;
   titulo: string;
   descripcion: string;
   estado: string;

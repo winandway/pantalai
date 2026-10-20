@@ -29,6 +29,7 @@
   "dependencies": {
     "fix-webm-duration": "^1.0.6",
     "hono": "^4.13.13",
+    "mediabunny": "^1.61.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "^4.6.7"

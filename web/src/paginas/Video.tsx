@@ -23,6 +23,7 @@ import { useSesion } from '../logica/sesion';
 import { buscarEnTranscripcion, formatoTiempo, segmentoActual, textoPlano } from '../logica/tiempo';
 import { copiar } from './Biblioteca';
 import { AvisoIA, Generar, Tareas } from '../componentes/IA';
+import { PreparadorMp4 } from '../componentes/Mp4';
 import type { EstadoIA } from '../logica/ia';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '👏', '🔥', '🙌'];
@@ -206,17 +207,21 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
                 {t('compartir')}
               </button>
             )}
-            {(video.permitir_descarga || video.es_dueno) && !video.es_dueno && (
-              <a className="boton secundario" href={`${archivoVideo(video.id)}?descargar=1`}>
-                {t('descargar')}
+            {(video.permitir_descarga || video.es_dueno) && (
+              <a
+                className="boton secundario"
+                href={`${archivoVideo(video.id)}?descargar=1`}
+                title={video.tiene_mp4 ? 'MP4' : 'WebM'}
+              >
+                ⬇ {video.tiene_mp4 ? t('descargarMp4') : t('descargar')}
               </a>
             )}
             {video.es_dueno && (
               <MenuPuntos
                 opciones={[
                   {
-                    etiqueta: t('descargar'),
-                    accion: () => (location.href = `${archivoVideo(video.id)}?descargar=1`),
+                    etiqueta: t('descargarOriginal'),
+                    accion: () => (location.href = `${archivoVideo(video.id)}?descargar=1&formato=webm`),
                   },
                   {
                     etiqueta: video.archivado ? t('desarchivar') : t('archivar'),
@@ -238,6 +243,9 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
           </div>
         </header>
 
+        {video.es_dueno && !video.tiene_mp4 && (
+          <PreparadorMp4 id={video.id} alTerminar={() => void cargar()} />
+        )}
         {video.es_dueno && (
           <AvisoIA
             id={video.id}

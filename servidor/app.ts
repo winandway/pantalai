@@ -79,6 +79,7 @@ async function cuerpo<T>(c: C, esquema: z.ZodType<T>): Promise<T | null> {
 
 const claveVideo = (id: string) => `videos/${id}/video`;
 const claveMiniatura = (id: string) => `videos/${id}/miniatura.jpg`;
+const claveMp4 = (id: string) => `videos/${id}/video.mp4`;
 
 type FilaVideo = {
   id: string;
@@ -119,8 +120,9 @@ function jsonSeguro(texto: string): unknown {
   }
 }
 
-function videoPublico(v: FilaVideo, autor: string, esDueno: boolean) {
+function videoPublico(v: FilaVideo, autor: string, esDueno: boolean, tieneMp4 = false) {
   return {
+    tiene_mp4: tieneMp4,
     id: v.id,
     titulo: v.titulo,
     descripcion: v.descripcion,
@@ -537,9 +539,13 @@ app.get('/datos/videos/:id', async (c) => {
   const autor = await c.env.DB.prepare('SELECT nombre FROM usuarios WHERE id = ?')
     .bind(v.usuario_id)
     .first<{ nombre: string }>();
-  return c.json({ video: videoPublico(v, autor?.nombre ?? '', u?.id === v.usuario_id) }, 200, {
-    'Cache-Control': 'no-store',
-  });
+  return c.json(
+    { video: videoPublico(v, autor?.nombre ?? '', u?.id === v.usuario_id, await tieneMp4(c, v.id)) },
+    200,
+    {
+      'Cache-Control': 'no-store',
+    },
+  );
 });
 
 const esquemaTiempo = z.object({ inicio: z.number().min(0), fin: z.number().min(0) });
@@ -612,7 +618,7 @@ app.patch('/datos/videos/:id', requiereSesion, async (c) => {
     .bind(...valores)
     .run();
   const nuevo = (await buscarVideo(c, v.id))!;
-  return c.json({ video: videoPublico(nuevo, c.get('usuario')!.nombre, true) });
+  return c.json({ video: videoPublico(nuevo, c.get('usuario')!.nombre, true, await tieneMp4(c, v.id)) });
 });
 
 app.post('/datos/videos/:id/duplicar', requiereSesion, async (c) => {
@@ -641,13 +647,14 @@ app.post('/datos/videos/:id/duplicar', requiereSesion, async (c) => {
 app.delete('/datos/videos/:id', requiereSesion, async (c) => {
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
-  await c.env.BUCKET.delete([claveVideo(v.id), claveMiniatura(v.id)]);
+  await c.env.BUCKET.delete([claveVideo(v.id), claveMiniatura(v.id), claveMp4(v.id)]);
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM videos WHERE id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM comentarios WHERE video_id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM reacciones WHERE video_id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM vistas WHERE video_id = ?').bind(v.id),
     c.env.DB.prepare('DELETE FROM video_ia WHERE video_id = ?').bind(v.id),
+    c.env.DB.prepare('DELETE FROM video_mp4 WHERE video_id = ?').bind(v.id),
   ]);
   return c.json({ ok: true });
 });
@@ -1005,6 +1012,66 @@ app.post('/datos/videos/:id/ia/generar', requiereSesion, async (c) => {
   }
 });
 
+// ---------- copia MP4 (la arma el navegador del dueño) ----------
+
+async function tieneMp4(c: C, id: string): Promise<boolean> {
+  const f = await c.env.DB.prepare('SELECT estado FROM video_mp4 WHERE video_id = ?')
+    .bind(id)
+    .first<{ estado: string }>();
+  return f?.estado === 'listo';
+}
+
+app.post('/datos/videos/:id/mp4', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v || v.estado !== 'listo') return err(c, 404, 'no_existe');
+  if (await tieneMp4(c, v.id)) return c.json({ ya: true });
+  const subida = await c.env.BUCKET.createMultipartUpload(claveMp4(v.id), {
+    httpMetadata: { contentType: 'video/mp4' },
+  });
+  await c.env.DB.prepare(
+    `INSERT INTO video_mp4 (video_id, estado, subida_id, bytes, actualizado) VALUES (?, 'subiendo', ?, 0, ?)
+     ON CONFLICT (video_id) DO UPDATE SET estado = 'subiendo', subida_id = excluded.subida_id, actualizado = excluded.actualizado`,
+  )
+    .bind(v.id, subida.uploadId, Date.now())
+    .run();
+  return c.json({ ya: false, parte_minima: PARTE_MIN }, 201);
+});
+
+app.put('/datos/videos/:id/mp4/partes/:n', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const f = await c.env.DB.prepare('SELECT * FROM video_mp4 WHERE video_id = ?')
+    .bind(v.id)
+    .first<{ estado: string; subida_id: string }>();
+  if (!f || f.estado !== 'subiendo' || !f.subida_id) return err(c, 409, 'ya_terminado');
+  const n = Number(c.req.param('n'));
+  if (!Number.isInteger(n) || n < 1 || n > 10000) return err(c, 400, 'parte');
+  const datos = await c.req.arrayBuffer();
+  if (datos.byteLength === 0) return err(c, 400, 'parte_vacia');
+  if (datos.byteLength > PARTE_MAX) return err(c, 413, 'parte_grande');
+  const parte = await c.env.BUCKET.resumeMultipartUpload(claveMp4(v.id), f.subida_id).uploadPart(n, datos);
+  return c.json({ parte: { partNumber: parte.partNumber, etag: parte.etag } });
+});
+
+app.post('/datos/videos/:id/mp4/completar', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const f = await c.env.DB.prepare('SELECT * FROM video_mp4 WHERE video_id = ?')
+    .bind(v.id)
+    .first<{ estado: string; subida_id: string }>();
+  if (!f || f.estado !== 'subiendo' || !f.subida_id) return err(c, 409, 'ya_terminado');
+  const d = await cuerpo(c, z.object({ partes: esquemaCompletar.shape.partes }));
+  if (!d) return err(c, 400, 'datos');
+  const partes = [...d.partes].sort((a, b) => a.partNumber - b.partNumber);
+  const obj = await c.env.BUCKET.resumeMultipartUpload(claveMp4(v.id), f.subida_id).complete(partes);
+  await c.env.DB.prepare(
+    `UPDATE video_mp4 SET estado = 'listo', subida_id = NULL, bytes = ?, actualizado = ? WHERE video_id = ?`,
+  )
+    .bind(obj.size, Date.now(), v.id)
+    .run();
+  return c.json({ ok: true, bytes: obj.size });
+});
+
 // ---------- archivos ----------
 
 app.get('/media/:id/video', async (c) => {
@@ -1013,7 +1080,11 @@ app.get('/media/:id/video', async (c) => {
   if (!v || v.estado !== 'listo' || !puedeVer(v, u)) return c.notFound();
   const descargar = c.req.query('descargar') === '1';
   if (descargar && !v.permitir_descarga && u?.id !== v.usuario_id) return err(c, 403, 'descarga');
-  const obj = await c.env.BUCKET.get(claveVideo(v.id), {
+  // La copia MP4 (si ya existe) se usa al pedir formato=mp4 y SIEMPRE al descargar: es la que abren iPhone y Final Cut.
+  const quiereMp4 = c.req.query('formato') === 'mp4' || (descargar && c.req.query('formato') !== 'webm');
+  const mp4 = quiereMp4 ? await tieneMp4(c, v.id) : false;
+  if (c.req.query('formato') === 'mp4' && !mp4) return c.notFound();
+  const obj = await c.env.BUCKET.get(mp4 ? claveMp4(v.id) : claveVideo(v.id), {
     range: c.req.raw.headers,
     onlyIf: c.req.raw.headers,
   });
@@ -1025,11 +1096,23 @@ app.get('/media/:id/video', async (c) => {
   h.set('Cache-Control', v.privacidad === 'enlace' ? 'private, no-cache' : 'private, no-store');
   h.set('ETag', obj.httpEtag);
   if (descargar) {
-    const nombre = v.titulo.replace(/[^\p{L}\p{N} _-]/gu, '').slice(0, 80) || 'pantalay';
+    const extension = mp4 || v.tipo.includes('mp4') ? 'mp4' : 'webm';
+    const nombre =
+      v.titulo
+        .replace(/[^\p{L}\p{N} _-]/gu, '')
+        .trim()
+        .slice(0, 80) || 'pantalay';
+    // Nombre en ASCII para navegadores viejos y el nombre real (con tildes) en UTF-8.
+    const ascii =
+      nombre
+        .normalize('NFD')
+        .replace(/[^\x20-\x7e]/g, '')
+        .trim() || 'pantalay';
     h.set(
       'Content-Disposition',
-      `attachment; filename="${nombre}.${v.tipo.includes('mp4') ? 'mp4' : 'webm'}"`,
+      `attachment; filename="${ascii}.${extension}"; filename*=UTF-8''${encodeURIComponent(`${nombre}.${extension}`)}`,
     );
+    if (mp4) h.set('content-type', 'video/mp4');
   }
   if (!('body' in obj)) return new Response(null, { status: 304, headers: h });
   const rango = obj.range as { offset?: number; length?: number } | undefined;

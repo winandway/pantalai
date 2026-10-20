@@ -204,7 +204,7 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
       <div className="reproductor-pantalla" onClick={alternar}>
         <video
           ref={el}
-          src={archivoVideo(video.id)}
+          key={video.tiene_mp4 ? 'mp4' : 'webm'}
           preload="metadata"
           playsInline
           muted={mudo}
@@ -237,6 +237,9 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
           onEnded={() => alTerminar?.()}
           onVolumeChange={(e) => setVolumen(e.currentTarget.volume)}
         >
+          {/* El MP4 primero: lo reproducen todos, también iPhone. El WebM original queda de respaldo. */}
+          {video.tiene_mp4 && <source src={`${archivoVideo(video.id)}?formato=mp4`} type="video/mp4" />}
+          <source src={`${archivoVideo(video.id)}?formato=webm`} type="video/webm" />
           {vtt && <track kind="captions" src={vtt} srcLang={video.idioma} label={t('subtitulos')} default />}
         </video>
         {video.superposiciones.filter(visibles).map((s, i) => (

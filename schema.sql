@@ -117,3 +117,12 @@ CREATE TABLE IF NOT EXISTS ia_gasto (
   llamadas INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (dia, proveedor)
 );
+
+-- Copia MP4 de cada video (19 oct 2026): la arma el navegador del dueño. Sirve para iPhone, Final Cut y YouTube.
+CREATE TABLE IF NOT EXISTS video_mp4 (
+  video_id TEXT PRIMARY KEY,
+  estado TEXT NOT NULL DEFAULT 'subiendo',
+  subida_id TEXT,
+  bytes INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);

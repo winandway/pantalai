@@ -223,6 +223,64 @@ describe('videos', () => {
     expect(fila.video.es_dueno).toBe(true);
   });
 
+  it('CANDADO MP4: la copia MP4 se sube por partes, se reproduce primero y es la que se descarga', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    let v = ((await (await c(`/datos/videos/${id}`)).json()) as { video: { tiene_mp4: boolean } }).video;
+    expect(v.tiene_mp4).toBe(false);
+    expect((await c(`/media/${id}/video?formato=mp4`)).status).toBe(404);
+    // Sin MP4, descargar entrega el original.
+    expect((await c(`/media/${id}/video?descargar=1`)).headers.get('content-disposition')).toContain('.webm');
+    const ini = (await (await c(`/datos/videos/${id}/mp4`, { method: 'POST' })).json()) as { ya: boolean };
+    expect(ini.ya).toBe(false);
+    const datos = new Uint8Array(PARTE_MIN + 10).fill(7);
+    const p1 = (
+      (await (
+        await c(`/datos/videos/${id}/mp4/partes/1`, { method: 'PUT', body: datos.slice(0, PARTE_MIN) })
+      ).json()) as { parte: object }
+    ).parte;
+    const p2 = (
+      (await (
+        await c(`/datos/videos/${id}/mp4/partes/2`, { method: 'PUT', body: datos.slice(PARTE_MIN) })
+      ).json()) as { parte: object }
+    ).parte;
+    expect(
+      (await c(`/datos/videos/${id}/mp4/completar`, { method: 'POST', json: { partes: [p2, p1] } })).status,
+    ).toBe(200);
+    v = ((await (await c(`/datos/videos/${id}`)).json()) as { video: { tiene_mp4: boolean } }).video;
+    expect(v.tiene_mp4).toBe(true);
+    const mp4 = await c(`/media/${id}/video?formato=mp4`, { headers: { range: 'bytes=0-9' } });
+    expect(mp4.status).toBe(206);
+    expect(mp4.headers.get('content-range')).toBe(`bytes 0-9/${PARTE_MIN + 10}`);
+    const desc = await c(`/media/${id}/video?descargar=1`);
+    expect(desc.headers.get('content-type')).toBe('video/mp4');
+    expect(desc.headers.get('content-disposition')).toMatch(/filename="[^"]+\.mp4"; filename\*=UTF-8''/);
+    // El original sigue disponible.
+    expect(
+      (await c(`/media/${id}/video?descargar=1&formato=webm`)).headers.get('content-disposition'),
+    ).toContain('.webm');
+    // Una segunda vez no rehace nada; y nadie más puede subir la copia.
+    expect(
+      ((await (await c(`/datos/videos/${id}/mp4`, { method: 'POST' })).json()) as { ya: boolean }).ya,
+    ).toBe(true);
+    const otro = await registrado('Beto', 'beto@example.com', '4.4.4.4');
+    expect((await otro(`/datos/videos/${id}/mp4`, { method: 'POST' })).status).toBe(404);
+    // Borrar el video borra también la copia.
+    await c(`/datos/videos/${id}`, { method: 'DELETE' });
+    expect(env.BUCKET.objetos.has(`videos/${id}/video.mp4`)).toBe(false);
+  });
+
+  it('el nombre del archivo descargado aguanta tildes y letras de otros idiomas', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    await c(`/datos/videos/${id}`, { method: 'PATCH', json: { titulo: 'Grabación de 日本 ñandú' } });
+    const r = await c(`/media/${id}/video?descargar=1`);
+    expect(r.status).toBe(200);
+    expect(r.headers.get('content-disposition')).toContain(
+      encodeURIComponent('Grabación de 日本 ñandú.webm'),
+    );
+  });
+
   it('descarga solo si el dueño la permite', async () => {
     const c = await registrado();
     const { id } = await videoListo(c);

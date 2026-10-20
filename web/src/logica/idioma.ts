@@ -117,7 +117,8 @@ const en = {
   descargarGrabacion: 'Download recording',
   respaldos: 'Recordings saved on this computer',
   respaldosAyuda: 'These didn’t finish uploading. Download them or delete them.',
-  permisoPantalla: 'Choose the screen, window or tab to record.',
+  permisoPantalla:
+    'Choose what to record. To include installed apps (not just this browser), pick “Entire screen”.',
   sinPermiso: 'We need permission to use your screen, camera or microphone. Check your browser settings.',
   navegadorNoSirve: 'Your browser can’t record the screen. Use Chrome, Edge or Firefox on a computer.',
   limiteSinLimite: 'No time limit. No watermark.',
@@ -214,6 +215,10 @@ const en = {
   noDestructivo: 'Edits never touch the original file: you can undo them any time.',
   muyPronto: 'Coming soon',
   iaPronto: 'Coming soon: captions in other languages and asking questions about your videos.',
+  mp4Preparando: 'Preparing the MP4 version (for iPhone, Final Cut and YouTube)…',
+  mp4Error: 'The MP4 version could not be prepared. The video still works.',
+  descargarMp4: 'Download MP4',
+  descargarOriginal: 'Download original (WebM)',
   iaTitulo: 'AI',
   iaTrabajando: 'AI is working on your video',
   iaAudio: 'Preparing the audio…',
@@ -363,7 +368,8 @@ const es: Record<Clave, string> = {
   descargarGrabacion: 'Descargar la grabación',
   respaldos: 'Grabaciones guardadas en esta computadora',
   respaldosAyuda: 'Estas no terminaron de subir. Descárgalas o bórralas.',
-  permisoPantalla: 'Elige la pantalla, la ventana o la pestaña que vas a grabar.',
+  permisoPantalla:
+    'Elige qué grabar. Para que salgan los programas instalados (no solo el navegador), elige «Pantalla completa».',
   sinPermiso:
     'Hace falta permiso para usar tu pantalla, cámara o micrófono. Revisa los ajustes del navegador.',
   navegadorNoSirve:
@@ -461,6 +467,10 @@ const es: Record<Clave, string> = {
   noDestructivo: 'Editar nunca toca el archivo original: puedes deshacerlo cuando quieras.',
   muyPronto: 'Muy pronto',
   iaPronto: 'Muy pronto: subtítulos en otros idiomas y hacerle preguntas a tus videos.',
+  mp4Preparando: 'Preparando la versión MP4 (para iPhone, Final Cut y YouTube)…',
+  mp4Error: 'No se pudo preparar la versión MP4. El video sigue funcionando.',
+  descargarMp4: 'Descargar MP4',
+  descargarOriginal: 'Descargar el original (WebM)',
   iaTitulo: 'IA',
   iaTrabajando: 'La IA está trabajando en tu video',
   iaAudio: 'Preparando el audio…',

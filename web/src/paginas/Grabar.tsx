@@ -65,6 +65,7 @@ export function Grabar() {
   const previa = useRef<HTMLVideoElement>(null);
   const camaraPrevia = useRef<HTMLVideoElement>(null);
   const terminarRef = useRef<() => Promise<void>>(async () => undefined);
+  const miniaturaInicio = useRef<Blob | null>(null);
 
   useEffect(() => {
     if (!cargando && !usuario) navegar('/login?volver=/record', true);
@@ -200,6 +201,15 @@ export function Grabar() {
       if (!grabadora.current) return; // se descartó durante la cuenta
     }
     g.empezar(flujo.current);
+    // La miniatura sale de los primeros segundos (lo que se ve al empezar), no del final.
+    miniaturaInicio.current = null;
+    window.setTimeout(() => {
+      if (grabadora.current === g)
+        void g
+          .miniatura()
+          .then((b) => (miniaturaInicio.current = b))
+          .catch(() => undefined);
+    }, 2500);
     if (respaldo.current) respaldo.current.tipo = g.tipo.split(';')[0]!;
     setEstado('grabando');
   }
@@ -210,7 +220,7 @@ export function Grabar() {
     const id = videoId.current;
     if (!g || !s || !id) return;
     setEstado('subiendo');
-    const miniatura = await g.miniatura().catch(() => null);
+    const miniatura = miniaturaInicio.current ?? (await g.miniatura().catch(() => null));
     const duracion = await g.terminar('usuario');
     const segmentos = g.segmentos;
     try {

@@ -133,8 +133,11 @@ export class Grabadora {
 
     if (this.a.modo !== 'camara') {
       pantalla = await navigator.mediaDevices.getDisplayMedia({
-        video: { height: { ideal: alto }, frameRate: { ideal: 30 } },
+        // «monitor» deja preseleccionada la pantalla completa en Chrome: así salen también los programas instalados.
+        video: { height: { ideal: alto }, frameRate: { ideal: 30 }, displaySurface: 'monitor' },
         audio: this.a.audioSistema,
+        selfBrowserSurface: 'include',
+        surfaceSwitching: 'include',
       } as DisplayMediaStreamOptions);
       this.flujos.push(pantalla);
       pantalla.getVideoTracks()[0]?.addEventListener('ended', () => {
