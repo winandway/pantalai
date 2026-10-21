@@ -58,6 +58,9 @@ describe('portada', () => {
     const { FUNCIONES } = await import('../web/src/paginas/Inicio');
     expect(FUNCIONES.es).toHaveLength(FUNCIONES.en.length);
     expect(FUNCIONES.en.length).toBeGreaterThanOrEqual(8);
+    const { PREGUNTAS } = await import('../web/src/paginas/funciones');
+    // Lo que va a Google como preguntas frecuentes es lo mismo que se ve en la portada, en los dos idiomas.
+    expect(PREGUNTAS.es).toHaveLength(PREGUNTAS.en.length);
   });
 });
 

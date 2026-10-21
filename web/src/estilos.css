@@ -3686,3 +3686,42 @@ main {
   width: 60%;
   overflow-wrap: anywhere;
 }
+
+/* ---------- portada: preguntas frecuentes ---------- */
+.portada-preguntas {
+  max-width: 760px;
+  margin: 72px auto 0;
+  padding: 0 16px;
+}
+.portada-preguntas h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.portada-preguntas details {
+  border-bottom: 1px solid var(--borde);
+  padding: 14px 4px;
+}
+.portada-preguntas summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.portada-preguntas summary::after {
+  content: '+';
+  color: var(--gris);
+  font-weight: 400;
+}
+.portada-preguntas details[open] summary::after {
+  content: '–';
+}
+.portada-preguntas summary::-webkit-details-marker {
+  display: none;
+}
+.portada-preguntas p {
+  margin: 10px 0 0;
+  color: var(--tinta-suave);
+  line-height: 1.55;
+}

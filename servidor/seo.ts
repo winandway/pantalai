@@ -1,45 +1,17 @@
 // Lo que leen Google y los buscadores de IA (ChatGPT, Claude, Perplexity, Gemini) sin ejecutar JavaScript:
 // el texto de cada página pública escrito en el HTML, los datos estructurados (JSON-LD) y los archivos
 // /llms.txt y /llms-full.txt. La app de React reemplaza ese texto al cargar, así que la persona ve lo de siempre.
-import { FUNCIONES } from '../web/src/paginas/funciones';
+import { FUNCIONES, PREGUNTAS as PREGUNTAS_IDIOMAS } from '../web/src/paginas/funciones';
 import { GUIAS, SECCIONES } from '../web/src/paginas/guias';
 import { ACTUALIZADO, CONTACTO, LEGALES, legalPorSlug } from '../web/src/paginas/legales';
 
 export const DOMINIO = 'https://pantalay.com';
 
+/** Las preguntas frecuentes en inglés (el idioma principal): las mismas que se ven en la portada. */
+export const PREGUNTAS = PREGUNTAS_IDIOMAS.en;
+
 const esc = (t: string) =>
   t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-export const PREGUNTAS: { p: string; r: string }[] = [
-  {
-    p: 'What is Pantalay?',
-    r: 'Pantalay is a free screen and camera recorder that works in your web browser. You record your screen, your camera or both, and the moment you stop you get a link to share. Viewers watch it in their browser without an account.',
-  },
-  {
-    p: 'Is Pantalay free?',
-    r: 'Yes. You can create an account and start recording for free. Paid plans add unlimited videos and recording length, 4K, drawing tools and AI features.',
-  },
-  {
-    p: 'Do I need to install anything?',
-    r: 'No. Pantalay runs in a modern browser such as Chrome, Edge, Firefox or Safari on your computer. There is nothing to download.',
-  },
-  {
-    p: 'Can I download my videos as MP4?',
-    r: 'Yes. Every video can be downloaded as an MP4 file that plays on any phone, computer, YouTube or social network. If you trimmed the video, the download comes out trimmed.',
-  },
-  {
-    p: 'Who can watch my videos?',
-    r: 'You choose for each video: anyone with the link, or only you. You can also turn comments and downloads on or off, and embed the video on your website.',
-  },
-  {
-    p: 'Does Pantalay make transcripts and captions?',
-    r: 'Yes. Pantalay creates a transcript and captions in English and Spanish, and with AI it can write the title, summary, chapters and step-by-step documents from your video.',
-  },
-  {
-    p: 'Is my data used to train AI?',
-    r: 'No. Your videos are processed only to give you the results you ask for. Pantalay does not sell personal data and does not show ads.',
-  },
-];
 
 /** Título + resumen + texto de la página, en HTML simple. null = la ruta no tiene texto público. */
 export function contenidoDeRuta(ruta: string): string | null {

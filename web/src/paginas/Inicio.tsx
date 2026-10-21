@@ -23,7 +23,7 @@ import { Demo } from '../componentes/Demo';
 import { useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
-import { FUNCIONES } from './funciones';
+import { FUNCIONES, PREGUNTAS } from './funciones';
 
 export { FUNCIONES };
 
@@ -371,6 +371,16 @@ export function Inicio() {
               : 'It uploads while you record and keeps a copy on your computer in case your internet drops.'}
           </p>
         </div>
+      </section>
+
+      <section className="portada-preguntas" aria-labelledby="preguntas-titulo">
+        <h2 id="preguntas-titulo">{es ? 'Preguntas frecuentes' : 'Frequently asked questions'}</h2>
+        {PREGUNTAS[idioma].map((q) => (
+          <details key={q.p}>
+            <summary>{q.p}</summary>
+            <p>{q.r}</p>
+          </details>
+        ))}
       </section>
 
       <section className="portada-final">
