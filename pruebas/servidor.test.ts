@@ -911,3 +911,57 @@ describe('CANDADO C-LIMITES-SERVIDOR: el servidor cumple el plan aunque alguien 
     expect((await intruso('/datos/admin/resumen', { headers: { 'x-panel': RUTA } })).status).toBe(429);
   });
 });
+
+describe('CANDADO C-CUENTA: la persona maneja su cuenta sola (nombre, contraseña y borrarla)', () => {
+  it('cambia el nombre y la contraseña: la vieja deja de servir y los otros equipos salen', async () => {
+    const c = await registrado();
+    const otro = cliente('3.3.3.3');
+    await otro('/datos/entrar', {
+      method: 'POST',
+      json: { correo: 'ana@example.com', clave: 'clave-segura-1' },
+    });
+    expect((await c('/datos/yo', { method: 'PATCH', json: { nombre: 'Ana María' } })).status).toBe(200);
+    expect(((await (await c('/datos/yo')).json()) as { usuario: { nombre: string } }).usuario.nombre).toBe(
+      'Ana María',
+    );
+    expect(
+      (await c('/datos/clave', { method: 'POST', json: { actual: 'mala-clave', nueva: 'clave-nueva-2' } }))
+        .status,
+    ).toBe(401);
+    expect(
+      (
+        await c('/datos/clave', {
+          method: 'POST',
+          json: { actual: 'clave-segura-1', nueva: 'clave-nueva-2' },
+        })
+      ).status,
+    ).toBe(200);
+    expect(((await (await c('/datos/yo')).json()) as { usuario: unknown }).usuario).not.toBeNull();
+    expect(((await (await otro('/datos/yo')).json()) as { usuario: unknown }).usuario).toBeNull();
+    const vieja = await cliente('4.4.4.4')('/datos/entrar', {
+      method: 'POST',
+      json: { correo: 'ana@example.com', clave: 'clave-segura-1' },
+    });
+    expect(vieja.status).toBe(401);
+  });
+
+  it('borrar la cuenta pide la contraseña y se lleva los videos y sus archivos', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    expect((await c('/datos/cuenta/borrar', { method: 'POST', json: { clave: 'otra' } })).status).toBe(401);
+    expect((await c(`/datos/videos/${id}`)).status).toBe(200);
+    expect(
+      (await c('/datos/cuenta/borrar', { method: 'POST', json: { clave: 'clave-segura-1' } })).status,
+    ).toBe(200);
+    expect(((await (await c('/datos/yo')).json()) as { usuario: unknown }).usuario).toBeNull();
+    expect(await env.BUCKET.get(`videos/${id}/video`)).toBeNull();
+    expect((await cliente()(`/datos/videos/${id}`)).status).toBe(404);
+    const entrar = await cliente('8.8.8.8')('/datos/entrar', {
+      method: 'POST',
+      json: { correo: 'ana@example.com', clave: 'clave-segura-1' },
+    });
+    expect(entrar.status).toBe(401);
+    // El correo queda libre para una cuenta nueva.
+    await registrado('Ana', 'ana@example.com', '9.9.9.1');
+  });
+});

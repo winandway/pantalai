@@ -1,6 +1,9 @@
 import { Admin } from './paginas/Admin';
 import { Pagar } from './paginas/Pagar';
 import { Precios } from './paginas/Precios';
+import { Cuenta } from './paginas/Cuenta';
+import { Legal } from './paginas/Legal';
+import { legalPorSlug } from './paginas/legales';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProveedorAviso } from './componentes/Aviso';
 import { Encabezado, Pie } from './componentes/Marco';
@@ -77,6 +80,9 @@ export function App() {
   else if (ruta === '/record') pagina = <Grabar />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
   else if (ruta === '/pricing') pagina = <Precios />;
+  else if (ruta === '/account') pagina = <Cuenta />;
+  else if (legalPorSlug(partes[0] ?? '') && partes.length === 1)
+    pagina = <Legal legal={legalPorSlug(partes[0]!)!} />;
   // El panel vive en una dirección secreta bajo /panel/: la valida el servidor, aquí no se conoce.
   else if (partes[0] === 'panel' && partes.length > 1) pagina = <Admin />;
   else if (ruta === '/checkout' || ruta === '/checkout/done') pagina = <Pagar />;

@@ -96,6 +96,9 @@ export function Encabezado() {
                   <a role="menuitem" href="/library" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
                     {t('biblioteca')}
                   </a>
+                  <a role="menuitem" href="/account" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
+                    {t('cta.menu')}
+                  </a>
                   {usuario.panel && (
                     <a
                       role="menuitem"
@@ -132,6 +135,23 @@ export function Pie() {
   const { t } = useIdioma();
   return (
     <footer className="pie">
+      <nav className="pie-enlaces" aria-label={t('cta.legal')}>
+        <a href="/docs" onClick={alClicEnlace}>
+          Docs
+        </a>
+        <a href="/terms" onClick={alClicEnlace}>
+          {t('legal.pie')}
+        </a>
+        <a href="/privacy" onClick={alClicEnlace}>
+          {t('legal.privacidad')}
+        </a>
+        <a href="/acceptable-use" onClick={alClicEnlace}>
+          {t('legal.uso')}
+        </a>
+        <a href="/cookies" onClick={alClicEnlace}>
+          {t('legal.cookies')}
+        </a>
+      </nav>
       <span>
         © {new Date().getFullYear()} pantalay.com | {t('derechos')}{' '}
         <a href="https://windoce.com" target="_blank" rel="noopener noreferrer">

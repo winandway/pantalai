@@ -155,6 +155,19 @@ export function Entrar({ registro }: { registro: boolean }) {
         <button className="boton ancho" disabled={enviando || (escudo.activo && !escudo.pase)}>
           {registro ? t('crearCuenta') : t('entrar')}
         </button>
+        {registro && (
+          <p className="ayuda centro chico">
+            {t('legal.aceptas')}{' '}
+            <a href="/terms" onClick={alClicEnlace}>
+              {t('legal.pie')}
+            </a>{' '}
+            {t('legal.y')}{' '}
+            <a href="/privacy" onClick={alClicEnlace}>
+              {t('legal.privacidad')}
+            </a>
+            .
+          </p>
+        )}
         <p className="ayuda centro">
           {registro ? t('yaTengo') : t('noTengo')}{' '}
           <a href={registro ? '/login' : '/signup'} onClick={alClicEnlace}>

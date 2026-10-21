@@ -156,6 +156,33 @@ main {
 .pie a:hover {
   color: var(--rojo);
 }
+.pie-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin-bottom: 8px;
+}
+.pie-enlaces a {
+  font-weight: 500;
+}
+/* ---------- mi cuenta ---------- */
+.cuenta-pagina {
+  display: grid;
+  gap: 16px;
+}
+.cuenta-pagina h2 {
+  font-size: 1.05rem;
+  margin: 0 0 4px;
+}
+.cuenta-legal-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.plan-actual {
+  margin: 0;
+}
 
 /* ---------- selector de idioma (estilo Amazon) ---------- */
 .selector-idioma {
@@ -2553,6 +2580,21 @@ main {
   }
   .docs-lateral nav {
     display: none;
+  }
+  /* En los textos legales, las cuatro políticas quedan a mano como botones. */
+  .legal .docs-lateral nav:first-child {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 6px;
+  }
+  .legal .docs-lateral nav:first-child .lateral-titulo {
+    display: none;
+  }
+  .legal .docs-lateral nav:first-child a {
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.82rem;
   }
   .docs-volver {
     display: inline-block;

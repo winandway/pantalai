@@ -376,6 +376,44 @@ describe('CANDADO C-PAGOS: cobro con Stripe dentro de la página', () => {
     expect(llamadas.find((l) => l.ruta === 'subscriptions')!.cuerpo).not.toContain('trial_period_days');
   });
 
+  it('borrar la cuenta cancela el plan en Stripe al momento (nadie queda pagando sin cuenta); cancelar y reanudar se ven en Mi cuenta', async () => {
+    const { llamadas } = stripeFalso();
+    const c = cliente();
+    await c('/datos/registro', {
+      method: 'POST',
+      json: { nombre: 'Ana', correo: 'ana@example.com', clave: 'clave-segura-1' },
+    });
+    await c('/datos/pago/suscripcion', { method: 'POST', json: { plan: 'business', ciclo: 'mensual' } });
+    const yo = ((await (await c('/datos/yo')).json()) as { usuario: { id: string } }).usuario.id;
+    const aviso = JSON.stringify({
+      type: 'customer.subscription.created',
+      data: {
+        object: {
+          id: 'sub_1',
+          status: 'trialing',
+          customer: 'cus_1',
+          metadata: { usuario_id: yo, plan: 'business', ciclo: 'mensual' },
+        },
+      },
+    });
+    await c('/datos/pago/aviso', {
+      method: 'POST',
+      body: aviso,
+      headers: { 'stripe-signature': await firmar(aviso) },
+    });
+    const plan = async () =>
+      (await (await c('/datos/plan')).json()) as { renovacion: { cancela_al_final: boolean } | null };
+    expect((await plan()).renovacion).toMatchObject({ cancela_al_final: false });
+    expect((await c('/datos/pago/cancelar', { method: 'POST' })).status).toBe(200);
+    expect((await plan()).renovacion).toMatchObject({ cancela_al_final: true });
+    expect((await c('/datos/pago/reanudar', { method: 'POST' })).status).toBe(200);
+    expect((await plan()).renovacion).toMatchObject({ cancela_al_final: false });
+    expect(
+      (await c('/datos/cuenta/borrar', { method: 'POST', json: { clave: 'clave-segura-1' } })).status,
+    ).toBe(200);
+    expect(llamadas.some((l) => l.metodo === 'DELETE' && l.ruta === 'subscriptions/sub_1')).toBe(true);
+  });
+
   it('sin las claves de Stripe el cobro está apagado y lo dice el canario', async () => {
     env = { DB: baseFalsa(), BUCKET: almacenFalso() };
     const c = cliente();

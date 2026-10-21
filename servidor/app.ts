@@ -24,6 +24,7 @@ import {
   robots,
   sitemap,
 } from './dominio';
+import { llmsCompleto, llmsTxt } from './seo';
 import { cobroActivo, esPlan, limitesDe, PRECIOS, type Limites, type Plan } from './planes';
 import {
   cancelarAlFinal,
@@ -38,6 +39,7 @@ import {
   ingresoMensual,
   cambiarPlan,
   cancelarAhora,
+  reanudar,
   leerSuscripcion,
   VIVA,
   type EnvPago,
@@ -233,6 +235,18 @@ app.use('*', async (c, next) => {
 
 app.get('/sitemap.xml', (c) => c.body(sitemap(), 200, { 'content-type': 'application/xml; charset=utf-8' }));
 app.get('/robots.txt', (c) => c.text(robots()));
+app.get('/llms.txt', (c) =>
+  c.text(llmsTxt(), 200, {
+    'content-type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'public, max-age=3600',
+  }),
+);
+app.get('/llms-full.txt', (c) =>
+  c.text(llmsCompleto(), 200, {
+    'content-type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'public, max-age=3600',
+  }),
+);
 app.get('/:archivo{google[A-Za-z0-9_-]+\\.html}', (c) => {
   const texto = archivoGoogle(c.req.param('archivo'), codigosGoogle(c.env.GOOGLE_VERIFICACION));
   return texto ? c.text(texto) : c.notFound();
@@ -617,6 +631,108 @@ app.post('/datos/salir', async (c) => {
   return c.json({ ok: true });
 });
 
+// ---------- mi cuenta: nombre, contraseña y borrar la cuenta ----------
+
+app.patch('/datos/yo', requiereSesion, async (c) => {
+  const d = await cuerpo(c, z.object({ nombre: z.string().trim().min(1).max(80) }));
+  if (!d) return err(c, 400, 'nombre');
+  await c.env.DB.prepare('UPDATE usuarios SET nombre = ? WHERE id = ?')
+    .bind(d.nombre, c.get('usuario')!.id)
+    .run();
+  return c.json({ usuario: { ...c.get('usuario')!, nombre: d.nombre } });
+});
+
+/** Comprueba la contraseña de la cuenta con sesión (para cambiarla o borrar la cuenta). */
+async function claveCorrecta(c: C, clave: string): Promise<boolean> {
+  const u = await c.env.DB.prepare('SELECT clave_hash, clave_sal FROM usuarios WHERE id = ?')
+    .bind(c.get('usuario')!.id)
+    .first<{ clave_hash: string; clave_sal: string }>();
+  return !!u && iguales(await hashClave(clave, u.clave_sal), u.clave_hash);
+}
+
+app.post('/datos/clave', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  if (!(await dentroDelLimite(c.env.DB, 'clave', u.id, 10, 15 * 60 * 1000))) return err(c, 429, 'demasiados');
+  const d = await cuerpo(
+    c,
+    z.object({ actual: z.string().min(1).max(200), nueva: z.string().min(8).max(200) }),
+  );
+  if (!d) return err(c, 400, 'datos');
+  if (!(await claveCorrecta(c, d.actual))) return err(c, 401, 'credenciales');
+  const sal = aleatorio(16);
+  const token = leerCookie(c.req.header('cookie'), COOKIE_SESION);
+  // Contraseña nueva y se cierran las demás sesiones (si alguien más había entrado, sale); esta sigue abierta.
+  await c.env.DB.batch([
+    c.env.DB.prepare('UPDATE usuarios SET clave_hash = ?, clave_sal = ? WHERE id = ?').bind(
+      await hashClave(d.nueva, sal),
+      sal,
+      u.id,
+    ),
+    c.env.DB.prepare('DELETE FROM sesiones WHERE usuario_id = ? AND token_hash != ?').bind(
+      u.id,
+      token ? await sha256(token) : '',
+    ),
+  ]);
+  despues(
+    c,
+    escribir(c, u.id, (i, n) => correoClaveCambiada(i, n)),
+  );
+  return c.json({ ok: true });
+});
+
+// Borrar la cuenta: pide la contraseña, cancela el plan pago al momento, borra los videos (y sus archivos) y todos
+// los datos de la persona. Sus comentarios en videos de otros quedan sin cuenta. Lo de Stripe (facturas) se queda
+// allá, como pide la ley.
+app.post('/datos/cuenta/borrar', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  if (!(await dentroDelLimite(c.env.DB, 'borrar_cuenta', u.id, 5, 15 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const d = await cuerpo(c, z.object({ clave: z.string().min(1).max(200) }));
+  if (!d) return err(c, 400, 'datos');
+  if (!(await claveCorrecta(c, d.clave))) return err(c, 401, 'credenciales');
+  const pago = await c.env.DB.prepare('SELECT suscripcion FROM pagos_stripe WHERE usuario_id = ?')
+    .bind(u.id)
+    .first<{ suscripcion: string | null }>();
+  if (pago?.suscripcion && pagoListo(c.env)) {
+    try {
+      const s = await leerSuscripcion(c.env, pago.suscripcion);
+      if (s.status !== 'canceled' && s.status !== 'incomplete_expired') await cancelarAhora(c.env, s.id);
+    } catch (e) {
+      // Sin cancelar en Stripe no se borra: se le seguiría cobrando a alguien sin cuenta.
+      console.error('borrar cuenta: no se pudo cancelar la suscripción', e);
+      return err(c, 502, 'stripe');
+    }
+  }
+  const { results: videos } = await c.env.DB.prepare('SELECT * FROM videos WHERE usuario_id = ?')
+    .bind(u.id)
+    .all<FilaVideo>();
+  for (const v of videos) {
+    if (v.subida_id)
+      await c.env.BUCKET.resumeMultipartUpload(claveVideo(v.id), v.subida_id)
+        .abort()
+        .catch(() => undefined);
+    await borrarVideo(c, v);
+  }
+  await c.env.DB.batch([
+    ...[
+      'carpetas',
+      'sesiones',
+      'perfil',
+      'recuperaciones',
+      'suscripciones',
+      'pagos_stripe',
+      'estado_stripe',
+      'accesos',
+      'errores_cliente',
+    ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} WHERE usuario_id = ?`).bind(u.id)),
+    c.env.DB.prepare('UPDATE comentarios SET usuario_id = NULL WHERE usuario_id = ?').bind(u.id),
+    c.env.DB.prepare('DELETE FROM usuarios WHERE id = ?').bind(u.id),
+  ]);
+  const segura = new URL(c.req.url).protocol === 'https:';
+  c.header('Set-Cookie', cookieSesion('', segura, 0));
+  return c.json({ ok: true });
+});
+
 // ---------- planes ----------
 
 async function planDe(c: C, usuarioId: string): Promise<{ plan: Plan; limites: Limites }> {
@@ -634,10 +750,32 @@ app.get('/datos/plan', requiereSesion, async (c) => {
   const s = await c.env.DB.prepare('SELECT ciclo FROM pagos_stripe WHERE usuario_id = ?')
     .bind(c.get('usuario')!.id)
     .first<{ ciclo: string | null }>();
+  const e = await c.env.DB.prepare(
+    'SELECT status, periodo_fin, cancela_al_final, monto, intervalo FROM estado_stripe WHERE usuario_id = ?',
+  )
+    .bind(c.get('usuario')!.id)
+    .first<{
+      status: string;
+      periodo_fin: number | null;
+      cancela_al_final: number;
+      monto: number;
+      intervalo: string;
+    }>();
   return c.json(
     {
       ...p,
       ciclo: p.plan === 'starter' ? null : (s?.ciclo ?? null),
+      // Para «Mi cuenta»: cuándo renueva (o termina) y si ya pidió cancelar.
+      renovacion:
+        p.plan !== 'starter' && e
+          ? {
+              status: e.status,
+              periodo_fin: e.periodo_fin,
+              cancela_al_final: !!e.cancela_al_final,
+              monto: e.monto,
+              intervalo: e.intervalo,
+            }
+          : null,
       cobro_activo: cobroActivo(c.env),
       pago_listo: pagoListo(c.env),
       precios: PRECIOS,
@@ -727,6 +865,24 @@ app.post('/datos/pago/suscripcion', requiereSesion, async (c) => {
   }
 });
 
+// Se arrepintió de cancelar: la suscripción sigue renovando como antes.
+app.post('/datos/pago/reanudar', requiereSesion, async (c) => {
+  const f = await c.env.DB.prepare('SELECT suscripcion FROM pagos_stripe WHERE usuario_id = ?')
+    .bind(c.get('usuario')!.id)
+    .first<{ suscripcion: string | null }>();
+  if (!f?.suscripcion) return err(c, 404, 'no_existe');
+  try {
+    await reanudar(c.env, f.suscripcion);
+    await c.env.DB.prepare('UPDATE estado_stripe SET cancela_al_final = 0 WHERE usuario_id = ?')
+      .bind(c.get('usuario')!.id)
+      .run();
+    return c.json({ ok: true });
+  } catch (e) {
+    console.error('pago: reanudar', e);
+    return err(c, 502, 'stripe');
+  }
+});
+
 app.post('/datos/pago/cancelar', requiereSesion, async (c) => {
   const f = await c.env.DB.prepare('SELECT suscripcion FROM pagos_stripe WHERE usuario_id = ?')
     .bind(c.get('usuario')!.id)
@@ -734,6 +890,10 @@ app.post('/datos/pago/cancelar', requiereSesion, async (c) => {
   if (!f?.suscripcion) return err(c, 404, 'no_existe');
   try {
     await cancelarAlFinal(c.env, f.suscripcion);
+    // Se ve al momento en «Mi cuenta»; el aviso de Stripe lo confirma después.
+    await c.env.DB.prepare('UPDATE estado_stripe SET cancela_al_final = 1 WHERE usuario_id = ?')
+      .bind(c.get('usuario')!.id)
+      .run();
     return c.json({ ok: true });
   } catch (e) {
     console.error('pago: cancelar', e);

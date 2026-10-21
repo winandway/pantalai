@@ -175,6 +175,11 @@ export async function cancelarAlFinal(env: EnvPago, suscripcion: string): Promis
   await stripe(env, 'POST', `subscriptions/${suscripcion}`, { cancel_at_period_end: true });
 }
 
+/** Deshace una cancelación pedida: la suscripción vuelve a renovar sola. */
+export async function reanudar(env: EnvPago, suscripcion: string): Promise<void> {
+  await stripe(env, 'POST', `subscriptions/${suscripcion}`, { cancel_at_period_end: false });
+}
+
 export type SuscripcionStripe = {
   id: string;
   status: string;

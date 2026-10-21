@@ -80,7 +80,9 @@ describe('CANDADO C-GOOGLE: listo para verificar en Google Search Console', () =
     expect(h).not.toContain('noindex');
     expect(prepararCabecera(base, '/library', [])).toContain('<meta name="robots" content="noindex" />');
     expect(prepararCabecera(base, '/pricing', [])).toContain('noindex');
-    expect(prepararCabecera(base, '/', [])).toBe(base);
+    // La portada conserva su título y suma los datos para Google y las IAs.
+    expect(prepararCabecera(base, '/', [])).toContain('<title>Pantalay</title>');
+    expect(prepararCabecera(base, '/', [])).toContain('"@type":"FAQPage"');
   });
 });
 
@@ -92,5 +94,61 @@ describe('CANDADO C-GOOGLE: el mapa que Google ya tiene enviado no pierde págin
     const locs = xml.match(/<loc>[^<]+<\/loc>/g)!;
     expect(new Set(locs).size).toBe(locs.length);
     expect(locs.length).toBeGreaterThanOrEqual(25);
+  });
+});
+
+describe('CANDADO C-SEO-IA: Google y los buscadores de IA leen el texto sin JavaScript', () => {
+  const base =
+    '<html><head><title>Pantalay</title></head><body><div id="raiz"></div><script src="/app.js"></script></body></html>';
+
+  it('cada página pública trae su texto dentro del HTML; las privadas no', async () => {
+    const { GUIAS } = await import('../web/src/paginas/guias');
+    const g = GUIAS[0]!;
+    const guia = prepararCabecera(base, `/docs/${g.slug}`, []);
+    expect(guia).toContain(`<h1>${g.en.titulo.replace(/&/g, '&amp;')}</h1>`);
+    expect(guia).toContain('"@type":"TechArticle"');
+    const terminos = prepararCabecera(base, '/terms', []);
+    expect(terminos).toContain('<h1>Terms of Service</h1>');
+    expect(terminos).toContain('Windoce, LLC');
+    expect(prepararCabecera(base, '/privacy', [])).toContain('<h1>Privacy Policy</h1>');
+    expect(prepararCabecera(base, '/', [])).toContain('Frequently asked questions');
+    expect(prepararCabecera(base, '/library', [])).toContain('<div id="raiz"></div>');
+    expect(prepararCabecera(base, '/account', [])).toContain('noindex');
+  });
+
+  it('el mapa del sitio trae los textos legales y robots invita a las IAs por su nombre', async () => {
+    const { robots, sitemap } = await import('../servidor/dominio');
+    for (const r of ['/terms', '/privacy', '/acceptable-use', '/cookies'])
+      expect(sitemap()).toContain(`https://pantalay.com${r}</loc>`);
+    const txt = robots();
+    for (const bot of ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended'])
+      expect(txt).toContain(`User-agent: ${bot}\nAllow: /`);
+    expect(txt).toContain('Disallow: /account');
+    expect(txt).toContain('Disallow: /panel/');
+  });
+
+  it('llms.txt sigue el formato y enlaza todas las guías; llms-full.txt trae su texto completo', async () => {
+    const { llmsCompleto, llmsTxt } = await import('../servidor/seo');
+    const { GUIAS } = await import('../web/src/paginas/guias');
+    const indice = llmsTxt();
+    expect(indice.startsWith('# Pantalay\n\n> ')).toBe(true);
+    for (const g of GUIAS) expect(indice).toContain(`https://pantalay.com/docs/${g.slug}`);
+    expect(llmsCompleto()).toContain(GUIAS[0]!.en.cuerpo[0]!);
+  });
+
+  it('un título con «</script>» no puede romper los datos estructurados', async () => {
+    const { datosEstructurados } = await import('../servidor/seo');
+    expect(datosEstructurados('/')).not.toMatch(/<\/script>.*<\/script>.*<\/script>.*<\/script>/s);
+    expect(datosEstructurados('/').split('</script>').length - 1).toBe(3);
+  });
+
+  it('los textos legales están completos en los dos idiomas', async () => {
+    const { LEGALES } = await import('../web/src/paginas/legales');
+    expect(LEGALES.map((l) => l.slug)).toEqual(['terms', 'privacy', 'acceptable-use', 'cookies']);
+    for (const l of LEGALES) {
+      expect(l.en.secciones.length).toBeGreaterThan(2);
+      expect(l.es.secciones.length).toBeGreaterThanOrEqual(l.en.secciones.length);
+      expect(JSON.stringify(l.en)).not.toMatch(/Loom|Atlassian/);
+    }
   });
 });

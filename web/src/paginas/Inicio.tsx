@@ -23,74 +23,12 @@ import { Demo } from '../componentes/Demo';
 import { useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
+import { FUNCIONES } from './funciones';
+
+export { FUNCIONES };
 
 type T2 = { en: string; es: string };
 const T = (en: string, es: string): T2 => ({ en, es });
-
-export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
-  en: [
-    [
-      'Screen + camera',
-      'Your screen with your face in a bubble, just the screen, or just the camera. Up to 4K.',
-    ],
-    [
-      'Instant link',
-      'Your video uploads while you record. The moment you stop, the link is on your clipboard.',
-    ],
-    [
-      'Live transcript and captions',
-      'Every word becomes text as you speak. Viewers get captions and a searchable transcript.',
-    ],
-    [
-      'Edit without starting over',
-      'Trim the ends, cut by transcript, remove silences, add text, arrows, boxes and blur.',
-    ],
-    [
-      'Comments and reactions',
-      'Viewers react and comment at the exact second. You see everything in one place.',
-    ],
-    ['Viewer insights', 'Views, average watch time, completion rate and button clicks for every video.'],
-    [
-      'AI writes the rest',
-      'Title, summary, chapters and tasks appear on their own. Remove filler words in one click.',
-    ],
-    [
-      'Video to document',
-      'Turn any video into a step-by-step guide or bug report, with a screenshot per step.',
-    ],
-  ],
-  es: [
-    [
-      'Pantalla + cámara',
-      'Tu pantalla con tu cara en una burbuja, solo la pantalla o solo la cámara. Hasta 4K.',
-    ],
-    ['Enlace al instante', 'El video se sube mientras grabas. Al terminar, el enlace ya está copiado.'],
-    [
-      'Transcripción y subtítulos en vivo',
-      'Cada palabra se vuelve texto mientras hablas. Quien lo ve tiene subtítulos y una transcripción para buscar.',
-    ],
-    [
-      'Edita sin volver a grabar',
-      'Recorta las puntas, corta con la transcripción, quita silencios, agrega textos, flechas, recuadros y difuminado.',
-    ],
-    [
-      'Comentarios y reacciones',
-      'Quien lo ve reacciona y comenta en el segundo exacto. Tú lo ves todo en un solo lugar.',
-    ],
-    [
-      'Estadísticas',
-      'Vistas, tiempo promedio, cuántos lo vieron completo y clics en tu botón, video por video.',
-    ],
-    [
-      'La IA escribe lo demás',
-      'Título, resumen, capítulos y tareas aparecen solos. Quita las muletillas con un clic.',
-    ],
-    [
-      'De video a documento',
-      'Convierte cualquier video en una guía paso a paso o un reporte de error, con una captura por paso.',
-    ],
-  ],
-};
 
 /** Cada herramienta grande, con su captura real del programa. */
 const VITRINA: { captura: string; etiqueta: T2; titulo: T2; texto: T2; puntos: T2[] }[] = [

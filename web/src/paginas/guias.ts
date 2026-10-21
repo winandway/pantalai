@@ -679,4 +679,35 @@ export const GUIAS: Guia[] = [
       ],
     },
   },
+  {
+    slug: 'your-account',
+    seccion: 'cuenta',
+    icono: '👤',
+    en: {
+      titulo: 'Your account: name, password, plan and deleting it',
+      resumen:
+        'Change your name or password, cancel or keep your plan, and delete your account whenever you want.',
+      cuerpo: [
+        'Open your account. Press your name at the top right and choose Account.',
+        'Change your name. Write it in Profile and press Save. It is the name your viewers see on your videos and comments.',
+        'Change your password. Write your current password and the new one (at least 8 characters) and press Change password. Every other device where you were logged in is logged out, and you get an email so you know it happened.',
+        'See your plan. Plan shows what you have and the date it renews. Press See plans to compare or upgrade.',
+        'Cancel your plan. Press Cancel plan and confirm. Nothing is charged again: you keep your paid features until the end of the period you already paid, and then your account moves to the free plan with all your videos. Changed your mind? Press Keep my plan before that date.',
+        'Delete your account. Open the ⋮ menu next to Legal, choose Delete account, write your password and confirm. Your account, videos, transcripts and folders are deleted and any paid plan is canceled right away. It can’t be undone, so download the videos you want to keep first.',
+      ],
+    },
+    es: {
+      titulo: 'Tu cuenta: nombre, contraseña, plan y borrarla',
+      resumen:
+        'Cambia tu nombre o tu contraseña, cancela o mantén tu plan, y borra tu cuenta cuando quieras.',
+      cuerpo: [
+        'Abre tu cuenta. Toca tu nombre arriba a la derecha y elige Mi cuenta.',
+        'Cambia tu nombre. Escríbelo en Perfil y toca Guardar. Es el nombre que ven quienes miran tus videos y comentarios.',
+        'Cambia tu contraseña. Escribe la actual y la nueva (al menos 8 caracteres) y toca Cambiar contraseña. Se cierra la sesión en los demás equipos donde habías entrado, y te llega un correo para que sepas que pasó.',
+        'Mira tu plan. En Plan ves lo que tienes y la fecha en que se renueva. Toca Ver planes para comparar o subir de plan.',
+        'Cancela tu plan. Toca Cancelar plan y confirma. No se vuelve a cobrar: conservas las funciones pagas hasta el final del período que ya pagaste y después tu cuenta pasa al plan gratis con todos tus videos. ¿Cambiaste de idea? Toca Mantener mi plan antes de esa fecha.',
+        'Borra tu cuenta. Abre el menú ⋮ al lado de Legal, elige Borrar cuenta, escribe tu contraseña y confirma. Se borran tu cuenta, tus videos, transcripciones y carpetas, y se cancela al momento cualquier plan pago. No se puede deshacer: descarga antes los videos que quieras guardar.',
+      ],
+    },
+  },
 ];
