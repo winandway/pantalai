@@ -58,7 +58,7 @@ for (const idioma of ['en', 'es']) {
   await p.goto(`${BASE}/record`);
   await foto(`grabar-${idioma}`);
   await p.goto(`${BASE}/v/${id}/edit`);
-  await irA(26);
+  await irA(4);
   await foto(`editar-${idioma}`);
 }
 await navegador.close();
