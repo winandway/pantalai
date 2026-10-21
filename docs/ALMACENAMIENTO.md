@@ -35,7 +35,12 @@ Ejemplo: 1.000 clientes con una hora de video cada uno ≈ 1,2 TB ≈ **18 USD a
 cliente de Business + AI (12 USD al mes) se pagan unos 800 GB. **El almacenamiento es barato; lo único que limita es el
 tope del plan del sitio.**
 
-## Qué recomiendo (decisión de Richard)
+## Decisión (20 oct 2026)
+
+Richard eligió la opción 1: **subir el sitio `pantalai` a 500 GB en YaDominios, cobrando lo que cuesta en Cloudflare.**
+Se hace en la sesión de YaDominios (es otro proyecto). Después, aquí: `ALMACEN_LIMITE_GB=500`.
+
+## Las opciones que se miraron
 
 1. **Subirle el almacenamiento al sitio `pantalai` en YaDominios** (es nuestra plataforma) a un tope a la medida, por
    ejemplo 500 GB, cobrando lo que cuesta en Cloudflare. Es el camino más simple: no cambia nada en el código.

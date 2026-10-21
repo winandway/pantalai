@@ -14,6 +14,12 @@
   decidir encender COBRO_ACTIVO y anunciar la página de precios. Destraba: probar el
   cobro de punta a punta y encender los planes. Plano y enlaces en el chat del 20 oct 2026; estado en docs/VERIFICAR-PAGOS.md.
 
+## 👤 Almacenamiento a 500 GB (decidido por Richard el 20 oct 2026)
+
+- 👤 Subir el almacenamiento del sitio `pantalai` a 500 GB en la sesión de YaDominios (YaPanel), cobrando lo que cuesta
+  en Cloudflare (0,015 USD por GB al mes). Encargo listo en el chat del 20 oct 2026. Cuando esté hecho, aquí: poner la
+  variable del sitio `ALMACEN_LIMITE_GB=500` y republicar, para que el superadmin muestre el tope nuevo.
+
 ## Hecho por Richard
 
 - ✅ 20 oct 2026: pantalay.com verificado en Google Search Console y sitemap enviado (Correcto, 25 páginas).
