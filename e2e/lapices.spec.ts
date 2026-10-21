@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { ipDePrueba } from './ayuda';
+
+test.use({ extraHTTPHeaders: { 'cf-connecting-ip': ipDePrueba() } });
 
 // CANDADO C-LAPICES: mientras se graba, «Draw» abre los lápices y lo que se dibuja sale en el video
 // (la vista previa muestra exactamente lo que se graba).
