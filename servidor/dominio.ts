@@ -89,13 +89,16 @@ export function prepararCabecera(html: string, ruta: string, codigos: string[]):
     const t = escapar(meta.titulo);
     const d = escapar(meta.descripcion);
     h = h
-      .replace(/<title>[^<]*<\/title>/, `<title>${t}</title>`)
-      .replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${d}" />`)
-      .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${t}" />`)
-      .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${d}" />`)
+      .replace(/<title>[^<]*<\/title>/, () => `<title>${t}</title>`)
+      .replace(/<meta name="description"[^>]*>/, () => `<meta name="description" content="${d}" />`)
+      .replace(/<meta property="og:title"[^>]*>/, () => `<meta property="og:title" content="${t}" />`)
+      .replace(
+        /<meta property="og:description"[^>]*>/,
+        () => `<meta property="og:description" content="${d}" />`,
+      )
       .replace(
         /<meta property="og:url"[^>]*>/,
-        `<meta property="og:url" content="${DOMINIO}${ruta.replace(/\/$/, '')}" />`,
+        () => `<meta property="og:url" content="${DOMINIO}${ruta.replace(/\/$/, '')}" />`,
       );
   }
   const extra = [
@@ -104,5 +107,5 @@ export function prepararCabecera(html: string, ruta: string, codigos: string[]):
   ]
     .filter(Boolean)
     .join('\n    ');
-  return extra ? h.replace('</head>', `    ${extra}\n  </head>`) : h;
+  return extra ? h.replace('</head>', () => `    ${extra}\n  </head>`) : h;
 }

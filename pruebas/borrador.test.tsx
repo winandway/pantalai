@@ -50,4 +50,31 @@ describe('CANDADO useBorrador: ningún formulario pierde lo escrito', () => {
     act(() => h.result.current.limpiar());
     expect(localStorage.getItem(llave)).toBeNull();
   });
+
+  it('después de guardar y vaciar el formulario no queda un borrador vacío', () => {
+    vi.useFakeTimers();
+    const llave = llaveBorrador('comentario', 'u');
+    const h = renderHook(() => useBorrador(llave, { texto: '' }));
+    act(() => h.result.current.cambiar('texto', 'Hola'));
+    act(() => vi.advanceTimersByTime(600));
+    expect(localStorage.getItem(llave)).not.toBeNull();
+    act(() => {
+      h.result.current.limpiar();
+      h.result.current.setValor({ texto: '' });
+    });
+    act(() => vi.advanceTimersByTime(600));
+    expect(localStorage.getItem(llave)).toBeNull();
+  });
+
+  it('si la cuenta llega después, trae el borrador de esa cuenta y no lo mezcla con el anónimo', () => {
+    vi.useFakeTimers();
+    localStorage.setItem(llaveBorrador('f', 'u1'), '{"nombre":"De u1"}');
+    const h = renderHook(({ llave }) => useBorrador(llave, { nombre: '' }), {
+      initialProps: { llave: llaveBorrador('f', null) },
+    });
+    h.rerender({ llave: llaveBorrador('f', 'u1') });
+    expect(h.result.current.valor.nombre).toBe('De u1');
+    act(() => vi.advanceTimersByTime(600));
+    expect(localStorage.getItem(llaveBorrador('f', null))).toBeNull();
+  });
 });

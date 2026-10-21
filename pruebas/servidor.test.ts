@@ -857,3 +857,57 @@ describe('CANDADO C-MP4-DIRECTO: lo grabado en MP4 no necesita conversión', () 
     });
   });
 });
+
+describe('CANDADO C-LIMITES-SERVIDOR: el servidor cumple el plan aunque alguien salte la página', () => {
+  it('duplicar respeta el tope de 25 videos del plan gratis', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    env.COBRO_ACTIVO = '1';
+    for (let i = 0; i < 24; i++) await c('/datos/videos', { method: 'POST', json: { tipo: 'video/webm' } });
+    const r = await c(`/datos/videos/${id}/duplicar`, { method: 'POST' });
+    expect(r.status).toBe(402);
+    expect(((await r.json()) as { error: string }).error).toBe('limite_videos');
+  });
+
+  it('una grabación más larga que el plan no se guarda', async () => {
+    const c = await registrado();
+    env.COBRO_ACTIVO = '1';
+    const { id } = (await (
+      await c('/datos/videos', { method: 'POST', json: { tipo: 'video/webm' } })
+    ).json()) as { id: string };
+    const p = (await (
+      await c(`/datos/videos/${id}/partes/1`, { method: 'PUT', body: new Uint8Array(1000) })
+    ).json()) as { parte: object };
+    const r = await c(`/datos/videos/${id}/completar`, {
+      method: 'POST',
+      json: { partes: [p.parte], duracion: 6 * 60 + 30 },
+    });
+    expect(r.status).toBe(402);
+    expect(((await r.json()) as { error: string }).error).toBe('limite_minutos');
+    expect((await c(`/datos/videos/${id}`)).status).toBe(404);
+  });
+
+  it('cerrar dos veces la misma subida (reintento) responde lo mismo, y cancelar no borra un video terminado', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const otra = await c(`/datos/videos/${id}/completar`, {
+      method: 'POST',
+      json: { partes: [{ partNumber: 1, etag: 'x' }], duracion: 42 },
+    });
+    expect(otra.status).toBe(200);
+    expect(await otra.json()).toMatchObject({ ok: true, id });
+    expect((await c(`/datos/videos/${id}/cancelar`, { method: 'POST' })).status).toBe(409);
+    expect((await c(`/datos/videos/${id}`)).status).toBe(200);
+  });
+
+  it('el superadmin que usa su panel normalmente nunca queda bloqueado; los fallos sí cuentan', async () => {
+    const RUTA = '/panel/prueba-secreta-1234567';
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com', SUPERADMIN_RUTA: RUTA } as typeof env;
+    const admin = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    for (let i = 0; i < 80; i++)
+      expect((await admin('/datos/admin/resumen', { headers: { 'x-panel': RUTA } })).status).toBe(200);
+    const intruso = cliente('6.6.6.6');
+    for (let i = 0; i < 30; i++) await intruso('/datos/admin/resumen', { headers: { 'x-panel': RUTA } });
+    expect((await intruso('/datos/admin/resumen', { headers: { 'x-panel': RUTA } })).status).toBe(429);
+  });
+});

@@ -56,6 +56,7 @@ import {
   nuevoId,
   pasaTurnstile,
   sha256,
+  yaExcedido,
 } from './seguridad';
 import {
   ErrorIA,
@@ -351,11 +352,12 @@ async function anotarIntento(c: C, detalle: string) {
  * panel no existiera, y el intento queda anotado.
  */
 const requiereSuperadmin = async (c: C, next: () => Promise<void>) => {
-  if (!(await dentroDelLimite(c.env.DB, 'panel', ip(c), 60, 15 * 60 * 1000)))
-    return err(c, 429, 'demasiados');
+  // Solo cuentan los fallos: el uso normal del panel (muchas peticiones) nunca deja afuera al superadmin.
+  if (await yaExcedido(c.env.DB, 'panel', ip(c), 30, 15 * 60 * 1000)) return err(c, 429, 'demasiados');
   const ruta = rutaPanel(c.env);
   const enviada = c.req.header('x-panel') ?? '';
   if (!ruta || !esSuperadmin(c) || !iguales(enviada.replace(/\/+$/, ''), ruta)) {
+    await dentroDelLimite(c.env.DB, 'panel', ip(c), 30, 15 * 60 * 1000);
     await anotarIntento(c, new URL(c.req.url).pathname);
     return err(c, 404, 'ruta');
   }
@@ -1408,16 +1410,20 @@ const esquemaNuevo = z.object({
   idioma: z.enum(['en', 'es']).default('en'),
 });
 
+/** El plan gratis tiene tope de videos: vale igual para grabar uno nuevo que para duplicar. */
+async function sinCupoDeVideos(c: C): Promise<boolean> {
+  const { limites } = await planDe(c, c.get('usuario')!.id);
+  if (limites.videos === null) return false;
+  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM videos WHERE usuario_id = ?')
+    .bind(c.get('usuario')!.id)
+    .first<{ n: number }>();
+  return (n?.n ?? 0) >= limites.videos;
+}
+
 app.post('/datos/videos', requiereSesion, async (c) => {
   const d = await cuerpo(c, esquemaNuevo);
   if (!d) return err(c, 400, 'datos');
-  const { limites } = await planDe(c, c.get('usuario')!.id);
-  if (limites.videos !== null) {
-    const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM videos WHERE usuario_id = ?')
-      .bind(c.get('usuario')!.id)
-      .first<{ n: number }>();
-    if ((n?.n ?? 0) >= limites.videos) return err(c, 402, 'limite_videos');
-  }
+  if (await sinCupoDeVideos(c)) return err(c, 402, 'limite_videos');
   const id = nuevoId(20);
   const tipo = d.tipo.split(';')[0]!;
   const subida = await c.env.BUCKET.createMultipartUpload(claveVideo(id), {
@@ -1475,9 +1481,20 @@ const esquemaCompletar = z.object({
 app.post('/datos/videos/:id/completar', requiereSesion, async (c) => {
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
+  // Un reintento (se cortó la red justo al cerrar) recibe la misma respuesta, no un error.
+  if (v.estado === 'listo') return c.json({ ok: true, id: v.id, bytes: v.bytes });
   if (v.estado !== 'subiendo' || !v.subida_id) return err(c, 409, 'ya_terminado');
   const d = await cuerpo(c, esquemaCompletar);
   if (!d) return err(c, 400, 'datos');
+  // El tope de minutos del plan también se cumple aquí (la grabadora para sola; esto cubre a quien la salte).
+  const { limites } = await planDe(c, c.get('usuario')!.id);
+  if (limites.minutos !== null && d.duracion > limites.minutos * 60 + 15) {
+    await c.env.BUCKET.resumeMultipartUpload(claveVideo(v.id), v.subida_id)
+      .abort()
+      .catch(() => undefined);
+    await borrarVideo(c, v);
+    return err(c, 402, 'limite_minutos');
+  }
   const partes = [...d.partes].sort((a, b) => a.partNumber - b.partNumber);
   const subida = c.env.BUCKET.resumeMultipartUpload(claveVideo(v.id), v.subida_id);
   let obj: R2Object;
@@ -1500,6 +1517,8 @@ app.post('/datos/videos/:id/completar', requiereSesion, async (c) => {
 app.post('/datos/videos/:id/cancelar', requiereSesion, async (c) => {
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
+  // Cancelar es solo para una subida a medias: un video terminado se borra desde la biblioteca, nunca por aquí.
+  if (v.estado !== 'subiendo') return err(c, 409, 'ya_terminado');
   if (v.subida_id) {
     try {
       await c.env.BUCKET.resumeMultipartUpload(claveVideo(v.id), v.subida_id).abort();
@@ -1507,7 +1526,7 @@ app.post('/datos/videos/:id/cancelar', requiereSesion, async (c) => {
       console.error('cancelar subida', e);
     }
   }
-  await c.env.DB.prepare('DELETE FROM videos WHERE id = ?').bind(v.id).run();
+  await borrarVideo(c, v);
   return c.json({ ok: true });
 });
 
@@ -1627,6 +1646,7 @@ app.patch('/datos/videos/:id', requiereSesion, async (c) => {
 app.post('/datos/videos/:id/duplicar', requiereSesion, async (c) => {
   const v = await videoDelDueno(c);
   if (!v || v.estado !== 'listo') return err(c, 404, 'no_existe');
+  if (await sinCupoDeVideos(c)) return err(c, 402, 'limite_videos');
   const id = nuevoId(20);
   const original = await c.env.BUCKET.get(claveVideo(v.id));
   if (!original) return err(c, 404, 'no_existe');
@@ -1878,6 +1898,9 @@ app.get('/datos/videos/:id/ia', requiereSesion, async (c) => {
 });
 
 app.post('/datos/videos/:id/ia/transcribir', requiereSesion, async (c) => {
+  // Tope por persona además del tope mensual de gasto: un video de dos horas son unos 120 pedazos.
+  if (!(await dentroDelLimite(c.env.DB, 'ia_transcribir', c.get('usuario')!.id, 300, UNA_HORA)))
+    return err(c, 429, 'demasiados');
   const v = await videoDelDueno(c);
   if (!v || v.estado !== 'listo') return err(c, 404, 'no_existe');
   const desde = Number(c.req.query('desde') ?? 0);
@@ -1944,6 +1967,8 @@ app.post('/datos/videos/:id/ia/transcribir', requiereSesion, async (c) => {
 app.post('/datos/videos/:id/ia/analizar', requiereSesion, async (c) => {
   const sinPlan = await exigirIA(c);
   if (sinPlan) return sinPlan;
+  if (!(await dentroDelLimite(c.env.DB, 'ia_texto', c.get('usuario')!.id, 40, UNA_HORA)))
+    return err(c, 429, 'demasiados');
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
   const f = await filaIA(c, v.id);
@@ -1994,6 +2019,8 @@ const esquemaGenerar = z.object({
 app.post('/datos/videos/:id/ia/generar', requiereSesion, async (c) => {
   const sinPlan = await exigirIA(c);
   if (sinPlan) return sinPlan;
+  if (!(await dentroDelLimite(c.env.DB, 'ia_texto', c.get('usuario')!.id, 40, UNA_HORA)))
+    return err(c, 429, 'demasiados');
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
   const d = await cuerpo(c, esquemaGenerar);
@@ -2238,7 +2265,7 @@ async function paginaApp(c: C): Promise<Response> {
   const html = prepararCabecera(
     (await r.text()).replace(
       /<link rel="canonical"[^>]*>/,
-      `<link rel="canonical" href="${DOMINIO}${ruta === '/' ? '/' : ruta.replace(/\/$/, '')}" />`,
+      () => `<link rel="canonical" href="${DOMINIO}${ruta === '/' ? '/' : ruta.replace(/\/$/, '')}" />`,
     ),
     ruta,
     codigosGoogle(c.env.GOOGLE_VERIFICACION),
@@ -2256,11 +2283,14 @@ app.get('/v/:id', async (c) => {
   const desc = escaparAtributo(v.descripcion.slice(0, 200) || 'Video on Pantalay');
   const imagen = v.tiene_miniatura ? `${origen}/media/${v.id}/miniatura` : `${origen}/og.png`;
   const html = (await pagina.text())
-    .replace(/<title>[^<]*<\/title>/, `<title>${titulo}</title>`)
-    .replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${titulo}">`)
-    .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${desc}">`)
-    .replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${imagen}">`)
-    .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="${origen}/v/${v.id}">`);
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${titulo}</title>`)
+    .replace(/<meta property="og:title"[^>]*>/, () => `<meta property="og:title" content="${titulo}">`)
+    .replace(
+      /<meta property="og:description"[^>]*>/,
+      () => `<meta property="og:description" content="${desc}">`,
+    )
+    .replace(/<meta property="og:image"[^>]*>/, () => `<meta property="og:image" content="${imagen}">`)
+    .replace(/<meta property="og:url"[^>]*>/, () => `<meta property="og:url" content="${origen}/v/${v.id}">`);
   return c.html(html);
 });
 
@@ -2277,7 +2307,7 @@ app.get('/panel/*', async (c) => {
   const ruta = rutaPanel(c.env);
   const pedida = new URL(c.req.url).pathname.replace(/\/+$/, '');
   if (!ruta || !esSuperadmin(c) || !iguales(pedida, ruta)) {
-    if (!(await dentroDelLimite(c.env.DB, 'panel', ip(c), 60, 15 * 60 * 1000)))
+    if (!(await dentroDelLimite(c.env.DB, 'panel', ip(c), 30, 15 * 60 * 1000)))
       return err(c, 429, 'demasiados');
     // La dirección secreta nunca se escribe en el registro: se anota que alguien sin permiso la usó.
     await anotarIntento(c, ruta && iguales(pedida, ruta) ? 'dirección secreta, sin permiso' : pedida);

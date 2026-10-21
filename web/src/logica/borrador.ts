@@ -56,10 +56,20 @@ export function useBorrador<T extends Record<string, unknown>>(llave: string, in
   });
   const inicialRef = useRef(inicial);
   const primera = useRef(true);
+  const llaveRef = useRef(llave);
 
   useEffect(() => {
     const guardado = leer<T>(llave);
     if (guardado && Object.keys(guardado).length) setRecuperado(true);
+    // La cuenta llegó después (de «anonimo» a la cuenta): se trae lo de la llave nueva; si no hay nada, se queda lo
+    // escrito y se guarda ya bajo la llave correcta.
+    if (llaveRef.current !== llave) {
+      llaveRef.current = llave;
+      if (guardado) {
+        primera.current = true;
+        setValor({ ...inicialRef.current, ...guardado });
+      }
+    }
   }, [llave]);
 
   useEffect(() => {
@@ -69,7 +79,10 @@ export function useBorrador<T extends Record<string, unknown>>(llave: string, in
     }
     const t = setTimeout(() => {
       try {
-        localStorage.setItem(llave, JSON.stringify(sinSensibles(valor)));
+        // Un formulario vacío (recién guardado o limpiado) no deja borrador.
+        if (JSON.stringify(sinSensibles(valor)) === JSON.stringify(sinSensibles(inicialRef.current)))
+          localStorage.removeItem(llave);
+        else localStorage.setItem(llave, JSON.stringify(sinSensibles(valor)));
       } catch {
         /* lleno o bloqueado: se sigue sin borrador */
       }

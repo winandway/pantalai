@@ -96,6 +96,22 @@ export async function dentroDelLimite(
   return true;
 }
 
+/** Solo mira si ya se pasó del límite, sin contar esta vez (para contar solo los fallos). */
+export async function yaExcedido(
+  db: D1Database,
+  accion: string,
+  ip: string,
+  maximo: number,
+  ventanaMs: number,
+  ahora = Date.now(),
+): Promise<boolean> {
+  const fila = await db
+    .prepare('SELECT COUNT(*) AS n FROM intentos WHERE clave = ? AND momento > ?')
+    .bind(`${accion}:${ip}`, ahora - ventanaMs)
+    .first<{ n: number }>();
+  return (fila?.n ?? 0) >= maximo;
+}
+
 /**
  * Escudo anti-robots (Cloudflare Turnstile). Se apaga solo si no hay clave secreta.
  * Si Cloudflare no responde, se deja pasar: detrás siguen la contraseña y el límite de intentos.
