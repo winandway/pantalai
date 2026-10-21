@@ -76,8 +76,11 @@ test('una persona usa Pantalay de punta a punta', async ({ page, browser }) => {
     .getByRole('button', { name: /Archive/ })
     .first()
     .click();
+  // Se espera a que cargue la vista de archivados (ahí está la copia), no la lista anterior.
+  const archivado = page.locator('.biblioteca article', { hasText: '(copy)' });
+  await expect(archivado).toHaveCount(1);
   await expect(page.locator('.biblioteca article')).toHaveCount(1);
-  await page.locator('.biblioteca article').first().getByRole('button', { name: 'More options' }).click();
+  await archivado.getByRole('button', { name: 'More options' }).click();
   await page.getByRole('menuitem', { name: 'Delete' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
   await expect(page.locator('.biblioteca article')).toHaveCount(0);
