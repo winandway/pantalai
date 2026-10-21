@@ -7,18 +7,16 @@
 
 ## 1. Lo que se probó, de punta a punta
 
-| Prueba                                                                                                    | Dónde                   | Resultado     |
-| --------------------------------------------------------------------------------------------------------- | ----------------------- | ------------- |
-| Recorrido completo de una persona: registrarse, grabar, comentar, reaccionar, compartir privado y con     | Local y **en vivo**     | ✅ pasa       |
-| enlace, insertar en otra página, crear carpeta, mover, buscar, duplicar, archivar, borrar, borrar carpeta |                         |               |
-| sin perder videos, salir y volver a entrar, buscar en Docs                                                |                         |               |
-| Grabar con pantalla y cámara simuladas, subir y ver                                                       | Local y en vivo         | ✅ pasa       |
-| Recortar las puntas y descargar recortado                                                                 | Local y en vivo         | ✅ pasa       |
-| iPhone: el video se reproduce en MP4 con subtítulos y no se va de la vista                                | Local y en vivo         | ✅ pasa       |
-| Lápices mientras se graba y la IA (con proveedores simulados)                                             | Local y compuerta       | ✅ pasa       |
-| Mi cuenta: cambiar nombre, borrar la cuenta con contraseña                                                | Local, en pantalla      | ✅ pasa       |
-| Pruebas automáticas del servidor y la página                                                              | Compuerta (cada subida) | ✅ 149 de 149 |
-| Escudo anti-robots: la sexta cuenta seguida desde la misma conexión se frena                              | En vivo                 | ✅ funciona   |
+| Prueba                                                                                                                                                                                                                                                                     | Dónde                   | Resultado     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------- |
+| Recorrido completo de una persona: registrarse, grabar, comentar, reaccionar, compartir privado y con enlace, insertar en otra página, crear carpeta, mover, buscar, duplicar, archivar, borrar, borrar carpeta sin perder videos, salir y volver a entrar, buscar en Docs | Local y **en vivo**     | ✅ pasa       |
+| Grabar con pantalla y cámara simuladas, subir y ver                                                                                                                                                                                                                        | Local y en vivo         | ✅ pasa       |
+| Recortar las puntas y descargar recortado                                                                                                                                                                                                                                  | Local y en vivo         | ✅ pasa       |
+| iPhone: el video se reproduce en MP4 con subtítulos y no se va de la vista                                                                                                                                                                                                 | Local y en vivo         | ✅ pasa       |
+| Lápices mientras se graba y la IA (con proveedores simulados)                                                                                                                                                                                                              | Local y compuerta       | ✅ pasa       |
+| Mi cuenta: cambiar nombre, borrar la cuenta con contraseña                                                                                                                                                                                                                 | Local, en pantalla      | ✅ pasa       |
+| Pruebas automáticas del servidor y la página                                                                                                                                                                                                                               | Compuerta (cada subida) | ✅ 149 de 149 |
+| Escudo anti-robots: la sexta cuenta seguida desde la misma conexión se frena                                                                                                                                                                                               | En vivo                 | ✅ funciona   |
 
 ## 2. Lo que arregló la auditoría profunda
 
