@@ -49,16 +49,31 @@ export function Pagar() {
       .catch(() => setListo(false));
   }, []);
 
+  /** Stripe aprobó: se espera su aviso para encender el plan (unos segundos). */
+  async function esperarPlan() {
+    for (let i = 0; i < 20; i++) {
+      const p = await pedir<{ plan: string }>('/datos/plan').catch(() => null);
+      if (p?.plan === plan) return;
+      await new Promise((ok) => setTimeout(ok, 1500));
+    }
+  }
+
   async function continuar() {
     setError('');
     setPaso('confirmando');
     try {
       const r = await pedir<{
         secreto: string;
-        tipo: 'pago' | 'tarjeta';
+        tipo: 'pago' | 'tarjeta' | 'cambiado';
         publicable: string;
         dias_prueba: number;
       }>('/datos/pago/suscripcion', { method: 'POST', json: { plan, ciclo } });
+      // Ya pagaba otro plan: se cambió sobre la misma suscripción, con la tarjeta que ya tenía.
+      if (r.tipo === 'cambiado') {
+        await esperarPlan();
+        setPaso('hecho');
+        return;
+      }
       setPrueba(r.dias_prueba);
       const s = await loadStripe(r.publicable, { locale: idioma });
       if (!s || !tarjeta.current) throw new Error('stripe');
@@ -67,7 +82,7 @@ export function Pagar() {
         appearance: { theme: 'stripe', variables: { colorPrimary: '#16181d', borderRadius: '10px' } },
       });
       e.create('payment', { layout: 'tabs' }).mount(tarjeta.current);
-      stripe.current = { s, e, tipo: r.tipo };
+      stripe.current = { s, e, tipo: r.tipo === 'pago' ? 'pago' : 'tarjeta' };
       setPaso('tarjeta');
     } catch (e) {
       setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'stripe'));
@@ -92,12 +107,7 @@ export function Pagar() {
       setPaso('tarjeta');
       return;
     }
-    // Stripe aprobó: se espera su aviso para encender el plan (unos segundos).
-    for (let i = 0; i < 20; i++) {
-      const p = await pedir<{ plan: string }>('/datos/plan').catch(() => null);
-      if (p?.plan === plan) break;
-      await new Promise((ok) => setTimeout(ok, 1500));
-    }
+    await esperarPlan();
     setPaso('hecho');
   }
 

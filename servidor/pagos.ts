@@ -63,7 +63,7 @@ export function formulario(datos: Record<string, unknown>, prefijo = ''): string
 
 async function stripe<T>(
   env: EnvPago,
-  metodo: 'GET' | 'POST',
+  metodo: 'GET' | 'POST' | 'DELETE',
   ruta: string,
   datos?: Record<string, unknown>,
   idempotencia?: string,
@@ -147,16 +147,23 @@ export async function crearSuscripcion(
   cliente: string,
   precio: string,
   datos: { usuario_id: string; plan: PlanPago; ciclo: Ciclo; diasPrueba: number },
+  idempotencia?: string,
 ): Promise<Intento> {
-  const s = await stripe<Suscripcion>(env, 'POST', 'subscriptions', {
-    customer: cliente,
-    items: [{ price: precio }],
-    payment_behavior: 'default_incomplete',
-    payment_settings: { save_default_payment_method: 'on_subscription' },
-    trial_period_days: datos.diasPrueba > 0 ? datos.diasPrueba : undefined,
-    metadata: { usuario_id: datos.usuario_id, plan: datos.plan, ciclo: datos.ciclo, fundador: '1' },
-    expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
-  });
+  const s = await stripe<Suscripcion>(
+    env,
+    'POST',
+    'subscriptions',
+    {
+      customer: cliente,
+      items: [{ price: precio }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      trial_period_days: datos.diasPrueba > 0 ? datos.diasPrueba : undefined,
+      metadata: { usuario_id: datos.usuario_id, plan: datos.plan, ciclo: datos.ciclo, fundador: '1' },
+      expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
+    },
+    idempotencia,
+  );
   const pago = s.latest_invoice?.payment_intent?.client_secret;
   const tarjeta = s.pending_setup_intent?.client_secret;
   if (pago) return { suscripcion: s.id, secreto: pago, tipo: 'pago' };
@@ -167,6 +174,46 @@ export async function crearSuscripcion(
 export async function cancelarAlFinal(env: EnvPago, suscripcion: string): Promise<void> {
   await stripe(env, 'POST', `subscriptions/${suscripcion}`, { cancel_at_period_end: true });
 }
+
+export type SuscripcionStripe = {
+  id: string;
+  status: string;
+  customer: string;
+  metadata?: Record<string, string>;
+  current_period_end?: number;
+  cancel_at_period_end?: boolean;
+  items?: { data?: { id: string; price?: { unit_amount?: number; recurring?: { interval?: string } } }[] };
+};
+
+/** La suscripción tal como está AHORA en Stripe (la fuente de verdad, aunque los avisos lleguen desordenados). */
+export async function leerSuscripcion(env: EnvPago, id: string): Promise<SuscripcionStripe> {
+  return stripe<SuscripcionStripe>(env, 'GET', `subscriptions/${id}`);
+}
+
+/** Cancela ya una suscripción que nunca se pagó (incompleta), para que no quede colgando. */
+export async function cancelarAhora(env: EnvPago, id: string): Promise<void> {
+  await stripe(env, 'DELETE', `subscriptions/${id}`);
+}
+
+/** Cambia el plan de una suscripción que ya paga (no crea otra): prorratea la diferencia. */
+export async function cambiarPlan(
+  env: EnvPago,
+  s: SuscripcionStripe,
+  precio: string,
+  datos: { plan: PlanPago; ciclo: Ciclo },
+): Promise<void> {
+  const item = s.items?.data?.[0]?.id;
+  if (!item) throw new ErrorPago('stripe', 'la suscripción no tiene artículo');
+  await stripe(env, 'POST', `subscriptions/${s.id}`, {
+    items: [{ id: item, price: precio }],
+    proration_behavior: 'create_prorations',
+    cancel_at_period_end: false,
+    metadata: { ...(s.metadata ?? {}), plan: datos.plan, ciclo: datos.ciclo },
+  });
+}
+
+/** Estados en los que la suscripción cuenta como viva (paga, en prueba o con un cobro reintentándose). */
+export const VIVA = ['active', 'trialing', 'past_due'];
 
 // ---------- aviso de Stripe (webhook) ----------
 

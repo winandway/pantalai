@@ -36,6 +36,10 @@ import {
   pagoListo,
   precioDe,
   ingresoMensual,
+  cambiarPlan,
+  cancelarAhora,
+  leerSuscripcion,
+  VIVA,
   type EnvPago,
 } from './pagos';
 import { z } from 'zod';
@@ -672,21 +676,39 @@ app.post('/datos/pago/suscripcion', requiereSesion, async (c) => {
   if (!(await dentroDelLimite(c.env.DB, 'pago', u.id, 10, 60 * 60_000))) return err(c, 429, 'demasiados');
   const d = await cuerpo(c, esquemaSuscribir);
   if (!d) return err(c, 400, 'datos');
-  if ((await planDe(c, u.id)).plan === d.plan) return err(c, 409, 'ya_suscrito');
   try {
-    const fila = await c.env.DB.prepare('SELECT cliente, uso_prueba FROM pagos_stripe WHERE usuario_id = ?')
+    const fila = await c.env.DB.prepare(
+      'SELECT cliente, suscripcion, uso_prueba FROM pagos_stripe WHERE usuario_id = ?',
+    )
       .bind(u.id)
-      .first<{ cliente: string; uso_prueba: number }>();
-    const cliente = fila?.cliente ?? (await crearCliente(c.env, u));
+      .first<{ cliente: string; suscripcion: string | null; uso_prueba: number }>();
     const precio = await precioDe(c.env, d.plan, d.ciclo);
+    // Nunca dos suscripciones: si ya hay una viva, se cambia de plan sobre esa; si quedó una sin pagar, se cancela.
+    if (fila?.suscripcion) {
+      const actual = await leerSuscripcion(c.env, fila.suscripcion);
+      if (VIVA.includes(actual.status)) {
+        if (actual.metadata?.plan === d.plan && actual.metadata?.ciclo === d.ciclo)
+          return err(c, 409, 'ya_suscrito');
+        await cambiarPlan(c.env, actual, precio, d);
+        await c.env.DB.prepare('UPDATE pagos_stripe SET ciclo = ?, actualizado = ? WHERE usuario_id = ?')
+          .bind(d.ciclo, Date.now(), u.id)
+          .run();
+        return c.json({ tipo: 'cambiado', suscripcion: actual.id });
+      }
+      if (actual.status === 'incomplete') await cancelarAhora(c.env, actual.id).catch(() => undefined);
+    }
+    const cliente = fila?.cliente ?? (await crearCliente(c.env, u));
     // La prueba gratis es una sola vez por cuenta.
     const dias = fila?.uso_prueba ? 0 : diasPrueba(c.env);
-    const intento = await crearSuscripcion(c.env, cliente, precio, {
-      usuario_id: u.id,
-      plan: d.plan,
-      ciclo: d.ciclo,
-      diasPrueba: dias,
-    });
+    // Dos clics seguidos (o un reintento de red) dentro de diez minutos devuelven la MISMA suscripción.
+    const ventana = Math.floor(Date.now() / 600_000);
+    const intento = await crearSuscripcion(
+      c.env,
+      cliente,
+      precio,
+      { usuario_id: u.id, plan: d.plan, ciclo: d.ciclo, diasPrueba: dias },
+      `sus-${u.id}-${d.plan}-${d.ciclo}-${ventana}`,
+    );
     await c.env.DB.prepare(
       `INSERT INTO pagos_stripe (usuario_id, cliente, suscripcion, ciclo, uso_prueba, actualizado)
        VALUES (?, ?, ?, ?, ?, ?)
@@ -753,8 +775,23 @@ app.post('/datos/pago/aviso', async (c) => {
       );
     return c.json({ ok: true });
   }
-  const cambio = leerAviso(evento);
-  if (!cambio) return c.json({ ok: true, ignorado: true });
+  const previo = leerAviso(evento);
+  if (!previo) return c.json({ ok: true, ignorado: true });
+  // Solo cuenta la suscripción que tenemos anotada: los avisos de una vieja (abandonada o reemplazada) no tocan el plan.
+  const anotada = await c.env.DB.prepare('SELECT suscripcion FROM pagos_stripe WHERE usuario_id = ?')
+    .bind(previo.usuario_id)
+    .first<{ suscripcion: string | null }>();
+  if (anotada?.suscripcion && anotada.suscripcion !== previo.suscripcion)
+    return c.json({ ok: true, ignorado: 'vieja' });
+  // Stripe no promete el orden de los avisos: se lee el estado de AHORA en Stripe y ese es el que se guarda.
+  let cambio = previo;
+  try {
+    const fresca = await leerSuscripcion(c.env, previo.suscripcion);
+    cambio = leerAviso({ type: 'customer.subscription.updated', data: { object: fresca } }) ?? previo;
+  } catch (e) {
+    console.error('pago: aviso, no se pudo leer la suscripción', e);
+    return err(c, 502, 'stripe');
+  }
   const ahora = Date.now();
   const antes = await c.env.DB.prepare('SELECT status FROM estado_stripe WHERE usuario_id = ?')
     .bind(cambio.usuario_id)

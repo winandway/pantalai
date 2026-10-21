@@ -45,36 +45,73 @@ function cliente() {
   };
 }
 
-/** Stripe simulado: anota cada llamada y responde como la API real. */
+/** Stripe simulado: anota cada llamada y guarda las suscripciones como la API real. */
 function stripeFalso() {
-  const llamadas: { metodo: string; ruta: string; cuerpo: string; auth: string | null }[] = [];
+  const llamadas: {
+    metodo: string;
+    ruta: string;
+    cuerpo: string;
+    auth: string | null;
+    idem: string | null;
+  }[] = [];
+  const subs = new Map<string, Record<string, unknown>>();
+  let n = 0;
+  const metadatos = (cuerpo: string) => {
+    const m: Record<string, string> = {};
+    for (const [k, v] of new URLSearchParams(cuerpo)) {
+      const x = /^metadata\[(.+)\]$/.exec(k);
+      if (x) m[x[1]!] = v;
+    }
+    return m;
+  };
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init: RequestInit = {}) => {
       const u = new URL(url);
       const ruta = u.pathname.replace('/v1/', '');
       const cuerpo = String(init.body ?? u.search.slice(1));
+      const metodo = init.method ?? 'GET';
+      const h = new Headers(init.headers);
       llamadas.push({
-        metodo: init.method ?? 'GET',
+        metodo,
         ruta,
         cuerpo: decodeURIComponent(cuerpo),
-        auth: new Headers(init.headers).get('authorization'),
+        auth: h.get('authorization'),
+        idem: h.get('idempotency-key'),
       });
       const json = (x: unknown, s = 200) => new Response(JSON.stringify(x), { status: s });
-      if (ruta === 'prices' && init.method === 'GET') return json({ data: [] });
+      if (ruta === 'prices' && metodo === 'GET') return json({ data: [] });
       if (ruta === 'prices') return json({ id: 'price_1', lookup_key: 'x' });
       if (ruta === 'customers') return json({ id: 'cus_1' });
-      if (ruta === 'subscriptions')
-        return json({
-          id: 'sub_1',
+      if (ruta === 'subscriptions' && metodo === 'POST') {
+        n++;
+        const s = {
+          id: `sub_${n}`,
           status: 'trialing',
-          latest_invoice: null,
-          pending_setup_intent: { client_secret: 'seti_secreto' },
-        });
-      return json({ error: { message: 'no' } }, 400);
+          customer: 'cus_1',
+          metadata: metadatos(cuerpo),
+          items: {
+            data: [{ id: `si_${n}`, price: { unit_amount: 12000, recurring: { interval: 'year' } } }],
+          },
+        };
+        subs.set(s.id, s);
+        return json({ ...s, latest_invoice: null, pending_setup_intent: { client_secret: 'seti_secreto' } });
+      }
+      const una = /^subscriptions\/(sub_\d+)$/.exec(ruta);
+      const s = una ? subs.get(una[1]!) : undefined;
+      if (s && metodo === 'GET') return json(s);
+      if (s && metodo === 'POST') {
+        s.metadata = { ...(s.metadata as object), ...metadatos(cuerpo) };
+        return json(s);
+      }
+      if (s && metodo === 'DELETE') {
+        s.status = 'canceled';
+        return json(s);
+      }
+      return json({ error: { message: 'no' } }, 404);
     }),
   );
-  return llamadas;
+  return { llamadas, subs };
 }
 
 beforeEach(() => {
@@ -162,7 +199,7 @@ describe('CANDADO C-PAGOS: cobro con Stripe dentro de la página', () => {
   });
 
   it('de punta a punta: suscribirse (la tarjeta se confirma en la página) y el aviso firmado enciende el plan', async () => {
-    const llamadas = stripeFalso();
+    const { llamadas, subs } = stripeFalso();
     const c = cliente();
     expect(
       (
@@ -232,38 +269,103 @@ describe('CANDADO C-PAGOS: cobro con Stripe dentro de la página', () => {
     expect(ok.status).toBe(200);
     expect(await plan()).toMatchObject({ plan: 'business_ia', ciclo: 'anual' });
 
-    // La prueba gratis es una sola vez; el mismo plan no se compra dos veces.
+    // El mismo plan no se compra dos veces.
     expect(
       (await c('/datos/pago/suscripcion', { method: 'POST', json: { plan: 'business_ia', ciclo: 'anual' } }))
         .status,
     ).toBe(409);
-    await c('/datos/pago/suscripcion', { method: 'POST', json: { plan: 'business', ciclo: 'mensual' } });
-    expect(llamadas.filter((l) => l.ruta === 'subscriptions').at(-1)!.cuerpo).not.toContain(
-      'trial_period_days',
-    );
+    // Otro plan con uno vivo: se cambia sobre la MISMA suscripción, nunca se crea una segunda.
+    const cambio = await c('/datos/pago/suscripcion', {
+      method: 'POST',
+      json: { plan: 'business', ciclo: 'mensual' },
+    });
+    expect(await cambio.json()).toMatchObject({ tipo: 'cambiado', suscripcion: 'sub_1' });
+    expect(llamadas.filter((l) => l.ruta === 'subscriptions' && l.metodo === 'POST')).toHaveLength(1);
+    expect(subs.get('sub_1')!.metadata).toMatchObject({ plan: 'business', ciclo: 'mensual' });
+    // La primera suscripción llevó su llave para que dos clics seguidos no creen dos.
+    expect(llamadas.find((l) => l.ruta === 'subscriptions')!.idem).toMatch(/^sus-.+-business_ia-anual-\d+$/);
 
-    // Cancelado: el plan se apaga.
-    const fin = JSON.stringify({
-      type: 'customer.subscription.deleted',
+    // Un aviso viejo (llega tarde y dice "en prueba") no pisa lo que Stripe dice AHORA: se lee la suscripción fresca.
+    subs.get('sub_1')!.status = 'canceled';
+    const tarde = JSON.stringify({
+      type: 'customer.subscription.updated',
       data: {
         object: {
           id: 'sub_1',
-          status: 'canceled',
+          status: 'trialing',
           customer: 'cus_1',
           metadata: { usuario_id: yo, plan: 'business_ia', ciclo: 'anual' },
         },
       },
     });
-    await c('/datos/pago/aviso', {
-      method: 'POST',
-      body: fin,
-      headers: { 'stripe-signature': await firmar(fin) },
-    });
+    expect(
+      (
+        await c('/datos/pago/aviso', {
+          method: 'POST',
+          body: tarde,
+          headers: { 'stripe-signature': await firmar(tarde) },
+        })
+      ).status,
+    ).toBe(200);
     expect((await plan()).plan).toBe('starter');
+
+    // Avisos de una suscripción que no es la anotada no tocan el plan.
+    const ajena = JSON.stringify({
+      type: 'customer.subscription.created',
+      data: {
+        object: {
+          id: 'sub_99',
+          status: 'active',
+          customer: 'cus_1',
+          metadata: { usuario_id: yo, plan: 'business_ia', ciclo: 'anual' },
+        },
+      },
+    });
+    const r2 = await c('/datos/pago/aviso', {
+      method: 'POST',
+      body: ajena,
+      headers: { 'stripe-signature': await firmar(ajena) },
+    });
+    expect(await r2.json()).toMatchObject({ ignorado: 'vieja' });
+    expect((await plan()).plan).toBe('starter');
+
+    // Ya cancelada, volver a suscribirse crea una nueva, sin repetir la prueba gratis.
+    await c('/datos/pago/suscripcion', { method: 'POST', json: { plan: 'business', ciclo: 'mensual' } });
+    const segunda = llamadas.filter((l) => l.ruta === 'subscriptions' && l.metodo === 'POST');
+    expect(segunda).toHaveLength(2);
+    expect(segunda[1]!.cuerpo).not.toContain('trial_period_days');
+  });
+
+  it('si Stripe no deja leer la suscripción, el aviso responde 502 para que Stripe lo reintente', async () => {
+    stripeFalso();
+    const c = cliente();
+    await c('/datos/registro', {
+      method: 'POST',
+      json: { nombre: 'Ana', correo: 'ana@example.com', clave: 'clave-segura-1' },
+    });
+    const yo = ((await (await c('/datos/yo')).json()) as { usuario: { id: string } }).usuario.id;
+    const aviso = JSON.stringify({
+      type: 'customer.subscription.created',
+      data: {
+        object: {
+          id: 'sub_404',
+          status: 'active',
+          customer: 'cus_1',
+          metadata: { usuario_id: yo, plan: 'business', ciclo: 'mensual' },
+        },
+      },
+    });
+    const r = await c('/datos/pago/aviso', {
+      method: 'POST',
+      body: aviso,
+      headers: { 'stripe-signature': await firmar(aviso) },
+    });
+    expect(r.status).toBe(502);
+    expect(((await (await c('/datos/plan')).json()) as { plan: string }).plan).toBe('starter');
   });
 
   it('con PAGO_DIAS_PRUEBA=0 se cobra al momento, sin días gratis', async () => {
-    const llamadas = stripeFalso();
+    const { llamadas } = stripeFalso();
     env = { ...env, PAGO_DIAS_PRUEBA: '0' };
     const c = cliente();
     await c('/datos/registro', {
