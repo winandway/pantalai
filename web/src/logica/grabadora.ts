@@ -44,14 +44,24 @@ const ALTO: Record<Calidad, number> = { '720': 720, '1080': 1080, '2160': 2160 }
 const BITS: Record<Calidad, number> = { '720': 2_500_000, '1080': 5_000_000, '2160': 16_000_000 };
 const BURBUJA: Record<Ajustes['burbujaTamano'], number> = { chico: 0.16, mediano: 0.22, grande: 0.3 };
 
+/**
+ * Formato de la grabación. Primero MP4 (H.264 + AAC), que Chrome, Edge y Safari graban directo: así no hay que
+ * convertir nada después (antes se grababa WebM y había que reconvertir el video entero en la computadora para tener
+ * el MP4 del iPhone, Final Cut y YouTube; eso era lo lento). Los códigos de perfil van completos: Chrome rechaza
+ * «avc1,mp4a» a secas. 4K pide un nivel más alto (5.1).
+ */
 export function tipoDeGrabacion(
   soporta: (t: string) => boolean = (t) => MediaRecorder.isTypeSupported(t),
+  calidad: Calidad = '1080',
 ): string {
   const opciones = [
+    ...(calidad === '2160' ? ['video/mp4;codecs=avc1.640033,mp4a.40.2'] : []),
+    'video/mp4;codecs=avc1.640028,mp4a.40.2',
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1,mp4a',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm',
-    'video/mp4;codecs=avc1,mp4a',
     'video/mp4',
   ];
   return opciones.find((t) => soporta(t)) ?? 'video/webm';
@@ -175,7 +185,10 @@ export class Grabadora {
   constructor(
     private a: Ajustes,
     private ev: Eventos = {},
-  ) {}
+  ) {
+    // Se sabe desde el principio: el servidor crea el video con este formato antes de empezar a grabar.
+    if (typeof MediaRecorder !== 'undefined') this.tipo = tipoDeGrabacion(undefined, a.calidad);
+  }
 
   /** true si se comparte la pantalla completa (ahí Pantalay mismo sale en el video al volver a dibujar). */
   pantallaCompleta(): boolean {
@@ -373,7 +386,6 @@ export class Grabadora {
   }
 
   empezar(flujo: MediaStream) {
-    this.tipo = tipoDeGrabacion();
     const grabador = new MediaRecorder(flujo, {
       mimeType: this.tipo,
       videoBitsPerSecond: BITS[this.a.calidad],

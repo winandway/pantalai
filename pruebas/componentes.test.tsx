@@ -77,6 +77,10 @@ describe('idioma y grabadora', () => {
   it('elige el mejor formato y ubica la burbuja en su esquina', () => {
     expect(tipoDeGrabacion((t) => t === 'video/webm;codecs=vp8,opus')).toBe('video/webm;codecs=vp8,opus');
     expect(tipoDeGrabacion(() => false)).toBe('video/webm');
+    // CANDADO C-MP4-DIRECTO: si el navegador puede, se graba MP4 (H.264 + AAC) y no hay que convertir nada después.
+    const chrome = (t: string) => t !== 'video/mp4;codecs=avc1,mp4a';
+    expect(tipoDeGrabacion(chrome)).toBe('video/mp4;codecs=avc1.640028,mp4a.40.2');
+    expect(tipoDeGrabacion(chrome, '2160')).toBe('video/mp4;codecs=avc1.640033,mp4a.40.2');
     const b = posicionBurbuja(1920, 1080, { burbujaTamano: 'mediano', esquina: 'abajo-der' });
     expect(b.x + b.lado).toBeLessThan(1920);
     expect(b.y + b.lado).toBeLessThan(1080);

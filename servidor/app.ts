@@ -1036,7 +1036,7 @@ app.get('/datos/admin/almacen', requiereSuperadmin, async (c) => {
 
 app.get('/datos/admin/sistema', requiereSuperadmin, async (c) => {
   const hoy = new Date().toISOString().slice(0, 10);
-  const [ia, correoHoy, correoMes, intentos] = await Promise.all([
+  const [ia, correoHoy, correoMes, intentos, errores] = await Promise.all([
     gastoDelMes(c.env.DB),
     c.env.DB.prepare('SELECT enviados, fallidos FROM correo_dia WHERE dia = ?')
       .bind(hoy)
@@ -1047,6 +1047,10 @@ app.get('/datos/admin/sistema', requiereSuperadmin, async (c) => {
     c.env.DB.prepare("SELECT COUNT(*) AS n FROM registro_admin WHERE accion = 'intento' AND momento > ?")
       .bind(Date.now() - DIA)
       .first<{ n: number }>(),
+    c.env.DB.prepare(
+      `SELECT e.donde, e.mensaje, e.video_id, e.agente, e.momento, u.nombre, u.correo FROM errores_cliente e
+       LEFT JOIN usuarios u ON u.id = e.usuario_id ORDER BY e.id DESC LIMIT 20`,
+    ).all(),
   ]);
   const t = topes(c.env);
   return c.json(
@@ -1072,6 +1076,7 @@ app.get('/datos/admin/sistema', requiereSuperadmin, async (c) => {
       },
       seguridad: { turnstile: Boolean(c.env.TURNSTILE_SECRET), intentos_24h: intentos?.n ?? 0 },
       version: COMMIT,
+      errores: errores.results,
     },
     200,
     { 'Cache-Control': 'no-store' },
@@ -1969,6 +1974,37 @@ app.post('/datos/videos/:id/ia/generar', requiereSesion, async (c) => {
   }
 });
 
+// ---------- errores que pasan en la computadora del cliente ----------
+
+const esquemaErrorCliente = z.object({
+  donde: z.string().trim().min(1).max(60),
+  mensaje: z.string().trim().min(1).max(1000),
+  video_id: z.string().max(40).default(''),
+});
+
+// La página avisa aquí cuando algo falla en el navegador (por ejemplo, armar el MP4): queda en el registro del sitio y
+// en el superadmin → Sistema, para arreglarlo para todos.
+app.post('/datos/errores', requiereSesion, async (c) => {
+  if (!(await dentroDelLimite(c.env.DB, 'error_cliente', c.get('usuario')!.id, 30, 60 * 60_000)))
+    return c.json({ ok: true });
+  const d = await cuerpo(c, esquemaErrorCliente);
+  if (!d) return err(c, 400, 'datos');
+  console.error('cliente', d.donde, d.video_id, d.mensaje);
+  await c.env.DB.prepare(
+    'INSERT INTO errores_cliente (usuario_id, donde, mensaje, video_id, agente, momento) VALUES (?, ?, ?, ?, ?, ?)',
+  )
+    .bind(
+      c.get('usuario')!.id,
+      d.donde,
+      d.mensaje,
+      d.video_id,
+      (c.req.header('user-agent') ?? '').slice(0, 200),
+      Date.now(),
+    )
+    .run();
+  return c.json({ ok: true });
+});
+
 // ---------- copia MP4 (la arma el navegador del dueño) ----------
 
 /** Recorte con el que tiene que estar armada la copia MP4 (las puntas que el dueño cortó). */
@@ -1976,8 +2012,17 @@ export function firmaRecorte(v: Pick<FilaVideo, 'recorte_inicio' | 'recorte_fin'
   return `${Math.round(v.recorte_inicio * 10) / 10}|${Math.round(v.recorte_fin * 10) / 10}`;
 }
 
-/** Hay copia MP4 lista Y armada con el recorte de ahora (si no, se vuelve a armar). */
-async function tieneMp4(c: C, v: Pick<FilaVideo, 'id' | 'recorte_inicio' | 'recorte_fin'>): Promise<boolean> {
+/** El original ya es MP4 (grabado directo en H.264 + AAC) y sin puntas cortadas: no hace falta ninguna copia. */
+function originalSirveDeMp4(v: Pick<FilaVideo, 'tipo' | 'recorte_inicio' | 'recorte_fin'>): boolean {
+  return v.tipo.startsWith('video/mp4') && firmaRecorte(v) === '0|0';
+}
+
+/** Dónde está el MP4 de este video: el original, la copia armada con el recorte de ahora, o ninguno todavía. */
+async function fuenteMp4(
+  c: C,
+  v: Pick<FilaVideo, 'id' | 'tipo' | 'recorte_inicio' | 'recorte_fin'>,
+): Promise<'original' | 'copia' | null> {
+  if (originalSirveDeMp4(v)) return 'original';
   const f = await c.env.DB.prepare(
     `SELECT m.estado, r.firma FROM video_mp4 m LEFT JOIN video_mp4_recorte r ON r.video_id = m.video_id
      WHERE m.video_id = ?`,
@@ -1985,7 +2030,14 @@ async function tieneMp4(c: C, v: Pick<FilaVideo, 'id' | 'recorte_inicio' | 'reco
     .bind(v.id)
     .first<{ estado: string; firma: string | null }>();
   // Las copias de antes del recortador no tienen firma: valen solo si el video no tiene puntas cortadas.
-  return f?.estado === 'listo' && (f.firma ?? '0|0') === firmaRecorte(v);
+  return f?.estado === 'listo' && (f.firma ?? '0|0') === firmaRecorte(v) ? 'copia' : null;
+}
+
+async function tieneMp4(
+  c: C,
+  v: Pick<FilaVideo, 'id' | 'tipo' | 'recorte_inicio' | 'recorte_fin'>,
+): Promise<boolean> {
+  return (await fuenteMp4(c, v)) !== null;
 }
 
 app.post('/datos/videos/:id/mp4', requiereSesion, async (c) => {
@@ -2062,9 +2114,10 @@ app.get('/media/:id/video', async (c) => {
   if (descargar && !v.permitir_descarga && u?.id !== v.usuario_id) return err(c, 403, 'descarga');
   // La copia MP4 (si ya existe) se usa al pedir formato=mp4 y SIEMPRE al descargar: es la que abren iPhone y Final Cut.
   const quiereMp4 = c.req.query('formato') === 'mp4' || (descargar && c.req.query('formato') !== 'webm');
-  const mp4 = quiereMp4 ? await tieneMp4(c, v) : false;
+  const fuente = quiereMp4 ? await fuenteMp4(c, v) : null;
+  const mp4 = fuente !== null;
   if (c.req.query('formato') === 'mp4' && !mp4) return c.notFound();
-  const obj = await c.env.BUCKET.get(mp4 ? claveMp4(v.id) : claveVideo(v.id), {
+  const obj = await c.env.BUCKET.get(fuente === 'copia' ? claveMp4(v.id) : claveVideo(v.id), {
     range: c.req.raw.headers,
     onlyIf: c.req.raw.headers,
   });

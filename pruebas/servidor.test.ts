@@ -42,10 +42,14 @@ async function registrado(nombre = 'Ana', correo = 'ana@example.com', ip = '1.1.
   return c;
 }
 
-async function videoListo(c: ReturnType<typeof cliente>, bytes = PARTE_MIN + 1000) {
+async function videoListo(
+  c: ReturnType<typeof cliente>,
+  bytes = PARTE_MIN + 1000,
+  tipo = 'video/webm;codecs=vp9',
+) {
   const r = await c('/datos/videos', {
     method: 'POST',
-    json: { tipo: 'video/webm;codecs=vp9', ancho: 1280, alto: 720 },
+    json: { tipo, ancho: 1280, alto: 720 },
   });
   const { id } = (await r.json()) as { id: string };
   const datos = new Uint8Array(bytes).map((_, i) => i % 251);
@@ -810,5 +814,46 @@ describe('CANDADO C-ALMACEN: el superadmin ve cuánto ocupa todo y el estado del
     expect(s.correo.cuota_dia).toBe(300);
     expect(s.ia.tope_usd_mes).toBeGreaterThan(0);
     expect(s.pago.listo).toBe(false);
+  });
+});
+
+describe('CANDADO C-MP4-DIRECTO: lo grabado en MP4 no necesita conversión', () => {
+  it('sin recorte, el original ES el MP4 que se descarga; con recorte hace falta la copia', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c, PARTE_MIN + 1000, 'video/mp4;codecs=avc1.640028,mp4a.40.2');
+    const v = () =>
+      c(`/datos/videos/${id}`).then((r) => r.json() as Promise<{ video: { tiene_mp4: boolean } }>);
+    expect((await v()).video.tiene_mp4).toBe(true);
+    const d = await c(`/media/${id}/video?descargar=1`);
+    expect(d.headers.get('content-type')).toBe('video/mp4');
+    expect(d.headers.get('content-disposition')).toContain('.mp4');
+    expect(
+      ((await (await c(`/datos/videos/${id}/mp4`, { method: 'POST' })).json()) as { ya: boolean }).ya,
+    ).toBe(true);
+    await c(`/datos/videos/${id}`, { method: 'PATCH', json: { recorte_inicio: 1, recorte_fin: 5 } });
+    expect((await v()).video.tiene_mp4).toBe(false);
+  });
+
+  it('los errores del navegador llegan al servidor y se ven en el superadmin', async () => {
+    const RUTA = '/panel/prueba-secreta-1234567';
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com', SUPERADMIN_RUTA: RUTA } as typeof env;
+    const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    expect(
+      (
+        await ana('/datos/errores', {
+          method: 'POST',
+          json: { donde: 'mp4', mensaje: 'EncodingError: falló', video_id: 'v1' },
+        })
+      ).status,
+    ).toBe(200);
+    const admin = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    const s = (await (await admin('/datos/admin/sistema', { headers: { 'x-panel': RUTA } })).json()) as {
+      errores: { donde: string; mensaje: string; correo: string }[];
+    };
+    expect(s.errores[0]).toMatchObject({
+      donde: 'mp4',
+      mensaje: 'EncodingError: falló',
+      correo: 'ana@example.com',
+    });
   });
 });

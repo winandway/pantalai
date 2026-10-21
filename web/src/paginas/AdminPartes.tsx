@@ -744,6 +744,15 @@ type Sistema = {
   pago: { listo: boolean; cobro_activo: boolean; cuenta: string };
   seguridad: { turnstile: boolean; intentos_24h: number };
   version: string;
+  errores: {
+    donde: string;
+    mensaje: string;
+    video_id: string;
+    agente: string;
+    momento: number;
+    nombre: string | null;
+    correo: string | null;
+  }[];
 };
 
 export function PestanaSistema() {
@@ -852,6 +861,33 @@ export function PestanaSistema() {
           </p>
         </section>
       </div>
+      <h3>{es ? 'Errores en las computadoras de los clientes' : 'Errors on customers’ computers'}</h3>
+      {d.errores.length === 0 ? (
+        <p className="ayuda">{es ? 'Ninguno. Todo bien.' : 'None. All good.'}</p>
+      ) : (
+        <div className="admin-tabla-marco">
+          <table className="admin-tabla">
+            <tbody>
+              {d.errores.map((e, i) => (
+                <tr key={i}>
+                  <td>{haceCuanto(e.momento, idioma)}</td>
+                  <td>
+                    {e.nombre}
+                    <br />
+                    <small>{e.correo}</small>
+                  </td>
+                  <td>
+                    <b>{e.donde}</b> · <code>{e.mensaje}</code>
+                  </td>
+                  <td className="admin-agente" title={e.agente}>
+                    {e.agente}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

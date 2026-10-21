@@ -1,6 +1,7 @@
 // Prepara la copia MP4 cuando el dueño abre su video (una sola vez). Si el navegador no puede, no pasa nada:
 // el video sigue funcionando en WebM y se puede intentar desde otra computadora.
 import { useEffect, useRef, useState } from 'react';
+import { pedir } from '../logica/api';
 import { useIdioma } from '../logica/idioma';
 import { prepararMp4, puedeConvertir } from '../logica/mp4';
 
@@ -21,6 +22,15 @@ export function PreparadorMp4({ id, alTerminar }: { id: string; alTerminar: () =
       alTerminar();
     } catch (e) {
       console.error('mp4', e);
+      // Que el error llegue al servidor: si no, se queda en este navegador y nadie lo puede arreglar.
+      void pedir('/datos/errores', {
+        method: 'POST',
+        json: {
+          donde: 'mp4',
+          video_id: id,
+          mensaje: e instanceof Error ? `${e.name}: ${e.message}` : String(e),
+        },
+      }).catch(() => undefined);
       setError(true);
     } finally {
       setAvance(null);

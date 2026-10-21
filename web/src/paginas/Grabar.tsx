@@ -256,7 +256,7 @@ export function Grabar() {
       const r = await pedir<{ id: string; parte_minima: number }>('/datos/videos', {
         method: 'POST',
         json: {
-          tipo: 'video/webm',
+          tipo: g.tipo.split(';')[0],
           ancho: g.ancho,
           alto: g.alto,
           idioma: a.idiomaVoz.startsWith('es') ? 'es' : 'en',
@@ -268,7 +268,7 @@ export function Grabar() {
         parteMinima: r.parte_minima,
         progreso: (s, total) => setProgreso(total ? s / total : 0),
       });
-      respaldo.current = { id: r.id, tipo: 'video/webm', creado: Date.now(), duracion: 0 };
+      respaldo.current = { id: r.id, tipo: g.tipo.split(';')[0]!, creado: Date.now(), duracion: 0 };
     } catch (e) {
       g.liberar();
       setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor'));

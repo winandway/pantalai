@@ -279,3 +279,13 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Superadmin → Sistema (`/datos/admin/sistema`): IA (gasto del mes frente al tope), correo (enviados hoy frente a la
   cuota `CORREO_CUOTA_DIA`, tabla `correo_dia`), Stripe (conectado, real o prueba, límites encendidos) y seguridad.
 - Prueba: «C-ALMACEN» en `pruebas/servidor.test.ts` (comprobada en rojo dejando la copia MP4 fuera de la suma).
+
+## C-MP4-DIRECTO (20 oct 2026)
+
+- Se graba directo en MP4 (H.264 + AAC) con los códigos de perfil completos (Chrome rechaza «avc1,mp4a» a secas). Sin
+  recorte, el original es el MP4 (no hay copia ni conversión); con recorte, la copia se arma sin re-codificar.
+  Explicación: `docs/VELOCIDAD-MP4.md`. NO volver a poner WebM primero en `tipoDeGrabacion`.
+- Los errores del navegador al armar el MP4 llegan a `/datos/errores` (tabla `errores_cliente`) y se ven en el
+  superadmin → Sistema.
+- Pruebas: `pruebas/componentes.test.tsx` (formato elegido) y «C-MP4-DIRECTO» en `pruebas/servidor.test.ts`
+  (comprobada en rojo obligando a hacer la copia).

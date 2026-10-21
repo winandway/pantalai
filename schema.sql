@@ -223,3 +223,14 @@ CREATE TABLE IF NOT EXISTS correo_dia (
   enviados INTEGER NOT NULL DEFAULT 0,
   fallidos INTEGER NOT NULL DEFAULT 0
 );
+
+-- Errores que pasan en la computadora de los clientes (20 oct 2026): antes se quedaban en su navegador y nadie los veía.
+CREATE TABLE IF NOT EXISTS errores_cliente (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id TEXT NOT NULL,
+  donde TEXT NOT NULL,
+  mensaje TEXT NOT NULL,
+  video_id TEXT NOT NULL DEFAULT '',
+  agente TEXT NOT NULL DEFAULT '',
+  momento INTEGER NOT NULL
+);
