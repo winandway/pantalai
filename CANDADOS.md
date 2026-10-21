@@ -248,3 +248,12 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Límite de intentos, registro en `registro_admin` (intentos, vistas, sacar del aire), `no-referrer`, `no-store` y
   `noindex` en la página del panel. Uso y capas: `docs/SUPERADMIN.md`.
 - Prueba: `pruebas/servidor.test.ts` «C-SUPERADMIN» (comprobada en rojo quitando la comprobación de la cabecera).
+
+## C-SUPERADMIN-OPERAR (20 oct 2026)
+
+- Pagos (`/datos/admin/pagos`, tabla `estado_stripe` que llena el aviso de Stripe), ficha del cliente
+  (`/datos/admin/usuarios/:id`, con accesos de la tabla `accesos`), suspender y reactivar (tabla `suspensiones`: no
+  entra, sesiones cerradas, videos fuera del aire y vuelven al reactivar), IP bloqueadas (tabla `ips_bloqueadas`,
+  comprobada en cada petición; el superadmin nunca queda bloqueado) y moderación (tabla `revisiones`, borrar video).
+  Plan y razones: `docs/SUPERADMIN-PLAN.md`; uso: `docs/SUPERADMIN.md`.
+- Prueba: `pruebas/servidor.test.ts` «C-SUPERADMIN-OPERAR» (comprobada en rojo dejando entrar a un suspendido).

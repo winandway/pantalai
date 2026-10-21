@@ -190,6 +190,16 @@ const en = {
   adminRegistro: 'Activity log',
   adminRegistroVacio: 'Nothing yet.',
   adminMiro: 'watched',
+  adminModeracion: 'Moderation',
+  adminModeracionAyuda:
+    'Videos nobody has reviewed yet, newest first. Watch them and mark them OK, take them offline or delete them.',
+  adminPagos: 'Payments',
+  adminSeguridad: 'Security',
+  adminMarcarRevisado: 'Mark as reviewed (OK)',
+  adminVerFicha: 'Open customer profile',
+  adminBorrarVideo: 'Delete video',
+  adminConfirmarBorrar:
+    '“{titulo}” and everything in it (file, MP4, comments) will be deleted forever. This can’t be undone.',
   adminSaco: 'took offline',
   nivelesSonido: 'Sound levels',
   sonidoComputadora: 'Computer sound',
@@ -552,6 +562,16 @@ const es: Record<Clave, string> = {
   adminRegistro: 'Registro de actividad',
   adminRegistroVacio: 'Todavía nada.',
   adminMiro: 'miró',
+  adminModeracion: 'Moderación',
+  adminModeracionAyuda:
+    'Los videos que todavía nadie revisó, del más nuevo al más viejo. Míralos y márcalos como revisados, sácalos del aire o bórralos.',
+  adminPagos: 'Pagos',
+  adminSeguridad: 'Seguridad',
+  adminMarcarRevisado: 'Marcar como revisado (está bien)',
+  adminVerFicha: 'Ver la ficha del cliente',
+  adminBorrarVideo: 'Borrar el video',
+  adminConfirmarBorrar:
+    '«{titulo}» y todo lo suyo (archivo, MP4, comentarios) se borra para siempre. No se puede deshacer.',
   adminSaco: 'sacó del aire',
   nivelesSonido: 'Niveles de sonido',
   sonidoComputadora: 'Sonido de la computadora',

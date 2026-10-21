@@ -633,3 +633,136 @@ describe('CANDADO C-SUPERADMIN: panel en dirección secreta, solo para las cuent
     expect(fin.registro.slice(0, 2).map((x) => x.accion)).toEqual(['hacer_privado', 'ver_video']);
   });
 });
+
+describe('CANDADO C-SUPERADMIN-OPERAR: pagos, ficha, suspender, bloquear IP y moderar', () => {
+  const RUTA = '/panel/prueba-secreta-1234567';
+  const P = { 'x-panel': RUTA };
+
+  it('suspender saca de la cuenta y del aire; reactivar devuelve todo; bloquear IP cierra la puerta', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com', SUPERADMIN_RUTA: RUTA } as typeof env;
+    const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    const { id } = await videoListo(ana);
+    const privado = await videoListo(ana);
+    await ana(`/datos/videos/${privado.id}`, { method: 'PATCH', json: { privacidad: 'privado' } });
+    const admin = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    const anaId = ((await (await ana('/datos/yo')).json()) as { usuario: { id: string } }).usuario.id;
+
+    // Ficha: datos, videos (con firma) y sus accesos con IP.
+    const ficha = (await (await admin(`/datos/admin/usuarios/${anaId}`, { headers: P })).json()) as {
+      videos: { id: string; firma: string }[];
+      accesos: { ip: string }[];
+      suspension: unknown;
+    };
+    expect(ficha.videos).toHaveLength(2);
+    expect(ficha.accesos[0]!.ip).toBe('1.1.1.1');
+    expect(ficha.suspension).toBeNull();
+    expect((await ana(`/datos/admin/usuarios/${anaId}`, { headers: P })).status).toBe(404);
+
+    // Suspender.
+    expect(
+      (
+        await admin(`/datos/admin/usuarios/${anaId}/suspender`, {
+          method: 'POST',
+          headers: P,
+          json: { motivo: 'contenido prohibido' },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await ana('/datos/yo').then((r) => r.json())) as { usuario: unknown }).toMatchObject({
+      usuario: null,
+    });
+    const entrar = await cliente('1.1.1.1')('/datos/entrar', {
+      method: 'POST',
+      json: { correo: 'ana@example.com', clave: 'clave-segura-1' },
+    });
+    expect(entrar.status).toBe(403);
+    expect((await cliente('9.9.9.9')(`/media/${id}/video`)).status).toBe(404);
+    // Reactivar: vuelve a entrar y su video público vuelve a estar público; el privado sigue privado.
+    expect(
+      (await admin(`/datos/admin/usuarios/${anaId}/reactivar`, { method: 'POST', headers: P })).status,
+    ).toBe(200);
+    expect((await cliente('9.9.9.9')(`/media/${id}/video`)).status).toBe(200);
+    expect((await cliente('9.9.9.9')(`/media/${privado.id}/video`)).status).toBe(404);
+    const ana2 = cliente('1.1.1.1');
+    expect(
+      (
+        await ana2('/datos/entrar', {
+          method: 'POST',
+          json: { correo: 'ana@example.com', clave: 'clave-segura-1' },
+        })
+      ).status,
+    ).toBe(200);
+
+    // Bloquear IP: esa dirección no puede usar Pantalay; el superadmin no se bloquea a sí mismo.
+    expect(
+      (await admin('/datos/admin/ips', { method: 'POST', headers: P, json: { ip: '2.2.2.2' } })).status,
+    ).toBe(400);
+    expect(
+      (
+        await admin('/datos/admin/ips', {
+          method: 'POST',
+          headers: P,
+          json: { ip: '1.1.1.1', motivo: 'spam' },
+        })
+      ).status,
+    ).toBe(200);
+    expect((await ana2('/datos/yo')).status).toBe(403);
+    expect((await cliente('1.1.1.1')('/datos/salud')).status).toBe(403);
+    const ips = (await (await admin('/datos/admin/ips', { headers: P })).json()) as {
+      bloqueadas: { ip: string }[];
+    };
+    expect(ips.bloqueadas.map((b) => b.ip)).toEqual(['1.1.1.1']);
+    expect((await admin('/datos/admin/ips/1.1.1.1', { method: 'DELETE', headers: P })).status).toBe(200);
+    expect((await ana2('/datos/yo')).status).toBe(200);
+
+    // Moderación: sin revisar → revisado; borrar quita el video de verdad.
+    const sin = (await (await admin('/datos/admin/videos?sin_revisar=1', { headers: P })).json()) as {
+      videos: { id: string }[];
+    };
+    expect(sin.videos).toHaveLength(2);
+    await admin(`/datos/admin/videos/${id}/revisado`, { method: 'POST', headers: P });
+    const sin2 = (await (await admin('/datos/admin/videos?sin_revisar=1', { headers: P })).json()) as {
+      videos: { id: string }[];
+    };
+    expect(sin2.videos.map((v) => v.id)).toEqual([privado.id]);
+    expect((await admin(`/datos/admin/videos/${privado.id}`, { method: 'DELETE', headers: P })).status).toBe(
+      200,
+    );
+    expect(env.BUCKET.objetos.has(`videos/${privado.id}/video`)).toBe(false);
+    const fin = (await (await admin('/datos/admin/resumen', { headers: P })).json()) as {
+      registro: { accion: string }[];
+    };
+    expect(fin.registro.map((r) => r.accion)).toEqual(
+      expect.arrayContaining([
+        'suspender',
+        'reactivar',
+        'bloquear_ip',
+        'desbloquear_ip',
+        'revisado',
+        'borrar_video',
+        'ver_ficha',
+      ]),
+    );
+  });
+
+  it('pagos: cuántos pagan, en prueba, con problemas y gratis, e ingreso mensual', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com', SUPERADMIN_RUTA: RUTA } as typeof env;
+    await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    const admin = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    const ids = (await env.DB.prepare('SELECT id FROM usuarios').all<{ id: string }>()).results.map(
+      (r) => r.id,
+    );
+    const poner = (u: string, status: string, monto: number, intervalo: string) =>
+      env.DB.prepare(
+        'INSERT INTO estado_stripe (usuario_id, status, monto, intervalo, periodo_fin, cancela_al_final, actualizado) VALUES (?, ?, ?, ?, 0, 0, 0)',
+      )
+        .bind(u, status, monto, intervalo)
+        .run();
+    await poner(ids[0]!, 'active', 1200, 'month');
+    await poner(ids[1]!, 'active', 12000, 'year');
+    const r = (await (await admin('/datos/admin/pagos', { headers: P })).json()) as {
+      resumen: { pagan: number; gratis: number; mrr: number };
+    };
+    expect(r.resumen).toMatchObject({ pagan: 2, gratis: 0, mrr: 2200 });
+  });
+});

@@ -161,3 +161,46 @@ CREATE TABLE IF NOT EXISTS registro_admin (
   objetivo TEXT NOT NULL DEFAULT '',
   momento INTEGER NOT NULL
 );
+
+-- Superadmin completo (20 oct 2026): accesos, suspensiones, IP bloqueadas, estado del pago y revisión de videos.
+CREATE TABLE IF NOT EXISTS accesos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  pais TEXT NOT NULL DEFAULT '',
+  agente TEXT NOT NULL DEFAULT '',
+  momento INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS accesos_usuario ON accesos (usuario_id, momento);
+
+CREATE TABLE IF NOT EXISTS suspensiones (
+  usuario_id TEXT PRIMARY KEY,
+  motivo TEXT NOT NULL DEFAULT '',
+  videos TEXT NOT NULL DEFAULT '[]',
+  admin_id TEXT NOT NULL,
+  momento INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ips_bloqueadas (
+  ip TEXT PRIMARY KEY,
+  motivo TEXT NOT NULL DEFAULT '',
+  admin_id TEXT NOT NULL,
+  momento INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS estado_stripe (
+  usuario_id TEXT PRIMARY KEY,
+  status TEXT NOT NULL,
+  monto INTEGER NOT NULL DEFAULT 0,
+  intervalo TEXT NOT NULL DEFAULT 'month',
+  periodo_fin INTEGER NOT NULL DEFAULT 0,
+  cancela_al_final INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS revisiones (
+  video_id TEXT PRIMARY KEY,
+  resultado TEXT NOT NULL,
+  admin_id TEXT NOT NULL,
+  momento INTEGER NOT NULL
+);

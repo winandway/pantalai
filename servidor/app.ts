@@ -20,6 +20,7 @@ import {
   leerAviso,
   pagoListo,
   precioDe,
+  ingresoMensual,
   type EnvPago,
 } from './pagos';
 import { z } from 'zod';
@@ -220,13 +221,22 @@ app.use('*', async (c, next) => {
   if (token && c.env.DB) {
     const fila = await c.env.DB.prepare(
       `SELECT u.id, u.correo, u.nombre, s.vence FROM sesiones s JOIN usuarios u ON u.id = s.usuario_id
-       WHERE s.token_hash = ?`,
+       WHERE s.token_hash = ? AND u.id NOT IN (SELECT usuario_id FROM suspensiones)`,
     )
       .bind(await sha256(token))
       .first<Usuario & { vence: number }>();
     if (fila && fila.vence > Date.now()) usuario = { id: fila.id, correo: fila.correo, nombre: fila.nombre };
   }
   c.set('usuario', usuario);
+  // Dirección IP bloqueada desde el superadmin: no puede usar Pantalay. El superadmin nunca se bloquea a sí mismo.
+  if (c.env.DB && !esSuperadmin(c)) {
+    const bloqueada = await c.env.DB.prepare('SELECT 1 FROM ips_bloqueadas WHERE ip = ?').bind(ip(c)).first();
+    if (bloqueada) {
+      c.res = err(c, 403, 'ip_bloqueada');
+      for (const [k, v] of Object.entries(CABECERAS_SEGURIDAD)) c.res.headers.set(k, v);
+      return;
+    }
+  }
   await next();
   for (const [k, v] of Object.entries(CABECERAS_SEGURIDAD)) {
     if (!c.res.headers.has(k)) c.res.headers.set(k, v);
@@ -403,6 +413,16 @@ async function abrirSesion(c: C, usuarioId: string) {
   await c.env.DB.prepare('INSERT INTO sesiones (token_hash, usuario_id, creada, vence) VALUES (?, ?, ?, ?)')
     .bind(await sha256(token), usuarioId, ahora, ahora + DURACION_SESION_MS)
     .run();
+  // Cada entrada queda anotada (para la ficha del cliente en el superadmin).
+  await c.env.DB.prepare('INSERT INTO accesos (usuario_id, ip, pais, agente, momento) VALUES (?, ?, ?, ?, ?)')
+    .bind(
+      usuarioId,
+      ip(c),
+      c.req.header('cf-ipcountry') ?? '',
+      (c.req.header('user-agent') ?? '').slice(0, 200),
+      ahora,
+    )
+    .run();
   const segura = new URL(c.req.url).protocol === 'https:';
   c.header('Set-Cookie', cookieSesion(token, segura, DURACION_SESION_MS / 1000));
 }
@@ -438,6 +458,8 @@ app.post('/datos/entrar', async (c) => {
     .bind(d.correo)
     .first<Usuario & { clave_hash: string; clave_sal: string }>();
   if (!u || !iguales(await hashClave(d.clave, u.clave_sal), u.clave_hash)) return err(c, 401, 'credenciales');
+  if (await c.env.DB.prepare('SELECT 1 FROM suspensiones WHERE usuario_id = ?').bind(u.id).first())
+    return err(c, 403, 'suspendida');
   await abrirSesion(c, u.id);
   // Al superadmin se le dice adónde ir: directo a su panel secreto.
   const panel = rutaPanel(c.env) && correoSuperadmin(c.env, u.correo) ? rutaPanel(c.env) : null;
@@ -586,6 +608,21 @@ app.post('/datos/pago/aviso', async (c) => {
        ON CONFLICT (usuario_id) DO UPDATE SET cliente = excluded.cliente, suscripcion = excluded.suscripcion,
          ciclo = excluded.ciclo, actualizado = excluded.actualizado`,
     ).bind(cambio.usuario_id, cambio.cliente, cambio.suscripcion, cambio.ciclo, ahora),
+    c.env.DB.prepare(
+      `INSERT INTO estado_stripe (usuario_id, status, monto, intervalo, periodo_fin, cancela_al_final, actualizado)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (usuario_id) DO UPDATE SET status = excluded.status, monto = excluded.monto,
+         intervalo = excluded.intervalo, periodo_fin = excluded.periodo_fin,
+         cancela_al_final = excluded.cancela_al_final, actualizado = excluded.actualizado`,
+    ).bind(
+      cambio.usuario_id,
+      cambio.status,
+      cambio.monto,
+      cambio.intervalo,
+      cambio.periodo_fin,
+      cambio.cancela_al_final ? 1 : 0,
+      ahora,
+    ),
   ]);
   return c.json({ ok: true });
 });
@@ -670,12 +707,13 @@ app.get('/datos/admin/videos', requiereSuperadmin, async (c) => {
   const usuario = c.req.query('usuario') ?? '';
   const r = await c.env.DB.prepare(
     `SELECT v.id, v.titulo, v.estado, v.duracion, v.bytes, v.privacidad, v.tiene_miniatura, v.creado,
-       u.id AS usuario_id, u.nombre AS usuario, u.correo
-     FROM videos v JOIN usuarios u ON u.id = v.usuario_id
+       u.id AS usuario_id, u.nombre AS usuario, u.correo, r.resultado AS revision
+     FROM videos v JOIN usuarios u ON u.id = v.usuario_id LEFT JOIN revisiones r ON r.video_id = v.id
      WHERE (? = '' OR v.usuario_id = ?) AND (lower(v.titulo) LIKE ? OR lower(u.correo) LIKE ?)
+       AND (? = '' OR r.video_id IS NULL)
      ORDER BY v.creado DESC LIMIT 300`,
   )
-    .bind(usuario, usuario, q, q)
+    .bind(usuario, usuario, q, q, c.req.query('sin_revisar') === '1' ? '1' : '')
     .all();
   // Cada video trae su firma del día: con ella el panel puede mostrar también los privados.
   const videos = await Promise.all(
@@ -699,7 +737,235 @@ app.post('/datos/admin/videos/:id/privado', requiereSuperadmin, async (c) => {
   await c.env.DB.prepare("UPDATE videos SET privacidad = 'privado', actualizado = ? WHERE id = ?")
     .bind(Date.now(), v.id)
     .run();
+  await marcarRevision(c, v.id, 'sacado');
   await anotarAdmin(c, 'hacer_privado', `${v.id} · ${v.titulo}`);
+  return c.json({ ok: true });
+});
+
+async function marcarRevision(c: C, videoId: string, resultado: 'ok' | 'sacado') {
+  await c.env.DB.prepare(
+    `INSERT INTO revisiones (video_id, resultado, admin_id, momento) VALUES (?, ?, ?, ?)
+     ON CONFLICT (video_id) DO UPDATE SET resultado = excluded.resultado, admin_id = excluded.admin_id,
+       momento = excluded.momento`,
+  )
+    .bind(videoId, resultado, c.get('usuario')!.id, Date.now())
+    .run();
+}
+
+/** Borra un video y todo lo suyo (archivos y filas). Lo usan el dueño y el superadmin. */
+async function borrarVideo(c: C, v: FilaVideo) {
+  await c.env.BUCKET.delete([claveVideo(v.id), claveMiniatura(v.id), claveMp4(v.id)]);
+  await c.env.DB.batch(
+    [
+      'videos WHERE id',
+      'comentarios WHERE video_id',
+      'reacciones WHERE video_id',
+      'vistas WHERE video_id',
+      'video_ia WHERE video_id',
+      'video_mp4 WHERE video_id',
+      'video_mp4_recorte WHERE video_id',
+      'revisiones WHERE video_id',
+    ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} = ?`).bind(v.id)),
+  );
+}
+
+// Moderación: «revisado, está bien».
+app.post('/datos/admin/videos/:id/revisado', requiereSuperadmin, async (c) => {
+  const v = await buscarVideo(c, c.req.param('id') ?? '');
+  if (!v) return err(c, 404, 'no_existe');
+  await marcarRevision(c, v.id, 'ok');
+  await anotarAdmin(c, 'revisado', `${v.id} · ${v.titulo}`);
+  return c.json({ ok: true });
+});
+
+// Borrar un video que no debe existir (contenido prohibido). No se puede deshacer: la página pide confirmación.
+app.delete('/datos/admin/videos/:id', requiereSuperadmin, async (c) => {
+  const v = await buscarVideo(c, c.req.param('id') ?? '');
+  if (!v) return err(c, 404, 'no_existe');
+  await borrarVideo(c, v);
+  await anotarAdmin(c, 'borrar_video', `${v.id} · ${v.titulo} · dueño ${v.usuario_id}`);
+  return c.json({ ok: true });
+});
+
+// ---------- superadmin: pagos ----------
+
+app.get('/datos/admin/pagos', requiereSuperadmin, async (c) => {
+  const r = await c.env.DB.prepare(
+    `SELECT u.id, u.nombre, u.correo, e.status, e.monto, e.intervalo, e.periodo_fin, e.cancela_al_final,
+       e.actualizado, COALESCE(s.plan, 'starter') AS plan, p.cliente, p.suscripcion
+     FROM estado_stripe e JOIN usuarios u ON u.id = e.usuario_id
+     LEFT JOIN suscripciones s ON s.usuario_id = e.usuario_id
+     LEFT JOIN pagos_stripe p ON p.usuario_id = e.usuario_id
+     ORDER BY e.actualizado DESC LIMIT 1000`,
+  ).all<{ status: string; monto: number; intervalo: string; plan: string }>();
+  const total = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM usuarios').first<{ n: number }>();
+  const grupo = (st: string[]) => r.results.filter((f) => st.includes(f.status)).length;
+  const pagan = grupo(['active']);
+  const prueba = grupo(['trialing']);
+  const problemas = grupo(['past_due', 'unpaid', 'incomplete']);
+  const cancelados = grupo(['canceled', 'incomplete_expired']);
+  return c.json(
+    {
+      resumen: {
+        pagan,
+        prueba,
+        problemas,
+        cancelados,
+        gratis: Math.max(0, (total?.n ?? 0) - pagan - prueba - problemas),
+        mrr: ingresoMensual(r.results),
+      },
+      clientes: r.results,
+      stripe_cuenta: c.env.STRIPE_PUBLICABLE?.startsWith('pk_live') ? 'vivo' : 'prueba',
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+// ---------- superadmin: ficha del cliente ----------
+
+app.get('/datos/admin/usuarios/:id', requiereSuperadmin, async (c) => {
+  const id = c.req.param('id') ?? '';
+  const db = c.env.DB;
+  const u = await db.prepare('SELECT id, nombre, correo, creado FROM usuarios WHERE id = ?').bind(id).first();
+  if (!u) return err(c, 404, 'no_existe');
+  const [plan, pago, estado, susp, accesos, videos] = await Promise.all([
+    db.prepare('SELECT plan, estado, fundador FROM suscripciones WHERE usuario_id = ?').bind(id).first(),
+    db.prepare('SELECT cliente, suscripcion, ciclo FROM pagos_stripe WHERE usuario_id = ?').bind(id).first(),
+    db.prepare('SELECT * FROM estado_stripe WHERE usuario_id = ?').bind(id).first(),
+    db.prepare('SELECT motivo, momento FROM suspensiones WHERE usuario_id = ?').bind(id).first(),
+    db
+      .prepare(
+        `SELECT a.ip, a.pais, a.agente, a.momento, (b.ip IS NOT NULL) AS bloqueada FROM accesos a
+         LEFT JOIN ips_bloqueadas b ON b.ip = a.ip WHERE a.usuario_id = ? ORDER BY a.momento DESC LIMIT 30`,
+      )
+      .bind(id)
+      .all(),
+    db
+      .prepare(
+        `SELECT v.id, v.titulo, v.estado, v.duracion, v.bytes, v.privacidad, v.tiene_miniatura, v.creado,
+           r.resultado AS revision
+         FROM videos v LEFT JOIN revisiones r ON r.video_id = v.id WHERE v.usuario_id = ? ORDER BY v.creado DESC`,
+      )
+      .bind(id)
+      .all<{ id: string; bytes: number }>(),
+  ]);
+  await anotarAdmin(c, 'ver_ficha', `${id} · ${(u as { correo: string }).correo}`);
+  return c.json(
+    {
+      usuario: u,
+      plan: plan ?? { plan: 'starter', estado: '', fundador: 0 },
+      pago,
+      estado,
+      suspension: susp,
+      accesos: accesos.results,
+      videos: await Promise.all(
+        videos.results.map(async (v) => ({ ...v, firma: await firmaPanel(c.env, v.id) })),
+      ),
+      bytes: videos.results.reduce((t, v) => t + (v.bytes ?? 0), 0),
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+const esquemaMotivo = z.object({ motivo: z.string().trim().max(300).default('') });
+
+// Suspender: no entra más, se cierran sus sesiones y todos sus videos públicos salen del aire.
+app.post('/datos/admin/usuarios/:id/suspender', requiereSuperadmin, async (c) => {
+  const id = c.req.param('id') ?? '';
+  const d = await cuerpo(c, esquemaMotivo);
+  if (!d) return err(c, 400, 'datos');
+  if (id === c.get('usuario')!.id) return err(c, 400, 'datos');
+  const u = await c.env.DB.prepare('SELECT correo FROM usuarios WHERE id = ?')
+    .bind(id)
+    .first<{ correo: string }>();
+  if (!u) return err(c, 404, 'no_existe');
+  if (await c.env.DB.prepare('SELECT 1 FROM suspensiones WHERE usuario_id = ?').bind(id).first())
+    return c.json({ ok: true });
+  const publicos = await c.env.DB.prepare(
+    "SELECT id FROM videos WHERE usuario_id = ? AND privacidad = 'enlace'",
+  )
+    .bind(id)
+    .all<{ id: string }>();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      'INSERT INTO suspensiones (usuario_id, motivo, videos, admin_id, momento) VALUES (?, ?, ?, ?, ?)',
+    ).bind(id, d.motivo, JSON.stringify(publicos.results.map((v) => v.id)), c.get('usuario')!.id, Date.now()),
+    c.env.DB.prepare("UPDATE videos SET privacidad = 'privado' WHERE usuario_id = ?").bind(id),
+    c.env.DB.prepare('DELETE FROM sesiones WHERE usuario_id = ?').bind(id),
+  ]);
+  await anotarAdmin(c, 'suspender', `${u.correo}${d.motivo ? ` · ${d.motivo}` : ''}`);
+  return c.json({ ok: true });
+});
+
+// Reactivar: vuelve a entrar y sus videos vuelven a estar como estaban antes de la suspensión.
+app.post('/datos/admin/usuarios/:id/reactivar', requiereSuperadmin, async (c) => {
+  const id = c.req.param('id') ?? '';
+  const s = await c.env.DB.prepare('SELECT videos FROM suspensiones WHERE usuario_id = ?')
+    .bind(id)
+    .first<{ videos: string }>();
+  if (!s) return err(c, 404, 'no_existe');
+  const ids = (jsonSeguro(s.videos) as string[]).filter((x) => typeof x === 'string');
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM suspensiones WHERE usuario_id = ?').bind(id),
+    ...ids.map((v) =>
+      c.env.DB.prepare("UPDATE videos SET privacidad = 'enlace' WHERE id = ? AND usuario_id = ?").bind(v, id),
+    ),
+  ]);
+  const u = await c.env.DB.prepare('SELECT correo FROM usuarios WHERE id = ?')
+    .bind(id)
+    .first<{ correo: string }>();
+  await anotarAdmin(c, 'reactivar', u?.correo ?? id);
+  return c.json({ ok: true });
+});
+
+// ---------- superadmin: direcciones IP ----------
+
+app.get('/datos/admin/ips', requiereSuperadmin, async (c) => {
+  const [bloqueadas, intentos] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT b.ip, b.motivo, b.momento, u.nombre AS admin FROM ips_bloqueadas b
+       LEFT JOIN usuarios u ON u.id = b.admin_id ORDER BY b.momento DESC`,
+    ).all(),
+    c.env.DB.prepare(
+      `SELECT substr(objetivo, 1, instr(objetivo, ' · ') - 1) AS ip, COUNT(*) AS n, MAX(momento) AS ultimo
+       FROM registro_admin WHERE accion = 'intento' GROUP BY 1 ORDER BY n DESC LIMIT 30`,
+    ).all(),
+  ]);
+  return c.json({ bloqueadas: bloqueadas.results, intentos: intentos.results }, 200, {
+    'Cache-Control': 'no-store',
+  });
+});
+
+const esquemaIp = z.object({
+  ip: z
+    .string()
+    .trim()
+    .max(64)
+    .regex(/^[0-9a-fA-F:.]{3,64}$/),
+  motivo: z.string().trim().max(300).default(''),
+});
+
+app.post('/datos/admin/ips', requiereSuperadmin, async (c) => {
+  const d = await cuerpo(c, esquemaIp);
+  if (!d) return err(c, 400, 'datos');
+  // Nunca te bloqueas a ti mismo.
+  if (d.ip === ip(c)) return err(c, 400, 'tu_ip');
+  await c.env.DB.prepare(
+    `INSERT INTO ips_bloqueadas (ip, motivo, admin_id, momento) VALUES (?, ?, ?, ?)
+     ON CONFLICT (ip) DO UPDATE SET motivo = excluded.motivo`,
+  )
+    .bind(d.ip, d.motivo, c.get('usuario')!.id, Date.now())
+    .run();
+  await anotarAdmin(c, 'bloquear_ip', `${d.ip}${d.motivo ? ` · ${d.motivo}` : ''}`);
+  return c.json({ ok: true });
+});
+
+app.delete('/datos/admin/ips/:ip', requiereSuperadmin, async (c) => {
+  const v = decodeURIComponent(c.req.param('ip') ?? '');
+  await c.env.DB.prepare('DELETE FROM ips_bloqueadas WHERE ip = ?').bind(v).run();
+  await anotarAdmin(c, 'desbloquear_ip', v);
   return c.json({ ok: true });
 });
 
@@ -1051,16 +1317,7 @@ app.post('/datos/videos/:id/duplicar', requiereSesion, async (c) => {
 app.delete('/datos/videos/:id', requiereSesion, async (c) => {
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
-  await c.env.BUCKET.delete([claveVideo(v.id), claveMiniatura(v.id), claveMp4(v.id)]);
-  await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM videos WHERE id = ?').bind(v.id),
-    c.env.DB.prepare('DELETE FROM comentarios WHERE video_id = ?').bind(v.id),
-    c.env.DB.prepare('DELETE FROM reacciones WHERE video_id = ?').bind(v.id),
-    c.env.DB.prepare('DELETE FROM vistas WHERE video_id = ?').bind(v.id),
-    c.env.DB.prepare('DELETE FROM video_ia WHERE video_id = ?').bind(v.id),
-    c.env.DB.prepare('DELETE FROM video_mp4 WHERE video_id = ?').bind(v.id),
-    c.env.DB.prepare('DELETE FROM video_mp4_recorte WHERE video_id = ?').bind(v.id),
-  ]);
+  await borrarVideo(c, v);
   return c.json({ ok: true });
 });
 

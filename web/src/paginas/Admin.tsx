@@ -9,6 +9,7 @@ import { haceCuanto, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { formatoTiempo } from '../logica/tiempo';
+import { FichaCliente, NOMBRE_PLAN, panel, PestanaPagos, PestanaSeguridad, tamano } from './AdminPartes';
 
 type Resumen = {
   usuarios: number;
@@ -33,41 +34,43 @@ type FilaUsuario = {
 type FilaVideo = {
   id: string;
   titulo: string;
-  estado: string;
+  estado?: string;
   duracion: number;
   bytes: number;
   privacidad: string;
   tiene_miniatura: number;
   creado: number;
-  usuario_id: string;
-  usuario: string;
-  correo: string;
+  usuario_id?: string;
+  usuario?: string;
+  correo?: string;
+  revision?: string | null;
   /** Firma del día para ver el video aunque sea privado. */
   firma: string;
 };
 
-const NOMBRE_PLAN: Record<string, string> = {
-  starter: 'Starter',
-  business: 'Business',
-  business_ia: 'Business + AI',
-  enterprise: 'Enterprise',
+const ACCION: Record<string, { en: string; es: string }> = {
+  ver_video: { en: 'watched', es: 'miró' },
+  hacer_privado: { en: 'took offline', es: 'sacó del aire' },
+  revisado: { en: 'reviewed OK', es: 'revisó (está bien)' },
+  borrar_video: { en: 'deleted video', es: 'borró el video' },
+  ver_ficha: { en: 'opened profile', es: 'abrió la ficha de' },
+  suspender: { en: 'suspended', es: 'suspendió a' },
+  reactivar: { en: 'reactivated', es: 'reactivó a' },
+  bloquear_ip: { en: 'blocked IP', es: 'bloqueó la IP' },
+  desbloquear_ip: { en: 'unblocked IP', es: 'desbloqueó la IP' },
+  intento: { en: 'attempt without permission', es: 'intento sin permiso' },
 };
-
-/** El servidor exige la dirección secreta en cada pedido del panel: la página la toma de su propia dirección. */
-const panel = () => ({ 'x-panel': location.pathname });
-
-export function tamano(bytes: number): string {
-  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
-  if (bytes >= 1e6) return `${Math.round(bytes / 1e6)} MB`;
-  return `${Math.round(bytes / 1e3)} KB`;
-}
 
 export function Admin() {
   const { t, idioma } = useIdioma();
   const { usuario, cargando } = useSesion();
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [negado, setNegado] = useState(false);
-  const [vista, setVista] = useState<'usuarios' | 'videos'>('usuarios');
+  const [vista, setVista] = useState<'usuarios' | 'videos' | 'moderacion' | 'pagos' | 'seguridad'>(
+    'usuarios',
+  );
+  const [ficha, setFicha] = useState<string | null>(null);
+  const [borrar, setBorrar] = useState<FilaVideo | null>(null);
   const [q, setQ] = useState('');
   const [usuarios, setUsuarios] = useState<FilaUsuario[]>([]);
   const [videos, setVideos] = useState<FilaVideo[]>([]);
@@ -99,9 +102,9 @@ export function Admin() {
         void pedir<{ usuarios: FilaUsuario[] }>(`/datos/admin/usuarios?q=${b}`, { headers: panel() }).then(
           (r) => setUsuarios(r.usuarios),
         );
-      else
+      else if (vista === 'videos' || vista === 'moderacion')
         void pedir<{ videos: FilaVideo[] }>(
-          `/datos/admin/videos?q=${b}&usuario=${encodeURIComponent(deUsuario?.id ?? '')}`,
+          `/datos/admin/videos?q=${b}&usuario=${encodeURIComponent(deUsuario?.id ?? '')}${vista === 'moderacion' ? '&sin_revisar=1' : ''}`,
           { headers: panel() },
         ).then((r) => setVideos(r.videos));
     }, 250);
@@ -170,33 +173,38 @@ export function Admin() {
 
       <div className="admin-barra">
         <div className="admin-pestanas" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={vista === 'usuarios'}
-            className={vista === 'usuarios' ? 'activo' : ''}
-            onClick={() => (setVista('usuarios'), setDeUsuario(null))}
-          >
-            {t('adminUsuarios')}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={vista === 'videos'}
-            className={vista === 'videos' ? 'activo' : ''}
-            onClick={() => setVista('videos')}
-          >
-            {t('adminVideos')}
-          </button>
+          {(
+            [
+              ['usuarios', t('adminUsuarios')],
+              ['videos', t('adminVideos')],
+              ['moderacion', t('adminModeracion')],
+              ['pagos', t('adminPagos')],
+              ['seguridad', t('adminSeguridad')],
+            ] as const
+          ).map(([v, nombre]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={vista === v}
+              className={vista === v ? 'activo' : ''}
+              onClick={() => (setVista(v), v === 'usuarios' && setDeUsuario(null))}
+            >
+              {nombre}
+            </button>
+          ))}
         </div>
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={vista === 'usuarios' ? t('adminBuscarUsuarios') : t('adminBuscarVideos')}
-          aria-label={t('buscar')}
-        />
+        {vista !== 'pagos' && vista !== 'seguridad' && (
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={vista === 'usuarios' ? t('adminBuscarUsuarios') : t('adminBuscarVideos')}
+            aria-label={t('buscar')}
+          />
+        )}
       </div>
+      {vista === 'moderacion' && <p className="ayuda">{t('adminModeracionAyuda')}</p>}
       {deUsuario && vista === 'videos' && (
         <p className="admin-filtro">
           {t('adminVideosDe')} <b>{deUsuario.nombre}</b> ({deUsuario.correo}){' '}
@@ -206,90 +214,126 @@ export function Admin() {
         </p>
       )}
 
-      <div className="admin-tabla-marco">
-        {vista === 'usuarios' ? (
-          <table className="admin-tabla">
-            <thead>
-              <tr>
-                <th>{t('adminNombre')}</th>
-                <th>{t('adminCorreo')}</th>
-                <th>{t('adminPlan')}</th>
-                <th>{t('adminVideos')}</th>
-                <th>{t('adminMinutos')}</th>
-                <th>{t('adminAlta')}</th>
-                <th>{t('adminUltimoVideo')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.nombre}</td>
-                  <td>{u.correo}</td>
-                  <td>
-                    <span className={`etiqueta-plan plan-${u.plan}`}>{NOMBRE_PLAN[u.plan] ?? u.plan}</span>
-                  </td>
-                  <td>
-                    {u.videos > 0 ? (
-                      <button
-                        type="button"
-                        className="enlace"
-                        onClick={() => (setDeUsuario(u), setVista('videos'), setQ(''))}
-                      >
-                        {u.videos}
-                      </button>
-                    ) : (
-                      0
-                    )}
-                  </td>
-                  <td>{Math.round(u.segundos / 60)}</td>
-                  <td>{haceCuanto(u.creado, idioma)}</td>
-                  <td>{u.ultimo ? haceCuanto(u.ultimo, idioma) : '—'}</td>
+      {vista === 'pagos' && <PestanaPagos abrirFicha={setFicha} />}
+      {vista === 'seguridad' && <PestanaSeguridad />}
+      {(vista === 'usuarios' || vista === 'videos' || vista === 'moderacion') && (
+        <div className="admin-tabla-marco">
+          {vista === 'usuarios' ? (
+            <table className="admin-tabla">
+              <thead>
+                <tr>
+                  <th>{t('adminNombre')}</th>
+                  <th>{t('adminCorreo')}</th>
+                  <th>{t('adminPlan')}</th>
+                  <th>{t('adminVideos')}</th>
+                  <th>{t('adminMinutos')}</th>
+                  <th>{t('adminAlta')}</th>
+                  <th>{t('adminUltimoVideo')}</th>
                 </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      <button type="button" className="enlace" onClick={() => setFicha(u.id)}>
+                        {u.nombre}
+                      </button>
+                    </td>
+                    <td>{u.correo}</td>
+                    <td>
+                      <span className={`etiqueta-plan plan-${u.plan}`}>{NOMBRE_PLAN[u.plan] ?? u.plan}</span>
+                    </td>
+                    <td>
+                      {u.videos > 0 ? (
+                        <button
+                          type="button"
+                          className="enlace"
+                          onClick={() => (setDeUsuario(u), setVista('videos'), setQ(''))}
+                        >
+                          {u.videos}
+                        </button>
+                      ) : (
+                        0
+                      )}
+                    </td>
+                    <td>{Math.round(u.segundos / 60)}</td>
+                    <td>{haceCuanto(u.creado, idioma)}</td>
+                    <td>{u.ultimo ? haceCuanto(u.ultimo, idioma) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="admin-videos">
+              {videos.map((v) => (
+                <article key={v.id} className="admin-video">
+                  <button
+                    type="button"
+                    className="admin-miniatura"
+                    onClick={() => mirar(v)}
+                    aria-label={t('adminMirar')}
+                  >
+                    {v.tiene_miniatura ? (
+                      <img src={`/media/${v.id}/miniatura?panel=${v.firma}`} alt="" loading="lazy" />
+                    ) : (
+                      <span>▶</span>
+                    )}
+                    <span className="admin-duracion">{formatoTiempo(v.duracion)}</span>
+                  </button>
+                  <div className="admin-video-datos">
+                    <strong title={v.titulo}>{v.titulo}</strong>
+                    <span>
+                      {v.usuario} · {v.correo}
+                    </span>
+                    <span>
+                      {haceCuanto(v.creado, idioma)} · {tamano(v.bytes)} ·{' '}
+                      {v.privacidad === 'privado' ? `🔒 ${t('privado')}` : `🔗 ${t('adminConEnlace')}`}
+                      {v.estado !== 'listo' ? ` · ${v.estado}` : ''}
+                    </span>
+                  </div>
+                  <MenuPuntos
+                    opciones={[
+                      { etiqueta: t('adminMirar'), accion: () => mirar(v) },
+                      ...(v.revision !== 'ok'
+                        ? [
+                            {
+                              etiqueta: t('adminMarcarRevisado'),
+                              accion: () =>
+                                void pedir(`/datos/admin/videos/${v.id}/revisado`, {
+                                  method: 'POST',
+                                  headers: panel(),
+                                }).then(() => {
+                                  setVideos((l) =>
+                                    vista === 'moderacion'
+                                      ? l.filter((x) => x.id !== v.id)
+                                      : l.map((x) => (x.id === v.id ? { ...x, revision: 'ok' } : x)),
+                                  );
+                                  cargarResumen();
+                                }),
+                            },
+                          ]
+                        : []),
+                      ...(v.usuario_id
+                        ? [{ etiqueta: t('adminVerFicha'), accion: () => setFicha(v.usuario_id!) }]
+                        : []),
+                      ...(v.privacidad !== 'privado'
+                        ? [{ etiqueta: t('adminSacarDelAire'), accion: () => setSacar(v), peligro: true }]
+                        : []),
+                      {
+                        etiqueta: t('adminBorrarVideo'),
+                        accion: () => setBorrar(v),
+                        peligro: true,
+                        separador: true,
+                      },
+                    ]}
+                  />
+                </article>
               ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="admin-videos">
-            {videos.map((v) => (
-              <article key={v.id} className="admin-video">
-                <button
-                  type="button"
-                  className="admin-miniatura"
-                  onClick={() => mirar(v)}
-                  aria-label={t('adminMirar')}
-                >
-                  {v.tiene_miniatura ? (
-                    <img src={`/media/${v.id}/miniatura?panel=${v.firma}`} alt="" loading="lazy" />
-                  ) : (
-                    <span>▶</span>
-                  )}
-                  <span className="admin-duracion">{formatoTiempo(v.duracion)}</span>
-                </button>
-                <div className="admin-video-datos">
-                  <strong title={v.titulo}>{v.titulo}</strong>
-                  <span>
-                    {v.usuario} · {v.correo}
-                  </span>
-                  <span>
-                    {haceCuanto(v.creado, idioma)} · {tamano(v.bytes)} ·{' '}
-                    {v.privacidad === 'privado' ? `🔒 ${t('privado')}` : `🔗 ${t('adminConEnlace')}`}
-                    {v.estado !== 'listo' ? ` · ${v.estado}` : ''}
-                  </span>
-                </div>
-                <MenuPuntos
-                  opciones={[
-                    { etiqueta: t('adminMirar'), accion: () => mirar(v) },
-                    ...(v.privacidad !== 'privado'
-                      ? [{ etiqueta: t('adminSacarDelAire'), accion: () => setSacar(v), peligro: true }]
-                      : []),
-                  ]}
-                />
-              </article>
-            ))}
-            {videos.length === 0 && <p className="vacio">{t('sinResultados')}</p>}
-          </div>
-        )}
-      </div>
+              {videos.length === 0 && <p className="vacio">{t('sinResultados')}</p>}
+            </div>
+          )}
+        </div>
+      )}
 
       {abierto && (
         <div className="admin-visor" role="dialog" aria-modal="true" aria-label={abierto.titulo}>
@@ -307,10 +351,30 @@ export function Admin() {
               playsInline
             />
             <p className="ayuda">
-              {abierto.usuario} · {abierto.correo} · {t('adminQuedaAnotado')}
+              {abierto.usuario ? `${abierto.usuario} · ${abierto.correo} · ` : ''}
+              {t('adminQuedaAnotado')}
             </p>
           </div>
         </div>
+      )}
+
+      {ficha && <FichaCliente id={ficha} cerrar={() => setFicha(null)} mirar={(v) => mirar(v)} />}
+
+      {borrar && (
+        <Confirmar
+          texto={t('adminConfirmarBorrar').replace('{titulo}', borrar.titulo)}
+          etiquetaSi={t('adminBorrarVideo')}
+          etiquetaNo={t('cancelar')}
+          no={() => setBorrar(null)}
+          si={() => {
+            const v = borrar;
+            setBorrar(null);
+            void pedir(`/datos/admin/videos/${v.id}`, { method: 'DELETE', headers: panel() }).then(() => {
+              setVideos((l) => l.filter((x) => x.id !== v.id));
+              cargarResumen();
+            });
+          }}
+        />
       )}
 
       {sacar && (
@@ -340,8 +404,8 @@ export function Admin() {
           <ul>
             {resumen.registro.map((r, i) => (
               <li key={i}>
-                {haceCuanto(r.momento, idioma)} · {r.nombre} ·{' '}
-                {t(r.accion === 'ver_video' ? 'adminMiro' : 'adminSaco')} {r.objetivo}
+                {haceCuanto(r.momento, idioma)} · {r.nombre} · {ACCION[r.accion]?.[idioma] ?? r.accion}{' '}
+                {r.objetivo}
               </li>
             ))}
           </ul>

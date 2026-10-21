@@ -211,6 +211,14 @@ export type CambioSuscripcion = {
   activa: boolean;
   suscripcion: string;
   cliente: string;
+  /** Estado tal cual lo dice Stripe: active, trialing, past_due, unpaid, canceled, incomplete… */
+  status: string;
+  /** Centavos que se cobran por periodo. */
+  monto: number;
+  intervalo: 'month' | 'year';
+  /** Cuándo se renueva (o termina), en milisegundos. */
+  periodo_fin: number;
+  cancela_al_final: boolean;
 };
 
 /** Lee un aviso de suscripción y dice qué plan queda en la cuenta. null si el aviso no es de suscripciones. */
@@ -220,7 +228,16 @@ export function leerAviso(evento: {
 }): CambioSuscripcion | null {
   if (!evento.type?.startsWith('customer.subscription.')) return null;
   const s = evento.data?.object as
-    { id: string; status: string; customer: string; metadata?: Record<string, string> } | undefined;
+    | {
+        id: string;
+        status: string;
+        customer: string;
+        metadata?: Record<string, string>;
+        current_period_end?: number;
+        cancel_at_period_end?: boolean;
+        items?: { data?: { price?: { unit_amount?: number; recurring?: { interval?: string } } }[] };
+      }
+    | undefined;
   const m = s?.metadata ?? {};
   if (!s || !m.usuario_id || (m.plan !== 'business' && m.plan !== 'business_ia')) return null;
   // Activa mientras está pagada o en prueba; «past_due» conserva el plan unos días mientras Stripe reintenta.
@@ -233,5 +250,19 @@ export function leerAviso(evento: {
     activa,
     suscripcion: s.id,
     cliente: s.customer,
+    status: evento.type === 'customer.subscription.deleted' ? 'canceled' : s.status,
+    monto: s.items?.data?.[0]?.price?.unit_amount ?? 0,
+    intervalo: s.items?.data?.[0]?.price?.recurring?.interval === 'year' ? 'year' : 'month',
+    periodo_fin: (s.current_period_end ?? 0) * 1000,
+    cancela_al_final: Boolean(s.cancel_at_period_end),
   };
+}
+
+/** Ingreso mensual (MRR) en centavos: lo anual cuenta un doceavo por mes. Solo cuentas que pagan de verdad. */
+export function ingresoMensual(filas: { status: string; monto: number; intervalo: string }[]): number {
+  return Math.round(
+    filas
+      .filter((f) => f.status === 'active' || f.status === 'past_due')
+      .reduce((t, f) => t + (f.intervalo === 'year' ? f.monto / 12 : f.monto), 0),
+  );
 }
