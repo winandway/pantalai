@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { ipDePrueba } from './ayuda';
+import { cabecerasDePrueba } from './ayuda';
 
-test.use({ extraHTTPHeaders: { 'cf-connecting-ip': ipDePrueba() } });
+test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
 // CANDADO C-RECORTE-DESCARGA: se cortan las dos puntas con las agarraderas, se guarda,
 // y el MP4 que se descarga ya sale sin ellas.

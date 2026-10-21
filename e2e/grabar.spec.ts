@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { ipDePrueba } from './ayuda';
+import { cabecerasDePrueba } from './ayuda';
 
-test.use({ extraHTTPHeaders: { 'cf-connecting-ip': ipDePrueba() } });
+test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
 // CANDADO C-GRABAR-PUNTA-A-PUNTA: crea cuenta, graba pantalla + cámara de verdad,
 // sube por partes, y el video queda listo, con duración y reproducible.

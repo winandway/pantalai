@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { ipDePrueba } from './ayuda';
+import { cabecerasDePrueba } from './ayuda';
 
-test.use({ extraHTTPHeaders: { 'cf-connecting-ip': ipDePrueba() } });
+test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
 // CANDADO C-IA-FLUJO: con una grabación real, el navegador saca el audio, lo manda en pedazos WAV al
 // servidor y pide el análisis; la página avisa el avance y el final. Las respuestas de la IA se simulan

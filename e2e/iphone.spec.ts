@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { ipDePrueba } from './ayuda';
+import { cabecerasDePrueba } from './ayuda';
 
-test.use({ extraHTTPHeaders: { 'cf-connecting-ip': ipDePrueba() } });
+test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
 // CANDADO C-VIDEO-A-LA-VISTA (iPhone): al darle play, la página NO salta a la transcripción y el video sigue a la vista;
 // el reproductor usa la copia MP4 (Safari no reproduce WebM) y trae subtítulos.

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { ipDePrueba } from './ayuda';
+import { cabecerasDePrueba } from './ayuda';
 
-test.use({ extraHTTPHeaders: { 'cf-connecting-ip': ipDePrueba() } });
+test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
 // CANDADO C-AUDITORIA (21 oct 2026): lo que hace una persona real en Pantalay, de punta a punta, en pantalla.
 // Graba, comenta, reacciona, comparte en privado e insertado, ordena la biblioteca (carpetas, mover, buscar,
