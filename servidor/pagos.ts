@@ -266,3 +266,39 @@ export function ingresoMensual(filas: { status: string; monto: number; intervalo
       .reduce((t, f) => t + (f.intervalo === 'year' ? f.monto / 12 : f.monto), 0),
   );
 }
+
+export type Factura = {
+  tipo: 'pagada' | 'fallida';
+  cliente: string;
+  monto: number;
+  url?: string;
+  pdf?: string;
+  numero?: string;
+};
+
+/** Lee un aviso de factura (invoice.paid / invoice.payment_failed). null si no es de facturas. */
+export function leerFactura(evento: {
+  type?: string;
+  data?: { object?: Record<string, unknown> };
+}): Factura | null {
+  if (evento.type !== 'invoice.paid' && evento.type !== 'invoice.payment_failed') return null;
+  const f = evento.data?.object as
+    | {
+        customer?: string;
+        amount_paid?: number;
+        amount_due?: number;
+        hosted_invoice_url?: string;
+        invoice_pdf?: string;
+        number?: string;
+      }
+    | undefined;
+  if (!f?.customer) return null;
+  return {
+    tipo: evento.type === 'invoice.paid' ? 'pagada' : 'fallida',
+    cliente: f.customer,
+    monto: (evento.type === 'invoice.paid' ? f.amount_paid : f.amount_due) ?? 0,
+    url: f.hosted_invoice_url,
+    pdf: f.invoice_pdf,
+    numero: f.number,
+  };
+}

@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../servidor/app';
-import { firmaValida, formulario, leerAviso, llavePrecio } from '../servidor/pagos';
+import {
+  firmaValida,
+  formulario,
+  ingresoMensual,
+  leerAviso,
+  leerFactura,
+  llavePrecio,
+} from '../servidor/pagos';
 import { almacenFalso, baseFalsa } from './falsos';
 
 const SECRETO = 'whsec_prueba';
@@ -92,6 +99,36 @@ describe('CANDADO C-PAGOS: cobro con Stripe dentro de la página', () => {
     expect(await firmaValida(cuerpo, await firmar(cuerpo, undefined, 'otro'), SECRETO)).toBe(false);
     expect(await firmaValida(cuerpo, undefined, SECRETO)).toBe(false);
     expect(await firmaValida(cuerpo, await firmar(cuerpo), undefined)).toBe(false);
+  });
+
+  it('las facturas: pagada manda su enlace y monto; fallida avisa; lo demás se ignora', () => {
+    const f = (type: string) => ({
+      type,
+      data: {
+        object: {
+          customer: 'cus_1',
+          amount_paid: 1200,
+          amount_due: 1200,
+          hosted_invoice_url: 'https://invoice.stripe.com/i/1',
+          number: 'A-1',
+        },
+      },
+    });
+    expect(leerFactura(f('invoice.paid'))).toMatchObject({
+      tipo: 'pagada',
+      cliente: 'cus_1',
+      monto: 1200,
+      numero: 'A-1',
+    });
+    expect(leerFactura(f('invoice.payment_failed'))!.tipo).toBe('fallida');
+    expect(leerFactura(f('invoice.created'))).toBeNull();
+    expect(
+      ingresoMensual([
+        { status: 'active', monto: 1200, intervalo: 'month' },
+        { status: 'canceled', monto: 900, intervalo: 'month' },
+        { status: 'active', monto: 12000, intervalo: 'year' },
+      ]),
+    ).toBe(2200);
   });
 
   it('el cuerpo va como formulario de Stripe', () => {

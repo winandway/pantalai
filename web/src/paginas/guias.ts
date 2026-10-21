@@ -600,6 +600,60 @@ export const GUIAS: Guia[] = [
     },
   },
   {
+    slug: 'reset-password',
+    seccion: 'cuenta',
+    icono: '🔑',
+    en: {
+      titulo: 'Forgot your password',
+      resumen: 'Get a link by email to create a new password in a minute.',
+      cuerpo: [
+        'On the Log in page, tap “Forgot your password?”.',
+        'Type the email of your account and tap “Send me the link”. For your privacy, the page says the same whether the email has an account or not.',
+        'Within a few minutes you get an email from noreply@pantalay.com. Check your spam folder too. The link works once, for one hour.',
+        'Open it, type your new password twice and save. For your safety, every open session is signed out and you get a second email confirming the change.',
+        'Log in with your new password. If you get the confirmation email and it wasn’t you, ask for a new link right away.',
+      ],
+    },
+    es: {
+      titulo: 'Olvidaste tu contraseña',
+      resumen: 'Recibe un enlace por correo para crear una contraseña nueva en un minuto.',
+      cuerpo: [
+        'En la página de Entrar, toca «¿Olvidaste tu contraseña?».',
+        'Escribe el correo de tu cuenta y toca «Mándame el enlace». Por tu privacidad, la página dice lo mismo tenga cuenta ese correo o no.',
+        'En unos minutos te llega un correo de noreply@pantalay.com. Revisa también la carpeta de spam. El enlace sirve una sola vez, durante una hora.',
+        'Ábrelo, escribe tu contraseña nueva dos veces y guarda. Por tu seguridad se cierran todas las sesiones abiertas y te llega un segundo correo que confirma el cambio.',
+        'Entra con tu contraseña nueva. Si te llega el correo de confirmación y no fuiste tú, pide un enlace nuevo de inmediato.',
+      ],
+    },
+  },
+  {
+    slug: 'emails-from-pantalay',
+    seccion: 'cuenta',
+    icono: '✉️',
+    en: {
+      titulo: 'Emails you get from Pantalay',
+      resumen: 'Welcome, password, plan and invoices: all from noreply@pantalay.com.',
+      cuerpo: [
+        'Pantalay writes to you only when something about your account happens, always from noreply@pantalay.com and in your language.',
+        'Welcome: when you create your account, with a button to record your first video.',
+        'Password: the link to create a new one, and a notice when it changes.',
+        'Plans: when your plan becomes active, each invoice with its link and PDF, if a payment fails (so you don’t lose your plan) and when a plan ends.',
+        'Pantalay never asks for your password or card by email. If you get an email asking for that, it isn’t us.',
+      ],
+    },
+    es: {
+      titulo: 'Los correos que te manda Pantalay',
+      resumen: 'Bienvenida, contraseña, plan y facturas: todos desde noreply@pantalay.com.',
+      cuerpo: [
+        'Pantalay te escribe solo cuando pasa algo con tu cuenta, siempre desde noreply@pantalay.com y en tu idioma.',
+        'Bienvenida: cuando creas tu cuenta, con un botón para grabar tu primer video.',
+        'Contraseña: el enlace para crear una nueva, y un aviso cuando cambia.',
+        'Planes: cuando tu plan queda activo, cada factura con su enlace y su PDF, si un pago no pasa (para que no pierdas tu plan) y cuando un plan termina.',
+        'Pantalay nunca te pide tu contraseña ni tu tarjeta por correo. Si te llega un correo pidiendo eso, no somos nosotros.',
+      ],
+    },
+  },
+  {
     slug: 'library-and-folders',
     seccion: 'cuenta',
     icono: '📁',

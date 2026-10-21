@@ -257,3 +257,15 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   comprobada en cada petición; el superadmin nunca queda bloqueado) y moderación (tabla `revisiones`, borrar video).
   Plan y razones: `docs/SUPERADMIN-PLAN.md`; uso: `docs/SUPERADMIN.md`.
 - Prueba: `pruebas/servidor.test.ts` «C-SUPERADMIN-OPERAR» (comprobada en rojo dejando entrar a un suspendido).
+
+## C-CORREO (20 oct 2026)
+
+- Correos desde `noreply@pantalay.com` con el envío de YaDominios (`servidor/correo.ts`): dominio activado con DKIM,
+  rebotes y DMARC; 300 correos al día en el plan del sitio. Variables del sitio: `CORREO_TOKEN` (el token del sitio,
+  secreto) y `CORREO_SITIO=pantalai`. Canario: `/datos/salud` → `correo`.
+- Bienvenida (registro), recuperar la contraseña (enlace de una hora, un solo uso, cierra todas las sesiones; responde
+  igual exista o no la cuenta), contraseña cambiada, plan activo, factura pagada (con el enlace y el PDF de Stripe),
+  pago fallido y plan terminado (eventos `invoice.paid` e `invoice.payment_failed` agregados al aviso de Stripe).
+- Plantilla corporativa con tablas y estilos en línea (cabecera oscura, franja de colores, botón rojo) y SIEMPRE texto
+  plano además del HTML. Si el envío falla, el registro y los pagos siguen.
+- Pruebas: `pruebas/correo.test.ts` (envío simulado; comprobada en rojo dejando que el enlace sirva dos veces).

@@ -2,6 +2,20 @@
 // Rutas de datos bajo /datos y archivos bajo /media (NUNCA /api: choca con los estáticos).
 import { Hono, type Context } from 'hono';
 import {
+  correoBienvenida,
+  correoClaveCambiada,
+  correoListo,
+  correoPagoFallido,
+  correoPagoRecibido,
+  correoPlanActivo,
+  correoPlanCancelado,
+  correoRecuperar,
+  enviar,
+  type EnvCorreo,
+  type Idioma,
+  type Mensaje,
+} from './correo';
+import {
   archivoGoogle,
   codigosGoogle,
   DOMINIO,
@@ -18,6 +32,7 @@ import {
   ErrorPago,
   firmaValida,
   leerAviso,
+  leerFactura,
   pagoListo,
   precioDe,
   ingresoMensual,
@@ -53,28 +68,29 @@ import {
   type Segmento,
 } from './ia/motor';
 
-export type Env = EnvPago & {
-  DB: D1Database;
-  BUCKET: R2Bucket;
-  ASSETS?: Fetcher;
-  TURNSTILE_SECRET?: string;
-  TURNSTILE_SITE_KEY?: string;
-  CF_ACCOUNT_ID?: string;
-  CF_AI_TOKEN?: string;
-  GEMINI_API_KEY?: string;
-  IA_TOPE_USD_MES?: string;
-  IA_TOPE_MINUTOS_DIA?: string;
-  /** Códigos de verificación de Google Search Console (meta y archivo), separados por coma. */
-  GOOGLE_VERIFICACION?: string;
-  /** Correos de las cuentas superadmin (Soporte), separados por coma. Sin esto el panel no existe para nadie. */
-  SUPERADMIN_CORREOS?: string;
-  /** Dirección secreta del panel de superadmin (secreta). */
-  SUPERADMIN_RUTA?: string;
-  /** Días gratis de la primera suscripción (0 = cobra al momento). */
-  PAGO_DIAS_PRUEBA?: string;
-  /** «1» enciende los límites de los planes (solo con la pasarela de pago probada). */
-  COBRO_ACTIVO?: string;
-};
+export type Env = EnvPago &
+  EnvCorreo & {
+    DB: D1Database;
+    BUCKET: R2Bucket;
+    ASSETS?: Fetcher;
+    TURNSTILE_SECRET?: string;
+    TURNSTILE_SITE_KEY?: string;
+    CF_ACCOUNT_ID?: string;
+    CF_AI_TOKEN?: string;
+    GEMINI_API_KEY?: string;
+    IA_TOPE_USD_MES?: string;
+    IA_TOPE_MINUTOS_DIA?: string;
+    /** Códigos de verificación de Google Search Console (meta y archivo), separados por coma. */
+    GOOGLE_VERIFICACION?: string;
+    /** Correos de las cuentas superadmin (Soporte), separados por coma. Sin esto el panel no existe para nadie. */
+    SUPERADMIN_CORREOS?: string;
+    /** Dirección secreta del panel de superadmin (secreta). */
+    SUPERADMIN_RUTA?: string;
+    /** Días gratis de la primera suscripción (0 = cobra al momento). */
+    PAGO_DIAS_PRUEBA?: string;
+    /** «1» enciende los límites de los planes (solo con la pasarela de pago probada). */
+    COBRO_ACTIVO?: string;
+  };
 
 type Usuario = { id: string; correo: string; nombre: string };
 type Vars = { usuario: Usuario | null };
@@ -382,6 +398,7 @@ app.get('/datos/salud', async (c) => {
       turnstile: Boolean(c.env.TURNSTILE_SECRET),
       // Canario del cobro: claves de Stripe puestas (secreta, publicable y la del aviso) y límites encendidos.
       pago: { listo: pagoListo(c.env), cobro_activo: cobroActivo(c.env) },
+      correo: correoListo(c.env),
       commit: COMMIT,
     },
     ok ? 200 : 500,
@@ -401,7 +418,40 @@ const esquemaRegistro = z.object({
   nombre: z.string().trim().min(1).max(80),
   correo: z.string().trim().toLowerCase().email().max(200),
   clave: z.string().min(8).max(200),
+  idioma: z.enum(['en', 'es']).optional(),
 });
+
+// ---------- correo ----------
+
+/** Hace un trabajo después de responder (si se puede), para que un correo lento no frene a nadie. */
+function despues(c: C, trabajo: Promise<unknown>) {
+  try {
+    c.executionCtx.waitUntil(trabajo);
+  } catch {
+    // Sin contexto de ejecución (pruebas): se espera aquí mismo, sin romper la respuesta.
+    void trabajo;
+  }
+}
+
+async function idiomaDe(c: C, usuarioId: string): Promise<Idioma> {
+  const f = await c.env.DB.prepare('SELECT idioma FROM perfil WHERE usuario_id = ?')
+    .bind(usuarioId)
+    .first<{ idioma: string }>();
+  return f?.idioma === 'es' ? 'es' : 'en';
+}
+
+/** Escribe a una cuenta en su idioma. */
+async function escribir(
+  c: C,
+  usuarioId: string,
+  hacer: (idioma: Idioma, nombre: string) => Omit<Mensaje, 'para'>,
+): Promise<boolean> {
+  const u = await c.env.DB.prepare('SELECT correo, nombre FROM usuarios WHERE id = ?')
+    .bind(usuarioId)
+    .first<{ correo: string; nombre: string }>();
+  if (!u) return false;
+  return enviar(c.env, { para: u.correo, ...hacer(await idiomaDe(c, usuarioId), u.nombre) });
+}
 const esquemaEntrar = z.object({
   correo: z.string().trim().toLowerCase().email().max(200),
   clave: z.string().min(1).max(200),
@@ -443,7 +493,14 @@ app.post('/datos/registro', async (c) => {
   )
     .bind(id, d.correo, d.nombre, await hashClave(d.clave, sal), sal, Date.now())
     .run();
+  await c.env.DB.prepare('INSERT OR REPLACE INTO perfil (usuario_id, idioma) VALUES (?, ?)')
+    .bind(id, d.idioma ?? 'en')
+    .run();
   await abrirSesion(c, id);
+  despues(
+    c,
+    escribir(c, id, (i, n) => correoBienvenida(i, n)),
+  );
   return c.json({ usuario: { id, correo: d.correo, nombre: d.nombre } }, 201);
 });
 
@@ -464,6 +521,72 @@ app.post('/datos/entrar', async (c) => {
   // Al superadmin se le dice adónde ir: directo a su panel secreto.
   const panel = rutaPanel(c.env) && correoSuperadmin(c.env, u.correo) ? rutaPanel(c.env) : null;
   return c.json({ usuario: { id: u.id, correo: u.correo, nombre: u.nombre }, panel });
+});
+
+// ---------- recuperar la contraseña ----------
+
+const UNA_HORA = 60 * 60 * 1000;
+
+// Siempre responde lo mismo (exista o no la cuenta): así nadie puede averiguar qué correos están registrados.
+app.post('/datos/recuperar', async (c) => {
+  const d = await cuerpo(
+    c,
+    z.object({
+      correo: z.string().trim().toLowerCase().email().max(200),
+      idioma: z.enum(['en', 'es']).optional(),
+    }),
+  );
+  if (!d) return err(c, 400, 'datos');
+  if (
+    !(await dentroDelLimite(c.env.DB, 'recuperar', ip(c), 5, 15 * 60 * 1000)) ||
+    !(await dentroDelLimite(c.env.DB, 'recuperar_correo', d.correo, 3, UNA_HORA))
+  )
+    return err(c, 429, 'demasiados');
+  const u = await c.env.DB.prepare('SELECT id FROM usuarios WHERE correo = ?')
+    .bind(d.correo)
+    .first<{ id: string }>();
+  if (u && !(await c.env.DB.prepare('SELECT 1 FROM suspensiones WHERE usuario_id = ?').bind(u.id).first())) {
+    const token = aleatorio(32);
+    await c.env.DB.prepare('INSERT INTO recuperaciones (token_hash, usuario_id, vence) VALUES (?, ?, ?)')
+      .bind(await sha256(token), u.id, Date.now() + UNA_HORA)
+      .run();
+    const enlace = `${DOMINIO}/reset-password?token=${token}`;
+    despues(
+      c,
+      escribir(c, u.id, (i, n) => correoRecuperar(i, n, enlace)),
+    );
+  }
+  return c.json({ ok: true });
+});
+
+app.post('/datos/restablecer', async (c) => {
+  if (!(await dentroDelLimite(c.env.DB, 'restablecer', ip(c), 10, 15 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const d = await cuerpo(
+    c,
+    z.object({ token: z.string().min(20).max(200), clave: z.string().min(8).max(200) }),
+  );
+  if (!d) return err(c, 400, 'datos');
+  const f = await c.env.DB.prepare('SELECT usuario_id, vence, usado FROM recuperaciones WHERE token_hash = ?')
+    .bind(await sha256(d.token))
+    .first<{ usuario_id: string; vence: number; usado: number }>();
+  if (!f || f.usado || f.vence < Date.now()) return err(c, 400, 'enlace_vencido');
+  const sal = aleatorio(16);
+  // Contraseña nueva, enlace usado y TODAS las sesiones cerradas (si alguien había entrado, sale).
+  await c.env.DB.batch([
+    c.env.DB.prepare('UPDATE usuarios SET clave_hash = ?, clave_sal = ? WHERE id = ?').bind(
+      await hashClave(d.clave, sal),
+      sal,
+      f.usuario_id,
+    ),
+    c.env.DB.prepare('UPDATE recuperaciones SET usado = 1 WHERE usuario_id = ?').bind(f.usuario_id),
+    c.env.DB.prepare('DELETE FROM sesiones WHERE usuario_id = ?').bind(f.usuario_id),
+  ]);
+  despues(
+    c,
+    escribir(c, f.usuario_id, (i, n) => correoClaveCambiada(i, n)),
+  );
+  return c.json({ ok: true });
 });
 
 app.post('/datos/salir', async (c) => {
@@ -594,9 +717,48 @@ app.post('/datos/pago/aviso', async (c) => {
   } catch {
     return err(c, 400, 'datos');
   }
+  // Facturas: pagada (manda la factura) o fallida (avisa para no perder el plan).
+  const factura = leerFactura(evento);
+  if (factura) {
+    const f = await c.env.DB.prepare('SELECT usuario_id FROM pagos_stripe WHERE cliente = ?')
+      .bind(factura.cliente)
+      .first<{ usuario_id: string }>();
+    if (f && factura.tipo === 'pagada' && factura.monto > 0)
+      despues(
+        c,
+        escribir(c, f.usuario_id, (i, n) =>
+          correoPagoRecibido(i, n, {
+            monto: factura.monto,
+            factura: factura.url,
+            pdf: factura.pdf,
+            numero: factura.numero,
+          }),
+        ),
+      );
+    if (f && factura.tipo === 'fallida')
+      despues(
+        c,
+        escribir(c, f.usuario_id, (i, n) => correoPagoFallido(i, n, factura.url)),
+      );
+    return c.json({ ok: true });
+  }
   const cambio = leerAviso(evento);
   if (!cambio) return c.json({ ok: true, ignorado: true });
   const ahora = Date.now();
+  const antes = await c.env.DB.prepare('SELECT status FROM estado_stripe WHERE usuario_id = ?')
+    .bind(cambio.usuario_id)
+    .first<{ status: string }>();
+  const estabaActiva = antes && ['active', 'trialing', 'past_due'].includes(antes.status);
+  if (cambio.activa && !estabaActiva)
+    despues(
+      c,
+      escribir(c, cambio.usuario_id, (i, n) => correoPlanActivo(i, n, cambio.plan)),
+    );
+  if (!cambio.activa && estabaActiva && cambio.status === 'canceled')
+    despues(
+      c,
+      escribir(c, cambio.usuario_id, (i, n) => correoPlanCancelado(i, n)),
+    );
   await c.env.DB.batch([
     c.env.DB.prepare(
       `INSERT INTO suscripciones (usuario_id, plan, fundador, estado, actualizado) VALUES (?, ?, 1, ?, ?)

@@ -12,7 +12,7 @@ import { ContextoSesion } from './logica/sesion';
 import { Biblioteca } from './paginas/Biblioteca';
 import { Docs } from './paginas/Docs';
 import { Editar } from './paginas/Editar';
-import { Entrar } from './paginas/Entrar';
+import { Entrar, Recuperar, Restablecer } from './paginas/Entrar';
 import { Grabar } from './paginas/Grabar';
 import { Inicio } from './paginas/Inicio';
 import { PaginaVideo } from './paginas/Video';
@@ -71,6 +71,8 @@ export function App() {
   else if (partes[0] === 'v' && partes[1] && partes[2] === 'edit') pagina = <Editar id={partes[1]} />;
   else if (partes[0] === 'v' && partes[1]) pagina = <PaginaVideo id={partes[1]} />;
   else if (ruta === '/login' || ruta === '/signup') pagina = <Entrar registro={ruta === '/signup'} />;
+  else if (ruta === '/forgot-password') pagina = <Recuperar />;
+  else if (ruta === '/reset-password') pagina = <Restablecer />;
   else if (ruta === '/library') pagina = <Biblioteca />;
   else if (ruta === '/record') pagina = <Grabar />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;

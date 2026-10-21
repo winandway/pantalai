@@ -3448,3 +3448,103 @@ main {
 .admin-seguridad h3 {
   margin: 22px 0 8px;
 }
+
+.olvide {
+  margin: -4px 0 12px;
+  text-align: right;
+  font-size: 14px;
+}
+.exito-caja {
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  background: #e6f6ec;
+  color: #14532d;
+}
+
+/* Superadmin: menú lateral */
+.admin-marco {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: calc(100vh - 62px);
+}
+.admin-marco .admin {
+  max-width: none;
+  margin: 0;
+  padding: 24px 28px 60px;
+}
+.admin-lateral {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: calc(100vh - 62px);
+  padding: 22px 14px;
+  background: #0f1115;
+  color: #fff;
+}
+.admin-lateral-titulo {
+  margin: 0 8px 18px;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.admin-lateral nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.admin-lateral nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.admin-lateral nav button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.admin-lateral nav button.activo {
+  background: #fff;
+  color: var(--tinta);
+}
+.admin-lateral nav button b {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 12px;
+}
+.admin-lateral nav button.activo b {
+  background: var(--fondo-suave);
+}
+@media (max-width: 860px) {
+  .admin-marco {
+    grid-template-columns: 1fr;
+  }
+  .admin-lateral {
+    position: static;
+    height: auto;
+    padding: 10px;
+    overflow-x: auto;
+  }
+  .admin-lateral-titulo {
+    display: none;
+  }
+  .admin-lateral nav {
+    flex-direction: row;
+  }
+  .admin-lateral nav button {
+    width: auto;
+    white-space: nowrap;
+  }
+  .admin-marco .admin {
+    padding: 18px 16px 48px;
+  }
+}

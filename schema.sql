@@ -204,3 +204,15 @@ CREATE TABLE IF NOT EXISTS revisiones (
   admin_id TEXT NOT NULL,
   momento INTEGER NOT NULL
 );
+
+-- Correo (20 oct 2026): idioma de cada cuenta para escribirle en el suyo, y enlaces para recuperar la contraseña.
+CREATE TABLE IF NOT EXISTS perfil (
+  usuario_id TEXT PRIMARY KEY,
+  idioma TEXT NOT NULL DEFAULT 'en'
+);
+CREATE TABLE IF NOT EXISTS recuperaciones (
+  token_hash TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  vence INTEGER NOT NULL,
+  usado INTEGER NOT NULL DEFAULT 0
+);
