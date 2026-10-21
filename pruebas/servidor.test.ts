@@ -766,3 +766,49 @@ describe('CANDADO C-SUPERADMIN-OPERAR: pagos, ficha, suspender, bloquear IP y mo
     expect(r.resumen).toMatchObject({ pagan: 2, gratis: 0, mrr: 2200 });
   });
 });
+
+describe('CANDADO C-ALMACEN: el superadmin ve cuánto ocupa todo y el estado del sistema', () => {
+  const RUTA = '/panel/prueba-secreta-1234567';
+  const P = { 'x-panel': RUTA };
+  it('suma originales y copias MP4, por cuenta y por video, frente al tope del plan', async () => {
+    env = {
+      ...env,
+      SUPERADMIN_CORREOS: 'soporte@example.com',
+      SUPERADMIN_RUTA: RUTA,
+      ALMACEN_LIMITE_GB: '20',
+    } as typeof env;
+    const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    const { id } = await videoListo(ana);
+    await env.DB.prepare(
+      "INSERT INTO video_mp4 (video_id, estado, bytes, actualizado) VALUES (?, 'listo', 1000000, 0)",
+    )
+      .bind(id)
+      .run();
+    const admin = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    const a = (await (await admin('/datos/admin/almacen', { headers: P })).json()) as {
+      total: number;
+      originales: number;
+      mp4: number;
+      limite: number;
+      por_minuto: number;
+      usuarios: { correo: string; bytes: number }[];
+      mayores: { id: string; mp4: number }[];
+    };
+    expect(a.originales).toBe(PARTE_MIN + 1000);
+    expect(a.mp4).toBe(1_000_000);
+    expect(a.total).toBeGreaterThanOrEqual(a.originales + a.mp4);
+    expect(a.limite).toBe(20e9);
+    expect(a.por_minuto).toBeGreaterThan(0);
+    expect(a.usuarios[0]).toMatchObject({ correo: 'ana@example.com', bytes: PARTE_MIN + 1000 + 1_000_000 });
+    expect(a.mayores[0]).toMatchObject({ id, mp4: 1_000_000 });
+    expect((await ana('/datos/admin/almacen', { headers: P })).status).toBe(404);
+    const s = (await (await admin('/datos/admin/sistema', { headers: P })).json()) as {
+      correo: { cuota_dia: number };
+      ia: { tope_usd_mes: number };
+      pago: { listo: boolean };
+    };
+    expect(s.correo.cuota_dia).toBe(300);
+    expect(s.ia.tope_usd_mes).toBeGreaterThan(0);
+    expect(s.pago.listo).toBe(false);
+  });
+});

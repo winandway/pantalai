@@ -88,6 +88,10 @@ export type Env = EnvPago &
     SUPERADMIN_RUTA?: string;
     /** Días gratis de la primera suscripción (0 = cobra al momento). */
     PAGO_DIAS_PRUEBA?: string;
+    /** Gigas de almacenamiento que trae el plan del sitio en YaDominios (Galaxia: 20). */
+    ALMACEN_LIMITE_GB?: string;
+    /** Correos al día que trae el plan del sitio (Galaxia: 300). */
+    CORREO_CUOTA_DIA?: string;
     /** «1» enciende los límites de los planes (solo con la pasarela de pago probada). */
     COBRO_ACTIVO?: string;
   };
@@ -450,7 +454,14 @@ async function escribir(
     .bind(usuarioId)
     .first<{ correo: string; nombre: string }>();
   if (!u) return false;
-  return enviar(c.env, { para: u.correo, ...hacer(await idiomaDe(c, usuarioId), u.nombre) });
+  const ok = await enviar(c.env, { para: u.correo, ...hacer(await idiomaDe(c, usuarioId), u.nombre) });
+  await c.env.DB.prepare(
+    `INSERT INTO correo_dia (dia, enviados, fallidos) VALUES (?, ?, ?)
+     ON CONFLICT (dia) DO UPDATE SET enviados = enviados + excluded.enviados, fallidos = fallidos + excluded.fallidos`,
+  )
+    .bind(new Date().toISOString().slice(0, 10), ok ? 1 : 0, ok ? 0 : 1)
+    .run();
+  return ok;
 }
 const esquemaEntrar = z.object({
   correo: z.string().trim().toLowerCase().email().max(200),
@@ -947,6 +958,124 @@ app.delete('/datos/admin/videos/:id', requiereSuperadmin, async (c) => {
   await borrarVideo(c, v);
   await anotarAdmin(c, 'borrar_video', `${v.id} · ${v.titulo} · dueño ${v.usuario_id}`);
   return c.json({ ok: true });
+});
+
+// ---------- superadmin: almacenamiento y estado del sistema ----------
+
+const DIA = 24 * 3600 * 1000;
+
+app.get('/datos/admin/almacen', requiereSuperadmin, async (c) => {
+  const db = c.env.DB;
+  const ahora = Date.now();
+  const [tot, semana, mes, usuarios, videos] = await Promise.all([
+    db
+      .prepare(
+        `SELECT COUNT(*) AS videos, COALESCE(SUM(v.bytes), 0) AS originales, COALESCE(SUM(v.duracion), 0) AS segundos,
+           COALESCE(SUM(CASE WHEN m.estado = 'listo' THEN m.bytes ELSE 0 END), 0) AS mp4,
+           COALESCE(SUM(v.tiene_miniatura), 0) AS miniaturas
+         FROM videos v LEFT JOIN video_mp4 m ON m.video_id = v.id`,
+      )
+      .first<{ videos: number; originales: number; segundos: number; mp4: number; miniaturas: number }>(),
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(v.bytes), 0) + COALESCE(SUM(m.bytes), 0) AS b FROM videos v
+         LEFT JOIN video_mp4 m ON m.video_id = v.id WHERE v.creado > ?`,
+      )
+      .bind(ahora - 7 * DIA)
+      .first<{ b: number }>(),
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(v.bytes), 0) + COALESCE(SUM(m.bytes), 0) AS b FROM videos v
+         LEFT JOIN video_mp4 m ON m.video_id = v.id WHERE v.creado > ?`,
+      )
+      .bind(ahora - 30 * DIA)
+      .first<{ b: number }>(),
+    db
+      .prepare(
+        `SELECT u.id, u.nombre, u.correo, COUNT(v.id) AS videos,
+           COALESCE(SUM(v.bytes), 0) + COALESCE(SUM(m.bytes), 0) AS bytes
+         FROM usuarios u JOIN videos v ON v.usuario_id = u.id LEFT JOIN video_mp4 m ON m.video_id = v.id
+         GROUP BY u.id ORDER BY bytes DESC LIMIT 15`,
+      )
+      .all(),
+    db
+      .prepare(
+        `SELECT v.id, v.titulo, v.duracion, v.bytes AS original, COALESCE(m.bytes, 0) AS mp4, u.nombre AS usuario,
+           v.usuario_id
+         FROM videos v JOIN usuarios u ON u.id = v.usuario_id LEFT JOIN video_mp4 m ON m.video_id = v.id
+         ORDER BY v.bytes + COALESCE(m.bytes, 0) DESC LIMIT 15`,
+      )
+      .all(),
+  ]);
+  const t = tot ?? { videos: 0, originales: 0, segundos: 0, mp4: 0, miniaturas: 0 };
+  // Las miniaturas no se miden una por una: pesan unos 60 KB cada una.
+  const miniaturas = t.miniaturas * 60_000;
+  const total = t.originales + t.mp4 + miniaturas;
+  const limiteGb = Number(c.env.ALMACEN_LIMITE_GB ?? 20) || 20;
+  const minutos = t.segundos / 60;
+  return c.json(
+    {
+      total,
+      originales: t.originales,
+      mp4: t.mp4,
+      miniaturas,
+      videos: t.videos,
+      minutos: Math.round(minutos),
+      limite: limiteGb * 1e9,
+      // Cuánto ocupa en promedio cada minuto grabado (original + copia MP4).
+      por_minuto: minutos > 0 ? Math.round(total / minutos) : 0,
+      ultimos_7_dias: semana?.b ?? 0,
+      ultimos_30_dias: mes?.b ?? 0,
+      usuarios: usuarios.results,
+      mayores: videos.results,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.get('/datos/admin/sistema', requiereSuperadmin, async (c) => {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const [ia, correoHoy, correoMes, intentos] = await Promise.all([
+    gastoDelMes(c.env.DB),
+    c.env.DB.prepare('SELECT enviados, fallidos FROM correo_dia WHERE dia = ?')
+      .bind(hoy)
+      .first<{ enviados: number; fallidos: number }>(),
+    c.env.DB.prepare('SELECT COALESCE(SUM(enviados), 0) AS n FROM correo_dia WHERE dia >= ?')
+      .bind(hoy.slice(0, 8) + '01')
+      .first<{ n: number }>(),
+    c.env.DB.prepare("SELECT COUNT(*) AS n FROM registro_admin WHERE accion = 'intento' AND momento > ?")
+      .bind(Date.now() - DIA)
+      .first<{ n: number }>(),
+  ]);
+  const t = topes(c.env);
+  return c.json(
+    {
+      ia: {
+        ...iaConfigurada(c.env),
+        usd_mes: ia.usd,
+        tope_usd_mes: t.usdMes,
+        minutos_hoy: ia.minutosHoy,
+        tope_minutos_dia: t.minutosDia,
+      },
+      correo: {
+        listo: correoListo(c.env),
+        hoy: correoHoy?.enviados ?? 0,
+        fallidos_hoy: correoHoy?.fallidos ?? 0,
+        mes: correoMes?.n ?? 0,
+        cuota_dia: Number(c.env.CORREO_CUOTA_DIA ?? 300) || 300,
+      },
+      pago: {
+        listo: pagoListo(c.env),
+        cobro_activo: cobroActivo(c.env),
+        cuenta: c.env.STRIPE_PUBLICABLE?.startsWith('pk_live') ? 'vivo' : 'prueba',
+      },
+      seguridad: { turnstile: Boolean(c.env.TURNSTILE_SECRET), intentos_24h: intentos?.n ?? 0 },
+      version: COMMIT,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
 });
 
 // ---------- superadmin: pagos ----------

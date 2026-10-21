@@ -9,7 +9,16 @@ import { haceCuanto, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { formatoTiempo } from '../logica/tiempo';
-import { FichaCliente, NOMBRE_PLAN, panel, PestanaPagos, PestanaSeguridad, tamano } from './AdminPartes';
+import {
+  FichaCliente,
+  NOMBRE_PLAN,
+  panel,
+  PestanaAlmacen,
+  PestanaPagos,
+  PestanaSeguridad,
+  PestanaSistema,
+  tamano,
+} from './AdminPartes';
 
 type Resumen = {
   usuarios: number;
@@ -67,7 +76,7 @@ export function Admin() {
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [negado, setNegado] = useState(false);
   const [vista, setVista] = useState<
-    'usuarios' | 'videos' | 'moderacion' | 'pagos' | 'seguridad' | 'registro'
+    'usuarios' | 'videos' | 'moderacion' | 'pagos' | 'almacen' | 'sistema' | 'seguridad' | 'registro'
   >('usuarios');
   const [ficha, setFicha] = useState<string | null>(null);
   const [borrar, setBorrar] = useState<FilaVideo | null>(null);
@@ -137,6 +146,8 @@ export function Admin() {
     ['videos', '🎬', t('adminVideos'), resumen.videos],
     ['moderacion', '🧐', t('adminModeracion'), null],
     ['pagos', '💳', t('adminPagos'), null],
+    ['almacen', '💾', t('adminAlmacen'), null],
+    ['sistema', '⚙️', t('adminSistema'), null],
     ['seguridad', '🔒', t('adminSeguridad'), null],
     ['registro', '📜', t('adminRegistro'), null],
   ] as const;
@@ -201,7 +212,7 @@ export function Admin() {
         </div>
 
         <div className="admin-barra">
-          {vista !== 'pagos' && vista !== 'seguridad' && vista !== 'registro' && (
+          {(vista === 'usuarios' || vista === 'videos' || vista === 'moderacion') && (
             <input
               type="search"
               value={q}
@@ -223,6 +234,8 @@ export function Admin() {
 
         {vista === 'pagos' && <PestanaPagos abrirFicha={setFicha} />}
         {vista === 'seguridad' && <PestanaSeguridad />}
+        {vista === 'almacen' && <PestanaAlmacen abrirFicha={setFicha} />}
+        {vista === 'sistema' && <PestanaSistema />}
         {(vista === 'usuarios' || vista === 'videos' || vista === 'moderacion') && (
           <div className="admin-tabla-marco">
             {vista === 'usuarios' ? (

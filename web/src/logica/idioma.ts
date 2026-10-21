@@ -209,6 +209,8 @@ const en = {
   adminModeracionAyuda:
     'Videos nobody has reviewed yet, newest first. Watch them and mark them OK, take them offline or delete them.',
   adminPagos: 'Payments',
+  adminAlmacen: 'Storage',
+  adminSistema: 'System',
   adminSeguridad: 'Security',
   adminMarcarRevisado: 'Mark as reviewed (OK)',
   adminVerFicha: 'Open customer profile',
@@ -596,6 +598,8 @@ const es: Record<Clave, string> = {
   adminModeracionAyuda:
     'Los videos que todavía nadie revisó, del más nuevo al más viejo. Míralos y márcalos como revisados, sácalos del aire o bórralos.',
   adminPagos: 'Pagos',
+  adminAlmacen: 'Almacenamiento',
+  adminSistema: 'Sistema',
   adminSeguridad: 'Seguridad',
   adminMarcarRevisado: 'Marcar como revisado (está bien)',
   adminVerFicha: 'Ver la ficha del cliente',

@@ -557,3 +557,301 @@ export function PestanaSeguridad() {
     </div>
   );
 }
+
+type Almacen = {
+  total: number;
+  originales: number;
+  mp4: number;
+  miniaturas: number;
+  videos: number;
+  minutos: number;
+  limite: number;
+  por_minuto: number;
+  ultimos_7_dias: number;
+  ultimos_30_dias: number;
+  usuarios: { id: string; nombre: string; correo: string; videos: number; bytes: number }[];
+  mayores: {
+    id: string;
+    titulo: string;
+    duracion: number;
+    original: number;
+    mp4: number;
+    usuario: string;
+    usuario_id: string;
+  }[];
+};
+
+/** Cuántos días faltan para llenar el espacio al ritmo de los últimos 30 días (null si no crece). */
+export function diasParaLlenar(libre: number, ultimos30: number): number | null {
+  if (ultimos30 <= 0) return null;
+  return Math.max(0, Math.round(libre / (ultimos30 / 30)));
+}
+
+export function PestanaAlmacen({ abrirFicha }: { abrirFicha: (id: string) => void }) {
+  const { idioma } = useIdioma();
+  const es = idioma === 'es';
+  const [d, setD] = useState<Almacen | null>(null);
+  useEffect(() => {
+    void pedir<Almacen>('/datos/admin/almacen', { headers: panel() }).then(setD);
+  }, []);
+  if (!d) return <div className="cargando" aria-busy="true" />;
+  const uso = Math.min(1, d.total / d.limite);
+  const libre = Math.max(0, d.limite - d.total);
+  const horas = d.por_minuto > 0 ? libre / (d.por_minuto * 60) : null;
+  const dias = diasParaLlenar(libre, d.ultimos_30_dias);
+  const color = uso > 0.9 ? 'mal' : uso > 0.7 ? 'aviso' : 'bien';
+  return (
+    <div className="admin-almacen">
+      <div className="admin-almacen-barra">
+        <div className="admin-almacen-cabeza">
+          <strong>
+            {tamano(d.total)} {es ? 'de' : 'of'} {tamano(d.limite)}
+          </strong>
+          <span>
+            {Math.round(uso * 1000) / 10} % {es ? 'usado' : 'used'}
+          </span>
+        </div>
+        <div
+          className={`admin-medidor ${color}`}
+          role="meter"
+          aria-valuenow={Math.round(uso * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <span style={{ width: `${Math.max(1, (d.originales / d.limite) * 100)}%` }} className="original" />
+          <span style={{ width: `${(d.mp4 / d.limite) * 100}%` }} className="mp4" />
+          <span style={{ width: `${(d.miniaturas / d.limite) * 100}%` }} className="mini" />
+        </div>
+        <p className="admin-leyenda">
+          <i className="original" /> {es ? 'Grabaciones originales' : 'Original recordings'}{' '}
+          {tamano(d.originales)} · <i className="mp4" /> {es ? 'Copias MP4' : 'MP4 copies'} {tamano(d.mp4)} ·{' '}
+          <i className="mini" /> {es ? 'Miniaturas' : 'Thumbnails'} {tamano(d.miniaturas)}
+        </p>
+        {uso > 0.7 && (
+          <p className="admin-suspendida" role="alert">
+            ⚠️{' '}
+            {es
+              ? 'El espacio se está llenando. Habla con Windoce para subir el almacenamiento antes de que se llene.'
+              : 'Storage is filling up. Raise the storage limit before it runs out.'}
+          </p>
+        )}
+      </div>
+      <div className="admin-cifras">
+        <div>
+          <span>{es ? 'Videos guardados' : 'Stored videos'}</span>
+          <strong>{d.videos}</strong>
+          <small>
+            {d.minutos} {es ? 'minutos grabados' : 'minutes recorded'}
+          </small>
+        </div>
+        <div>
+          <span>{es ? 'Cada minuto ocupa' : 'Each minute takes'}</span>
+          <strong>{tamano(d.por_minuto)}</strong>
+          <small>{es ? 'original + copia MP4' : 'original + MP4 copy'}</small>
+        </div>
+        <div>
+          <span>{es ? 'Crecimiento' : 'Growth'}</span>
+          <strong>+{tamano(d.ultimos_30_dias)}</strong>
+          <small>
+            {es ? 'en 30 días' : 'in 30 days'} · +{tamano(d.ultimos_7_dias)} {es ? 'en 7' : 'in 7'}
+          </small>
+        </div>
+        <div>
+          <span>{es ? 'Todavía caben' : 'Still fits'}</span>
+          <strong>{horas === null ? '—' : `${Math.round(horas)} h`}</strong>
+          <small>
+            {dias === null
+              ? es
+                ? 'de video'
+                : 'of video'
+              : dias > 730
+                ? es
+                  ? `a este ritmo, más de ${Math.floor(dias / 365)} años`
+                  : `at this pace, over ${Math.floor(dias / 365)} years`
+                : es
+                  ? `se llena en unos ${dias} días`
+                  : `full in about ${dias} days`}
+          </small>
+        </div>
+      </div>
+      <div className="admin-dos">
+        <div>
+          <h3>{es ? 'Quién ocupa más' : 'Who uses the most'}</h3>
+          <table className="admin-tabla">
+            <tbody>
+              {d.usuarios.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <button type="button" className="enlace" onClick={() => abrirFicha(u.id)}>
+                      {u.nombre}
+                    </button>
+                    <br />
+                    <small>{u.correo}</small>
+                  </td>
+                  <td>
+                    {u.videos} {u.videos === 1 ? 'video' : 'videos'}
+                  </td>
+                  <td>
+                    <b>{tamano(u.bytes)}</b>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>{es ? 'Los videos más pesados' : 'Heaviest videos'}</h3>
+          <table className="admin-tabla">
+            <tbody>
+              {d.mayores.map((v) => (
+                <tr key={v.id}>
+                  <td>
+                    <button type="button" className="enlace" onClick={() => abrirFicha(v.usuario_id)}>
+                      {v.titulo}
+                    </button>
+                    <br />
+                    <small>
+                      {v.usuario} · {formatoTiempo(v.duracion)}
+                    </small>
+                  </td>
+                  <td>
+                    <b>{tamano(v.original + v.mp4)}</b>
+                    <br />
+                    <small>
+                      {tamano(v.original)} + MP4 {tamano(v.mp4)}
+                    </small>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type Sistema = {
+  ia: {
+    oido: boolean;
+    cerebro: boolean;
+    usd_mes: number;
+    tope_usd_mes: number;
+    minutos_hoy: number;
+    tope_minutos_dia: number;
+  };
+  correo: { listo: boolean; hoy: number; fallidos_hoy: number; mes: number; cuota_dia: number };
+  pago: { listo: boolean; cobro_activo: boolean; cuenta: string };
+  seguridad: { turnstile: boolean; intentos_24h: number };
+  version: string;
+};
+
+export function PestanaSistema() {
+  const { idioma } = useIdioma();
+  const es = idioma === 'es';
+  const [d, setD] = useState<Sistema | null>(null);
+  useEffect(() => {
+    void pedir<Sistema>('/datos/admin/sistema', { headers: panel() }).then(setD);
+  }, []);
+  if (!d) return <div className="cargando" aria-busy="true" />;
+  const luz = (ok: boolean, si: string, no: string) => (
+    <span className={`estado-pago ${ok ? 'bien' : 'mal'}`}>{ok ? si : no}</span>
+  );
+  const dolar = (n: number) => `$${n.toFixed(2)}`;
+  return (
+    <div className="admin-sistema">
+      <div className="admin-tarjetas">
+        <section>
+          <h3>🧠 {es ? 'Inteligencia artificial' : 'AI'}</h3>
+          <p>
+            {luz(
+              d.ia.oido,
+              es ? 'Transcripción encendida' : 'Transcription on',
+              es ? 'Transcripción apagada' : 'Transcription off',
+            )}{' '}
+            {luz(d.ia.cerebro, es ? 'Gemini encendido' : 'Gemini on', es ? 'Gemini apagado' : 'Gemini off')}
+          </p>
+          <p className="admin-grande">
+            {dolar(d.ia.usd_mes)}{' '}
+            <small>
+              / {dolar(d.ia.tope_usd_mes)} {es ? 'este mes' : 'this month'}
+            </small>
+          </p>
+          <div className={`admin-medidor ${d.ia.usd_mes / d.ia.tope_usd_mes > 0.8 ? 'mal' : 'bien'}`}>
+            <span
+              className="original"
+              style={{ width: `${Math.min(100, (d.ia.usd_mes / d.ia.tope_usd_mes) * 100)}%` }}
+            />
+          </div>
+          <p className="ayuda">
+            {d.ia.minutos_hoy} / {d.ia.tope_minutos_dia}{' '}
+            {es
+              ? 'minutos transcritos hoy. Si se llega al tope, la IA se detiene sola.'
+              : 'minutes transcribed today. AI stops by itself at the cap.'}
+          </p>
+        </section>
+        <section>
+          <h3>✉️ {es ? 'Correo' : 'Email'}</h3>
+          <p>{luz(d.correo.listo, 'noreply@pantalay.com', es ? 'Sin configurar' : 'Not set up')}</p>
+          <p className="admin-grande">
+            {d.correo.hoy}{' '}
+            <small>
+              / {d.correo.cuota_dia} {es ? 'hoy' : 'today'}
+            </small>
+          </p>
+          <div className={`admin-medidor ${d.correo.hoy / d.correo.cuota_dia > 0.8 ? 'mal' : 'bien'}`}>
+            <span
+              className="original"
+              style={{ width: `${Math.min(100, (d.correo.hoy / d.correo.cuota_dia) * 100)}%` }}
+            />
+          </div>
+          <p className="ayuda">
+            {d.correo.mes} {es ? 'este mes' : 'this month'} · {d.correo.fallidos_hoy}{' '}
+            {es ? 'fallidos hoy' : 'failed today'}
+          </p>
+        </section>
+        <section>
+          <h3>💳 Stripe</h3>
+          <p>
+            {luz(d.pago.listo, es ? 'Conectado' : 'Connected', es ? 'Sin conectar' : 'Not connected')}{' '}
+            <span className="estado-pago">
+              {d.pago.cuenta === 'vivo'
+                ? es
+                  ? 'Cuenta real'
+                  : 'Live account'
+                : es
+                  ? 'Modo de prueba'
+                  : 'Test mode'}
+            </span>
+          </p>
+          <p className="ayuda">
+            {d.pago.cobro_activo
+              ? es
+                ? 'Los límites del plan gratis están encendidos.'
+                : 'Free plan limits are on.'
+              : es
+                ? 'Los límites del plan gratis están apagados: todos tienen todo hasta encenderlos.'
+                : 'Free plan limits are off: everyone has everything until you turn them on.'}
+          </p>
+        </section>
+        <section>
+          <h3>🔒 {es ? 'Seguridad' : 'Security'}</h3>
+          <p>
+            {luz(
+              d.seguridad.turnstile,
+              es ? 'Escudo anti-robots encendido' : 'Bot shield on',
+              es ? 'Escudo anti-robots apagado' : 'Bot shield off',
+            )}
+          </p>
+          <p className="admin-grande">
+            {d.seguridad.intentos_24h}{' '}
+            <small>{es ? 'intentos al panel en 24 h' : 'panel attempts in 24 h'}</small>
+          </p>
+          <p className="ayuda">
+            {es ? 'Versión publicada' : 'Published version'}: <code>{d.version}</code>
+          </p>
+        </section>
+      </div>
+    </div>
+  );
+}

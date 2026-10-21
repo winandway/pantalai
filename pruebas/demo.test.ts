@@ -21,3 +21,13 @@ describe('pantallas de la demo', () => {
     expect(PANTALLAS).toEqual(['plan', 'tienda', 'ventas']);
   });
 });
+
+describe('almacenamiento del superadmin', () => {
+  it('calcula en cuántos días se llena al ritmo del último mes', async () => {
+    const { diasParaLlenar, tamano } = await import('../web/src/paginas/AdminPartes');
+    expect(diasParaLlenar(10e9, 3e9)).toBe(100);
+    expect(diasParaLlenar(10e9, 0)).toBeNull();
+    expect(tamano(1.5e9)).toBe('1.5 GB');
+    expect(tamano(2.4e6)).toBe('2 MB');
+  });
+});

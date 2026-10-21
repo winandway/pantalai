@@ -269,3 +269,13 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Plantilla corporativa con tablas y estilos en línea (cabecera oscura, franja de colores, botón rojo) y SIEMPRE texto
   plano además del HTML. Si el envío falla, el registro y los pagos siguen.
 - Pruebas: `pruebas/correo.test.ts` (envío simulado; comprobada en rojo dejando que el enlace sirva dos veces).
+
+## C-ALMACEN (20 oct 2026)
+
+- Superadmin → Almacenamiento (`/datos/admin/almacen`): originales + copias MP4 + miniaturas (60 KB c/u estimado)
+  frente al tope del plan (`ALMACEN_LIMITE_GB`, 20 en Galaxia), MB por minuto, crecimiento 7/30 días, horas que caben,
+  días para llenarse, quién ocupa más y los videos más pesados. Aviso al 70 % y al 90 %. Explicación y costos en
+  `docs/ALMACENAMIENTO.md`.
+- Superadmin → Sistema (`/datos/admin/sistema`): IA (gasto del mes frente al tope), correo (enviados hoy frente a la
+  cuota `CORREO_CUOTA_DIA`, tabla `correo_dia`), Stripe (conectado, real o prueba, límites encendidos) y seguridad.
+- Prueba: «C-ALMACEN» en `pruebas/servidor.test.ts` (comprobada en rojo dejando la copia MP4 fuera de la suma).

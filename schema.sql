@@ -216,3 +216,10 @@ CREATE TABLE IF NOT EXISTS recuperaciones (
   vence INTEGER NOT NULL,
   usado INTEGER NOT NULL DEFAULT 0
 );
+
+-- Cuántos correos salieron cada día (20 oct 2026), para verlo en el superadmin frente a la cuota del plan.
+CREATE TABLE IF NOT EXISTS correo_dia (
+  dia TEXT PRIMARY KEY,
+  enviados INTEGER NOT NULL DEFAULT 0,
+  fallidos INTEGER NOT NULL DEFAULT 0
+);
