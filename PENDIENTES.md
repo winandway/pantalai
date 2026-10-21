@@ -43,8 +43,7 @@
 
 - [x] Sitio en vivo (19 oct 2026): salud ok, base y almacén ok, variable `SITIO_CONECTADO=1` puesta y grabación
       de punta a punta pasada contra https://pantalai.sitios.dev.
-- [ ] La portada «/» la sirve la plataforma como estático y no lleva las cabeceras de seguridad (las demás
-      páginas sí). Estudiar servirla desde el programa sin romper la portada.
+- [x] La portada «/» ya pasa por el programa y lleva las cabeceras de seguridad (comprobado el 21 oct 2026).
 - [x] Lápices para dibujar mientras se graba (20 oct 2026, candado C-LAPICES).
 - [x] Sonido de la computadora encendido por defecto, sin filtros, con medidores y aviso (20 oct 2026, C-SONIDO-COMPUTADORA).
 - [ ] Dibujar ENCIMA de otros programas sin volver a Pantalay, y énfasis del cursor (necesita extensión de Chrome o app de escritorio).
@@ -57,3 +56,12 @@
 - [ ] Los cortes del MEDIO (silencios, cortar por texto) todavía no salen en el MP4 descargado; las puntas sí.
 - [x] Superadmin en /admin con usuarios, planes y grabaciones (20 oct 2026, C-SUPERADMIN, uso en docs/SUPERADMIN.md).
 - [x] Cobro con Stripe dentro de la página construido (20 oct 2026, C-PAGOS); falta probarlo con las claves.
+- [x] Auditoría de lanzamiento (21 oct 2026): una sola suscripción por persona y avisos de Stripe en orden
+      (C-PAGOS-UNA-SUSCRIPCION), límites del plan en el servidor (C-LIMITES-SERVIDOR), errores traducidos, borrador
+      sin restos, recorrido completo de una persona (C-AUDITORIA).
+- [x] Textos legales propios, Mi cuenta (cancelar plan y borrar cuenta) y lectura para Google y las IAs (21 oct 2026,
+      C-LEGAL, C-CUENTA, C-SEO-IA).
+- [ ] Subir un archivo de video desde la computadora (Loom lo tiene; nosotros solo grabamos).
+- [ ] Renombrar carpeta con una ventanita propia en vez del cuadro del navegador.
+- [ ] Verificar el correo al registrarse (hoy no se pide).
+- [ ] Borrar cuenta y volver a registrarse con el mismo correo da otra prueba gratis: decidir si se guarda una huella.

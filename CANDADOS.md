@@ -289,3 +289,56 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   superadmin → Sistema.
 - Pruebas: `pruebas/componentes.test.tsx` (formato elegido) y «C-MP4-DIRECTO» en `pruebas/servidor.test.ts`
   (comprobada en rojo obligando a hacer la copia).
+
+## C-PAGOS-UNA-SUSCRIPCION (21 oct 2026)
+
+- Nunca dos suscripciones por persona. Si ya hay una viva (activa, en prueba o con cobro reintentándose): mismo plan
+  → 409 `ya_suscrito`; otro plan → se cambia el precio SOBRE la misma suscripción (prorrateo) y la página recibe
+  `tipo: 'cambiado'`. Si quedó una sin pagar (`incomplete`), se cancela antes de crear la nueva.
+- La creación lleva llave de idempotencia (`sus-<usuario>-<plan>-<ciclo>-<ventana de 10 min>`): dos clics seguidos
+  devuelven la misma suscripción.
+- El aviso de Stripe (webhook) ignora los eventos de una suscripción que no es la anotada (`ignorado: 'vieja'`) y
+  SIEMPRE lee la suscripción fresca en Stripe antes de guardar (los avisos llegan desordenados). Si Stripe no responde:
+  502, para que Stripe reintente. NO volver a guardar lo que dice el evento a secas.
+- Pruebas: `pruebas/pagos.test.ts` (Stripe simulado con suscripciones guardadas), comprobadas en rojo quitando el
+  cambio de plan y la lectura fresca.
+
+## C-LIMITES-SERVIDOR (21 oct 2026)
+
+- El servidor cumple el plan aunque alguien salte la página: duplicar respeta el tope de videos, cerrar una subida
+  más larga que los minutos del plan la borra (402 `limite_minutos`).
+- Cerrar dos veces la misma subida (reintento de red) responde lo mismo; cancelar solo sirve para una subida a medias
+  (un video terminado nunca se borra por ahí) y se lleva sus archivos.
+- IA con tope por persona además del tope mensual de gasto: 300 pedazos de transcripción y 40 análisis o documentos
+  por hora.
+- El panel del superadmin cuenta SOLO los fallos (30 en 15 min por dirección); el uso normal nunca lo bloquea.
+- Títulos con «$» no rompen las tarjetas para redes (reemplazos con función, no con texto).
+- Pruebas: «C-LIMITES-SERVIDOR» en `pruebas/servidor.test.ts`, comprobadas en rojo con el servidor anterior.
+
+## C-CUENTA (21 oct 2026)
+
+- «Mi cuenta» (`/account`, en el menú de la cuenta): nombre, contraseña (cierra las otras sesiones y manda correo),
+  plan con fecha de renovación, cancelar (al final del período) y mantener el plan, y borrar la cuenta.
+- Borrar la cuenta está SOLO dentro del menú ⋮, pide la contraseña, cancela la suscripción en Stripe al momento (si
+  Stripe no responde, NO se borra: se le seguiría cobrando a alguien sin cuenta), borra los videos con sus archivos y
+  todos los datos; los comentarios en videos ajenos quedan sin cuenta.
+- Pruebas: «C-CUENTA» en `pruebas/servidor.test.ts` y la de borrar con Stripe en `pruebas/pagos.test.ts`, comprobadas
+  en rojo sin borrar los archivos y sin cerrar las sesiones.
+
+## C-LEGAL y C-SEO-IA (21 oct 2026)
+
+- Textos legales PROPIOS de Pantalay (no copiados de nadie): `web/src/paginas/legales.ts`, en `/terms`, `/privacy`,
+  `/acceptable-use` y `/cookies`, en inglés (rige) y español (cortesía). Enlazados en el pie, en el registro y en Mi
+  cuenta. Si cambia un proveedor, un dato que se guarda o el cobro, se actualiza ahí y la fecha `ACTUALIZADO`.
+- Para Google y las IAs (`servidor/seo.ts`): el texto de la portada, Docs, cada guía y los legales va escrito dentro
+  del HTML (React lo reemplaza al cargar); JSON-LD (SoftwareApplication, FAQPage, WebSite, TechArticle, migas);
+  `/llms.txt` y `/llms-full.txt`; robots invita por nombre a GPTBot, ClaudeBot, PerplexityBot, Google-Extended y otros.
+- Las preguntas frecuentes de los datos estructurados son LAS MISMAS que se ven en la portada (`PREGUNTAS` en
+  `web/src/paginas/funciones.ts`): Google castiga si no coinciden.
+- Pruebas: «C-SEO-IA» en `pruebas/dominio.test.ts`.
+
+## C-AUDITORIA (21 oct 2026)
+
+- `e2e/auditoria.spec.ts`: una persona real de punta a punta (registrarse, grabar, comentar, reaccionar, compartir
+  privado y con enlace, insertar, carpetas, mover, buscar, duplicar, archivar, borrar, borrar carpeta sin perder
+  videos, salir y entrar, Docs). Pasa local y contra el sitio en vivo con `URL_BASE=https://pantalay.com`.

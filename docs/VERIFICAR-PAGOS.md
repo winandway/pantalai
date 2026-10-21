@@ -17,6 +17,15 @@
 - `PAGO_DIAS_PRUEBA=0` puesto para la compra del video de Richard. **Después de esa compra, volver a 14.**
 - La cuenta de Stripe es la de Windoce, LLC y la comparten otros negocios: no se toca ningún otro aviso ni producto.
 
+## Agregado el 21 oct 2026 (probado con Stripe simulado, SIN probar con Stripe real)
+
+- Una sola suscripción por persona: cambiar de plan modifica la misma suscripción con prorrateo (no crea otra).
+- El aviso lee siempre la suscripción fresca en Stripe y descarta los eventos de suscripciones viejas.
+- «Mi cuenta»: cancelar al final del período y «Mantener mi plan» (deshace la cancelación).
+- Borrar la cuenta cancela la suscripción en Stripe al momento; si Stripe no responde, la cuenta NO se borra.
+- Cómo se prueba en vivo después de la compra de Richard: en Mi cuenta tocar Cancelar plan (en Stripe debe verse
+  «cancela el <fecha>»), luego Mantener mi plan (vuelve a renovar). El borrado se prueba con una cuenta «Soporte E2E».
+
 ## Cómo funciona
 
 - La tarjeta se escribe DENTRO de Pantalay, en el cuadro seguro de Stripe (Payment Element). Nadie sale a otra página.

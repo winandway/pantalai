@@ -529,7 +529,7 @@ export const LEGALES: Legal[] = [
           titulo: 'One cookie, and only because you need it',
           parrafos: [
             'Pantalay uses a single cookie of its own, “pantalai_sesion”, to keep you signed in. It is essential, it is protected so page scripts can’t read it, and it lasts up to 30 days or until you log out. Without it you couldn’t use your account, so it doesn’t need consent.',
-            'We don’t use advertising cookies, and we don’t use third-party analytics or tracking.',
+            'We don’t use advertising cookies or tracking cookies. If we measure visits, we use a privacy-friendly tool that sets no cookies and doesn’t follow you across sites.',
           ],
         },
         {
@@ -567,7 +567,7 @@ export const LEGALES: Legal[] = [
           titulo: 'Una cookie, y solo porque hace falta',
           parrafos: [
             'Pantalay usa una sola cookie propia, «pantalai_sesion», para mantener tu sesión abierta. Es esencial, está protegida para que los programas de la página no puedan leerla y dura hasta 30 días o hasta que salgas. Sin ella no podrías usar tu cuenta, por eso no necesita permiso.',
-            'No usamos cookies de publicidad ni herramientas de análisis o rastreo de terceros.',
+            'No usamos cookies de publicidad ni de rastreo. Si medimos las visitas, usamos una herramienta respetuosa de la privacidad que no pone cookies ni te sigue entre sitios.',
           ],
         },
         {
