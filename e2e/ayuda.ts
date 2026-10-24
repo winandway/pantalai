@@ -4,3 +4,11 @@
 const n = () => Math.floor(Math.random() * 250) + 1;
 export const cabecerasDePrueba = (): Record<string, string> =>
   process.env.URL_BASE ? {} : { 'cf-connecting-ip': `10.${n()}.${n()}.${n()}` };
+
+/** La versión publicada del sitio: las pruebas que crean videos por la API la mandan, igual que la página. */
+export async function versionDelSitio(request: {
+  get: (u: string) => Promise<{ json: () => Promise<unknown> }>;
+}) {
+  const r = (await (await request.get('/datos/config')).json()) as { commit?: string };
+  return r.commit ?? 'local';
+}

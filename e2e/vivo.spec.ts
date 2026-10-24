@@ -44,8 +44,13 @@ test('IA real en vivo: español, dos pedazos, título, resumen, capítulos, tare
   const id = await page.evaluate(
     async ({ b64, H }) => {
       const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const { commit } = await (await fetch('/datos/config')).json();
       const n = await (
-        await fetch('/datos/videos', { method: 'POST', headers: H, body: JSON.stringify({ idioma: 'es' }) })
+        await fetch('/datos/videos', {
+          method: 'POST',
+          headers: H,
+          body: JSON.stringify({ idioma: 'es', version: commit }),
+        })
       ).json();
       const parte = (
         await (

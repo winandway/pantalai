@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { cabecerasDePrueba } from './ayuda';
+import { cabecerasDePrueba, versionDelSitio } from './ayuda';
 
 test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
@@ -14,7 +14,12 @@ test('en iPhone el video se reproduce y no se va de la vista', async ({ page, re
     headers: H,
     data: { nombre: 'Soporte iPhone', correo, clave: 'clave-segura-1' },
   });
-  const { id } = await (await request.post('/datos/videos', { headers: H, data: { idioma: 'es' } })).json();
+  const { id } = await (
+    await request.post('/datos/videos', {
+      headers: H,
+      data: { version: await versionDelSitio(request), idioma: 'es' },
+    })
+  ).json();
   const webm = readFileSync(new URL('./datos/corto.webm', import.meta.url));
   const p1 = (await (await request.put(`/datos/videos/${id}/partes/1`, { headers: H, data: webm })).json())
     .parte;

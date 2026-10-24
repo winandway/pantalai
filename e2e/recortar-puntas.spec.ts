@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { cabecerasDePrueba } from './ayuda';
+import { cabecerasDePrueba, versionDelSitio } from './ayuda';
 
 test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
@@ -17,7 +17,10 @@ test('al arrastrar las puntas el cuadro se ve al instante', async ({ page, reque
     ).status(),
   ).toBe(201);
   const { id } = await (
-    await request.post('/datos/videos', { headers: H, data: { tipo: 'video/mp4', ancho: 640, alto: 360 } })
+    await request.post('/datos/videos', {
+      headers: H,
+      data: { version: await versionDelSitio(request), tipo: 'video/mp4', ancho: 640, alto: 360 },
+    })
   ).json();
   const archivo = readFileSync(new URL('./datos/fragmentado.mp4', import.meta.url));
   const parte = (
