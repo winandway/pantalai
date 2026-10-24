@@ -34,6 +34,14 @@ export function Cuenta() {
   const [borrar, setBorrar] = useState(false);
   const [cancelar, setCancelar] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ajustes, setAjustes] = useState<AjustesCuenta | null>(null);
+
+  useEffect(() => {
+    if (!usuario) return;
+    pedir<AjustesCuenta>('/datos/cuenta/ajustes')
+      .then(setAjustes)
+      .catch(() => setAjustes({ empresa: '', marca: false, marca_obligatoria: false }));
+  }, [usuario]);
 
   useEffect(() => {
     if (!cargando && !usuario) navegar('/login');
@@ -73,8 +81,9 @@ export function Cuenta() {
   return (
     <section className="pagina-angosta cuenta-pagina">
       <h1>{t('cta.titulo')}</h1>
-      <Perfil usuario={usuario} cambiar={(u) => setUsuario(u)} />
+      {ajustes && <Perfil usuario={usuario} empresa={ajustes.empresa} cambiar={(u) => setUsuario(u)} />}
       <CambiarClave />
+      {ajustes && <MarcaDeAgua ajustes={ajustes} cambiar={setAjustes} />}
 
       <div className="tarjeta formulario">
         <h2>{t('cta.plan')}</h2>
@@ -161,10 +170,57 @@ export function Cuenta() {
   );
 }
 
-function Perfil({ usuario, cambiar }: { usuario: Usuario; cambiar: (u: Usuario) => void }) {
+type AjustesCuenta = { empresa: string; marca: boolean; marca_obligatoria: boolean };
+
+/** Marca de agua: en el plan gratis va siempre; con plan pago (o superadmin) se enciende para videos de publicidad. */
+function MarcaDeAgua({ ajustes, cambiar }: { ajustes: AjustesCuenta; cambiar: (a: AjustesCuenta) => void }) {
   const { t } = useIdioma();
   const avisar = useAviso();
-  const b = useBorrador(llaveBorrador('cuenta-perfil', usuario.id), { nombre: usuario.nombre });
+  const [error, setError] = useState<string | null>(null);
+  async function alternar(marca: boolean) {
+    setError(null);
+    try {
+      await pedir('/datos/cuenta/ajustes', { method: 'PATCH', json: { marca } });
+      cambiar({ ...ajustes, marca });
+      avisar(marca ? t('cfg.marcaEncendida') : t('cfg.marcaApagada'));
+    } catch (e) {
+      setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor'));
+    }
+  }
+  return (
+    <div className="tarjeta formulario">
+      <h2>{t('cfg.marca')}</h2>
+      <label className="interruptor">
+        <input
+          type="checkbox"
+          checked={ajustes.marca}
+          disabled={ajustes.marca_obligatoria}
+          onChange={(e) => void alternar(e.target.checked)}
+        />
+        {t('cfg.marcaOpcion')}
+      </label>
+      <p className="ayuda">{ajustes.marca_obligatoria ? t('cfg.marcaGratis') : t('cfg.marcaAyuda')}</p>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Perfil({
+  usuario,
+  empresa,
+  cambiar,
+}: {
+  usuario: Usuario;
+  empresa: string;
+  cambiar: (u: Usuario) => void;
+}) {
+  const { t } = useIdioma();
+  const avisar = useAviso();
+  const b = useBorrador(llaveBorrador('cuenta-perfil', usuario.id), { nombre: usuario.nombre, empresa });
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -177,6 +233,7 @@ function Perfil({ usuario, cambiar }: { usuario: Usuario; cambiar: (u: Usuario) 
         method: 'PATCH',
         json: { nombre: b.valor.nombre },
       });
+      await pedir('/datos/cuenta/ajustes', { method: 'PATCH', json: { empresa: b.valor.empresa } });
       b.limpiar();
       cambiar({ ...usuario, ...r.usuario });
       avisar(t('cta.guardado'));
@@ -207,6 +264,17 @@ function Perfil({ usuario, cambiar }: { usuario: Usuario; cambiar: (u: Usuario) 
           maxLength={80}
           autoComplete="name"
           required
+        />
+      </div>
+      <div className="campo">
+        <label htmlFor="cuenta-empresa">{t('cfg.empresa')}</label>
+        <input
+          id="cuenta-empresa"
+          value={b.valor.empresa}
+          onChange={(e) => b.cambiar('empresa', e.target.value)}
+          maxLength={120}
+          autoComplete="organization"
+          placeholder={t('cfg.empresaEjemplo')}
         />
       </div>
       <div className="campo">

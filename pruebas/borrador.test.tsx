@@ -78,3 +78,20 @@ describe('CANDADO useBorrador: ningún formulario pierde lo escrito', () => {
     expect(localStorage.getItem(llaveBorrador('f', null))).toBeNull();
   });
 });
+
+describe('CANDADO borrador: lo guardado no reaparece como «recuperado»', () => {
+  it('guardar enseguida de escribir (antes del medio segundo) no deja el borrador escrito después', () => {
+    vi.useFakeTimers();
+    const llave = llaveBorrador('perfil', 'u');
+    const h = renderHook(() => useBorrador(llave, { nombre: 'Ana', empresa: '' }));
+    act(() => h.result.current.cambiar('empresa', 'Mi empresa'));
+    act(() => vi.advanceTimersByTime(200));
+    act(() => h.result.current.limpiar());
+    act(() => vi.advanceTimersByTime(600));
+    expect(localStorage.getItem(llave)).toBeNull();
+    // Y si después se escribe algo nuevo, eso sí se guarda.
+    act(() => h.result.current.cambiar('empresa', 'Otra'));
+    act(() => vi.advanceTimersByTime(600));
+    expect(localStorage.getItem(llave)).not.toBeNull();
+  });
+});

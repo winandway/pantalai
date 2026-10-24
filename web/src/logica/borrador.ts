@@ -57,6 +57,9 @@ export function useBorrador<T extends Record<string, unknown>>(llave: string, in
   const inicialRef = useRef(inicial);
   const primera = useRef(true);
   const llaveRef = useRef(llave);
+  // El guardado que espera su medio segundo: al guardar con éxito se cancela (si no, escribía el borrador DESPUÉS
+  // de limpiarlo y reaparecía como «recuperado»).
+  const pendiente = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const guardado = leer<T>(llave);
@@ -78,6 +81,7 @@ export function useBorrador<T extends Record<string, unknown>>(llave: string, in
       return;
     }
     const t = setTimeout(() => {
+      pendiente.current = null;
       try {
         // Un formulario vacío (recién guardado o limpiado) no deja borrador.
         if (JSON.stringify(sinSensibles(valor)) === JSON.stringify(sinSensibles(inicialRef.current)))
@@ -87,15 +91,20 @@ export function useBorrador<T extends Record<string, unknown>>(llave: string, in
         /* lleno o bloqueado: se sigue sin borrador */
       }
     }, 500);
+    pendiente.current = t;
     return () => clearTimeout(t);
   }, [llave, valor]);
 
   const limpiar = useCallback(() => {
+    if (pendiente.current) clearTimeout(pendiente.current);
+    pendiente.current = null;
     borrarBorrador(llave);
     setRecuperado(false);
   }, [llave]);
 
   const empezarDeNuevo = useCallback(() => {
+    if (pendiente.current) clearTimeout(pendiente.current);
+    pendiente.current = null;
     borrarBorrador(llave);
     setRecuperado(false);
     primera.current = true;

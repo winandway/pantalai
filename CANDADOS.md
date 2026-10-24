@@ -395,3 +395,17 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `e2e/grabar-area.spec.ts` (el archivo grabado mide lo marcado; rojo sin recortar),
   `e2e/grabar-pestana.spec.ts` (pestaña con cámara adentro y pantalla completa sin duplicar; rojo sin el arreglo),
   `pruebas/recorte.test.ts` (cuentas del área).
+
+## C-MARCA-CONFIGURABLE (24 oct 2026)
+
+- Pedido de Richard: la marca de agua es obligatoria en el plan gratis; en planes pagos va apagada y se puede
+  encender desde Configuración (para videos de publicidad del equipo). El superadmin igual que un plan pago.
+- `marcaObligatoria` / `llevaMarca` en `servidor/app.ts`; preferencia y empresa en la tabla `ajustes_cuenta`
+  (`GET/PATCH /datos/cuenta/ajustes`). Apagarla en el plan gratis responde 409 `marca_plan_gratis`.
+- «Mi cuenta» pasó a llamarse «Configuración» (misma dirección `/account`): perfil con empresa, contraseña, marca de
+  agua, plan, legal y borrar la cuenta.
+- De paso, borrador: al guardar con éxito se cancela el guardado automático pendiente (antes, si se guardaba en menos
+  de medio segundo, el borrador se escribía después y reaparecía como «recuperado»). Vale para todos los formularios.
+- Pruebas: «C-MARCA-CONFIGURABLE» en `pruebas/servidor.test.ts` y la del borrador en `pruebas/borrador.test.tsx`,
+  las dos comprobadas en rojo.
+- Superadmin en producción (24 oct 2026): `SUPERADMIN_CORREOS` = solo la cuenta de Richard.

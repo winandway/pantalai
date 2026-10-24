@@ -242,3 +242,12 @@ CREATE TABLE IF NOT EXISTS video_youtube (
   datos TEXT NOT NULL,
   actualizado INTEGER NOT NULL
 );
+
+-- Configuración de la cuenta (24 oct 2026): empresa y si los videos llevan la marca de agua. El plan gratis la lleva
+-- siempre; los planes pagos y el superadmin la pueden encender (por ejemplo, para videos de publicidad).
+CREATE TABLE IF NOT EXISTS ajustes_cuenta (
+  usuario_id TEXT PRIMARY KEY,
+  empresa TEXT NOT NULL DEFAULT '',
+  marca INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);

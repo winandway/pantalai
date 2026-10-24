@@ -988,3 +988,48 @@ describe('CANDADO C-MARCA-AGUA: los videos del plan gratis llevan la marca Panta
     expect(await marca(soporte, s.id)).toBe(false);
   });
 });
+
+describe('CANDADO C-MARCA-CONFIGURABLE: la marca de agua se enciende en Configuración', () => {
+  it('gratis: siempre con marca y no se puede apagar; pago y superadmin: apagada, se puede encender', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com' } as typeof env;
+    const marca = async (c: ReturnType<typeof cliente>, id: string) =>
+      ((await (await c(`/datos/videos/${id}`)).json()) as { video: { marca: boolean } }).video.marca;
+    const ajustes = async (c: ReturnType<typeof cliente>) =>
+      (await (await c('/datos/cuenta/ajustes')).json()) as { marca: boolean; marca_obligatoria: boolean };
+
+    const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    const { id } = await videoListo(ana);
+    expect(await ajustes(ana)).toMatchObject({ marca: true, marca_obligatoria: true });
+    const apagar = await ana('/datos/cuenta/ajustes', { method: 'PATCH', json: { marca: false } });
+    expect(apagar.status).toBe(409);
+    expect(await marca(ana, id)).toBe(true);
+
+    // El superadmin: sin marca hasta que la enciende (para videos de publicidad); y la puede volver a apagar.
+    const soporte = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    const s = await videoListo(soporte);
+    expect(await ajustes(soporte)).toMatchObject({ marca: false, marca_obligatoria: false });
+    expect(await marca(soporte, s.id)).toBe(false);
+    expect(
+      (await soporte('/datos/cuenta/ajustes', { method: 'PATCH', json: { marca: true, empresa: 'Windoce' } }))
+        .status,
+    ).toBe(200);
+    expect(await marca(soporte, s.id)).toBe(true);
+    expect(await marca(cliente('5.5.5.5'), s.id)).toBe(true);
+    expect(((await (await soporte('/datos/cuenta/ajustes')).json()) as { empresa: string }).empresa).toBe(
+      'Windoce',
+    );
+    await soporte('/datos/cuenta/ajustes', { method: 'PATCH', json: { marca: false } });
+    expect(await marca(soporte, s.id)).toBe(false);
+
+    // Plan pagado: igual que el superadmin.
+    const yo = (await (await ana('/datos/yo')).json()) as { usuario: { id: string } };
+    await env.DB.prepare(
+      "INSERT INTO suscripciones (usuario_id, plan, estado, actualizado) VALUES (?, 'business', 'activa', ?)",
+    )
+      .bind(yo.usuario.id, Date.now())
+      .run();
+    expect(await marca(ana, id)).toBe(false);
+    await ana('/datos/cuenta/ajustes', { method: 'PATCH', json: { marca: true } });
+    expect(await marca(ana, id)).toBe(true);
+  });
+});

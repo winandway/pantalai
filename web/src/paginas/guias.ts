@@ -686,12 +686,13 @@ export const GUIAS: Guia[] = [
     seccion: 'cuenta',
     icono: '👤',
     en: {
-      titulo: 'Your account: name, password, plan and deleting it',
+      titulo: 'Settings: name, password, watermark, plan and deleting your account',
       resumen:
         'Change your name or password, cancel or keep your plan, and delete your account whenever you want.',
       cuerpo: [
-        'Open your account. Press your name at the top right and choose Account.',
-        'Change your name. Write it in Profile and press Save. It is the name your viewers see on your videos and comments.',
+        'Open Settings. Press your name at the top right and choose Settings.',
+        'Change your name and company. Write them in Profile and press Save. Your name is what viewers see on your videos and comments.',
+        'Watermark. On the free plan your videos always show a small gray Pantalay mark. On a paid plan it is off, and you can turn it on in Settings whenever you want it (for example, for promo videos).',
         'Change your password. Write your current password and the new one (at least 8 characters) and press Change password. Every other device where you were logged in is logged out, and you get an email so you know it happened.',
         'See your plan. Plan shows what you have and the date it renews. Press See plans to compare or upgrade.',
         'Cancel your plan. Press Cancel plan and confirm. Nothing is charged again: you keep your paid features until the end of the period you already paid, and then your account moves to the free plan with all your videos. Changed your mind? Press Keep my plan before that date.',
@@ -699,12 +700,13 @@ export const GUIAS: Guia[] = [
       ],
     },
     es: {
-      titulo: 'Tu cuenta: nombre, contraseña, plan y borrarla',
+      titulo: 'Configuración: nombre, contraseña, marca de agua, plan y borrar la cuenta',
       resumen:
         'Cambia tu nombre o tu contraseña, cancela o mantén tu plan, y borra tu cuenta cuando quieras.',
       cuerpo: [
-        'Abre tu cuenta. Toca tu nombre arriba a la derecha y elige Mi cuenta.',
-        'Cambia tu nombre. Escríbelo en Perfil y toca Guardar. Es el nombre que ven quienes miran tus videos y comentarios.',
+        'Abre Configuración. Toca tu nombre arriba a la derecha y elige Configuración.',
+        'Cambia tu nombre y tu empresa. Escríbelos en Perfil y toca Guardar. Tu nombre es el que ven quienes miran tus videos y comentarios.',
+        'Marca de agua. En el plan gratis tus videos llevan siempre una pequeña marca gris de Pantalay. Con un plan pago va apagada, y la puedes encender en Configuración cuando la quieras (por ejemplo, para videos de publicidad).',
         'Cambia tu contraseña. Escribe la actual y la nueva (al menos 8 caracteres) y toca Cambiar contraseña. Se cierra la sesión en los demás equipos donde habías entrado, y te llega un correo para que sepas que pasó.',
         'Mira tu plan. En Plan ves lo que tienes y la fecha en que se renueva. Toca Ver planes para comparar o subir de plan.',
         'Cancela tu plan. Toca Cancelar plan y confirma. No se vuelve a cobrar: conservas las funciones pagas hasta el final del período que ya pagaste y después tu cuenta pasa al plan gratis con todos tus videos. ¿Cambiaste de idea? Toca Mantener mi plan antes de esa fecha.',

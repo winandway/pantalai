@@ -644,6 +644,51 @@ app.patch('/datos/yo', requiereSesion, async (c) => {
   return c.json({ usuario: { ...c.get('usuario')!, nombre: d.nombre } });
 });
 
+// Configuración: empresa y marca de agua.
+app.get('/datos/cuenta/ajustes', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  const f = await c.env.DB.prepare('SELECT empresa FROM ajustes_cuenta WHERE usuario_id = ?')
+    .bind(u.id)
+    .first<{ empresa: string }>();
+  return c.json(
+    {
+      empresa: f?.empresa ?? '',
+      marca: await llevaMarca(c, u.id, u.correo),
+      marca_obligatoria: await marcaObligatoria(c, u.id, u.correo),
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.patch('/datos/cuenta/ajustes', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  const d = await cuerpo(
+    c,
+    z.object({ empresa: z.string().trim().max(120).optional(), marca: z.boolean().optional() }),
+  );
+  if (!d) return err(c, 400, 'datos');
+  // En el plan gratis la marca no se puede apagar.
+  if (d.marca === false && (await marcaObligatoria(c, u.id, u.correo)))
+    return err(c, 409, 'marca_plan_gratis');
+  const antes = await c.env.DB.prepare('SELECT empresa, marca FROM ajustes_cuenta WHERE usuario_id = ?')
+    .bind(u.id)
+    .first<{ empresa: string; marca: number }>();
+  await c.env.DB.prepare(
+    `INSERT INTO ajustes_cuenta (usuario_id, empresa, marca, actualizado) VALUES (?, ?, ?, ?)
+     ON CONFLICT (usuario_id) DO UPDATE SET empresa = excluded.empresa, marca = excluded.marca,
+       actualizado = excluded.actualizado`,
+  )
+    .bind(
+      u.id,
+      d.empresa ?? antes?.empresa ?? '',
+      d.marca === undefined ? (antes?.marca ?? 0) : d.marca ? 1 : 0,
+      Date.now(),
+    )
+    .run();
+  return c.json({ ok: true });
+});
+
 /** Comprueba la contraseña de la cuenta con sesión (para cambiarla o borrar la cuenta). */
 async function claveCorrecta(c: C, clave: string): Promise<boolean> {
   const u = await c.env.DB.prepare('SELECT clave_hash, clave_sal FROM usuarios WHERE id = ?')
@@ -726,6 +771,7 @@ app.post('/datos/cuenta/borrar', requiereSesion, async (c) => {
       'estado_stripe',
       'accesos',
       'errores_cliente',
+      'ajustes_cuenta',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} WHERE usuario_id = ?`).bind(u.id)),
     c.env.DB.prepare('UPDATE comentarios SET usuario_id = NULL WHERE usuario_id = ?').bind(u.id),
     c.env.DB.prepare('DELETE FROM usuarios WHERE id = ?').bind(u.id),
@@ -1714,6 +1760,16 @@ app.put('/datos/videos/:id/miniatura', requiereSesion, async (c) => {
  * límites) todavía esté apagado. Así cada video gratis que circula hace publicidad. Las cuentas de superadmin no.
  */
 async function llevaMarca(c: C, usuarioId: string, correo: string): Promise<boolean> {
+  if (await marcaObligatoria(c, usuarioId, correo)) return true;
+  // Planes pagos y superadmin: sin marca, salvo que la encienda en Configuración (videos de publicidad).
+  const f = await c.env.DB.prepare('SELECT marca FROM ajustes_cuenta WHERE usuario_id = ?')
+    .bind(usuarioId)
+    .first<{ marca: number }>();
+  return f?.marca === 1;
+}
+
+/** El plan gratis lleva la marca siempre (no se puede apagar); el superadmin nunca está obligado. */
+async function marcaObligatoria(c: C, usuarioId: string, correo: string): Promise<boolean> {
   if (correoSuperadmin(c.env, correo)) return false;
   return LIMITES[(await planDe(c, usuarioId)).plan].marca;
 }
