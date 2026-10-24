@@ -55,7 +55,35 @@ export async function prepararCuadros(
   try {
     const pista = await input.getPrimaryVideoTrack();
     if (!pista || !(await pista.canDecode())) throw new Error('no se puede decodificar el video aquí');
-    // Primero la tira de fotos (12 chiquitas): es lo primero que se ve.
+    const tramos = tramosPuntas(duracion);
+    // Video corto (todo es «punta»): UNA sola pasada de principio a fin saca las fotos de la tira y los cuadros a la
+    // vez. Saltar foto por foto en un WebM sin índice es lentísimo.
+    if (tramos.length === 1) {
+      const grande = new CanvasSink(pista, { height: 270 });
+      const total = Math.ceil(duracion / PASO) || 1;
+      const chico = new OffscreenCanvas(1, 72);
+      let foto = 0;
+      let siguiente = 0;
+      let hechos = 0;
+      for await (const { canvas, timestamp } of grande.canvases(0, duracion + 0.01)) {
+        if (!opciones.vivo()) return;
+        while (foto < opciones.fotos.length && timestamp + 0.02 >= opciones.fotos[foto]!) {
+          chico.width = Math.round((72 * canvas.width) / canvas.height);
+          chico.getContext('2d')!.drawImage(canvas, 0, 0, chico.width, 72);
+          const imagen = await aJpeg(chico, 0.7);
+          if (imagen) opciones.alFoto(foto, URL.createObjectURL(imagen));
+          foto++;
+        }
+        if (timestamp + 0.02 < siguiente) continue;
+        const imagen = await aJpeg(canvas, 0.8);
+        if (imagen) opciones.alCuadro({ s: timestamp, imagen });
+        siguiente = timestamp + PASO;
+        opciones.alProgreso(Math.min(1, ++hechos / total));
+      }
+      opciones.alProgreso(1);
+      return;
+    }
+    // Video largo: primero la tira de fotos (12 chiquitas), que es lo primero que se ve.
     const chica = new CanvasSink(pista, { height: 72 });
     let i = 0;
     for await (const r of chica.canvasesAtTimestamps(opciones.fotos)) {
@@ -66,7 +94,6 @@ export async function prepararCuadros(
     }
     // Después las puntas, cuadro por cuadro.
     const grande = new CanvasSink(pista, { height: 270 });
-    const tramos = tramosPuntas(duracion);
     const total = tramos.reduce((n, [a, b]) => n + Math.ceil((b - a) / PASO), 0) || 1;
     let hechos = 0;
     for (const [desde, hasta] of tramos) {
