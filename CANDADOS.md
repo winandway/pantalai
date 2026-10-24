@@ -381,3 +381,17 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   marca gris «Pantalay» con el logo abajo a la derecha (`.marca-agua`), con enlace a pantalay.com.
 - Falta (anotado en PENDIENTES): que el MP4 DESCARGADO del plan gratis también salga con la marca grabada.
 - Prueba: «C-MARCA-AGUA» en `pruebas/servidor.test.ts`, comprobada en rojo con la regla anterior.
+
+## C-AREA y C-CAMARA-EN-PESTANA (24 oct 2026)
+
+- Qué pasaba: con la pantalla completa salían el Dock, los íconos y la barra de arriba; al compartir solo la pestaña
+  de YouTube (para una reacción) salía limpia pero SIN la cámara, porque la burbuja flotante es otra ventana.
+- C-CAMARA-EN-PESTANA: con la burbuja flotante, si lo compartido NO es la pantalla completa (`displaySurface` distinto
+  de `monitor`), la cámara se pinta dentro del video (`preparar` en `web/src/logica/grabadora.ts`). Con la pantalla
+  completa NO (la ventanita ya sale en la pantalla y quedaría doble).
+- C-AREA: ajuste «Elegir qué parte de la pantalla grabar». Después de compartir, `ElegirArea` muestra lo compartido y
+  se marca un rectángulo (mover, estirar desde las esquinas). `fijarArea` recorta en el lienzo (`areaEnPixeles`:
+  dentro de la imagen, medidas pares, mínimo 160 px). El área queda guardada para la próxima vez.
+- Pruebas: `e2e/grabar-area.spec.ts` (el archivo grabado mide lo marcado; rojo sin recortar),
+  `e2e/grabar-pestana.spec.ts` (pestaña con cámara adentro y pantalla completa sin duplicar; rojo sin el arreglo),
+  `pruebas/recorte.test.ts` (cuentas del área).

@@ -15,7 +15,9 @@ import {
   puedeGrabarPantalla,
   reconocimientoDisponible,
   type Ajustes,
+  type Area,
 } from '../logica/grabadora';
+import { ElegirArea } from '../componentes/ElegirArea';
 import { textoError, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
 import { abrirVentana, montarBurbuja, type Burbuja } from '../logica/burbuja';
@@ -67,6 +69,10 @@ export function Grabar() {
   const [camaras, setCamaras] = useState<MediaDeviceInfo[]>([]);
   const [microfonos, setMicrofonos] = useState<MediaDeviceInfo[]>([]);
   const [confirmar, setConfirmar] = useState<'descartar' | 'reiniciar' | null>(null);
+  // Elegir qué parte de la pantalla completa se graba (se muestra después de compartirla).
+  const [eligiendo, setEligiendo] = useState<{ flujo: MediaStream; listo: (x: Area | null) => void } | null>(
+    null,
+  );
   const grabadora = useRef<Grabadora | null>(null);
   const subidor = useRef<Subidor | null>(null);
   const videoId = useRef<string | null>(null);
@@ -228,6 +234,17 @@ export function Grabar() {
       if (nombre !== 'AbortError' && !(nombre === 'NotAllowedError' && a.modo !== 'camara'))
         setError(t('sinPermiso'));
       return;
+    }
+    // «Elegir qué parte»: se marca el área sobre la imagen de lo compartido (pantalla, ventana o pestaña) antes de
+    // empezar. Con la pestaña de YouTube, por ejemplo, queda solo el reproductor.
+    if (a.modo !== 'camara' && a.elegirArea && g.pantallaCruda) {
+      const flujoPantalla = g.pantallaCruda;
+      const elegida = await new Promise<Area | null>((listo) =>
+        setEligiendo({ flujo: flujoPantalla, listo }),
+      );
+      setEligiendo(null);
+      g.fijarArea(elegida);
+      if (elegida) setA((x) => ({ ...x, area: elegida }));
     }
     grabadora.current = g;
     void leerDispositivos();
@@ -400,6 +417,7 @@ export function Grabar() {
 
   return (
     <div className="grabar">
+      {eligiendo && <ElegirArea flujo={eligiendo.flujo} inicial={a.area} listo={eligiendo.listo} />}
       {estado === 'ajustes' && (
         <div className="grabar-ajustes">
           <section className="tarjeta">
@@ -470,6 +488,19 @@ export function Grabar() {
                 />
                 {t('audioSistema')}
               </label>
+            )}
+            {a.modo !== 'camara' && (
+              <>
+                <label className="interruptor">
+                  <input
+                    type="checkbox"
+                    checked={!!a.elegirArea}
+                    onChange={(e) => cambiar('elegirArea', e.target.checked)}
+                  />
+                  {t('areaOpcion')}
+                </label>
+                <p className="ayuda">{t('areaOpcionAyuda')}</p>
+              </>
             )}
             <div className="campo">
               <label htmlFor="calidad">{t('calidad')}</label>

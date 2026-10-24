@@ -743,4 +743,33 @@ export const GUIAS: Guia[] = [
       ],
     },
   },
+  {
+    slug: 'record-part-of-screen',
+    seccion: 'grabar',
+    icono: '🔲',
+    en: {
+      titulo: 'Record only part of your screen (perfect for reactions)',
+      resumen:
+        'Leave out the dock, the icons and the browser: record just the video you are reacting to, with your camera.',
+      cuerpo: [
+        'When you share your entire screen, everything shows: the dock, the app icons and the menu bar. Pantalay gives you two clean ways to record only what matters.',
+        'Option 1: share just the tab. When your browser asks what to share, pick the tab (for example, the YouTube video you are reacting to). Only the page shows: no browser bar, no dock, no icons. Your camera is placed inside the video for you, in the corner you chose.',
+        'Option 2: choose an area. Before recording, turn on “Choose which part of the screen to record”. After you share, Pantalay shows your screen: drag with your mouse to mark the area, move it, or stretch it from the corners. Everything outside is left out of the video. Press “Record this area”.',
+        'Reacting to a video? Share the YouTube tab and mark just the player: your video shows the clip and your face, nothing else.',
+        'Next time, the same area is already marked. Press “Entire screen” if you want to record everything instead.',
+      ],
+    },
+    es: {
+      titulo: 'Graba solo una parte de tu pantalla (ideal para reacciones)',
+      resumen:
+        'Deja fuera el Dock, los íconos y el navegador: graba solo el video al que reaccionas, con tu cámara.',
+      cuerpo: [
+        'Cuando compartes la pantalla completa sale todo: el Dock, los íconos de las aplicaciones y la barra de arriba. Pantalay te da dos formas limpias de grabar solo lo que importa.',
+        'Forma 1: comparte solo la pestaña. Cuando el navegador te pregunte qué compartir, elige la pestaña (por ejemplo, el video de YouTube al que reaccionas). Sale solo la página: sin barra del navegador, sin Dock y sin íconos. Tu cámara se pone dentro del video, en la esquina que elegiste.',
+        'Forma 2: elige un área. Antes de grabar, activa «Elegir qué parte de la pantalla grabar». Después de compartir, Pantalay te muestra tu pantalla: arrastra con el mouse para marcar el área, muévela o estírala desde las esquinas. Lo de afuera no sale en el video. Toca «Grabar esta área».',
+        '¿Vas a reaccionar a un video? Comparte la pestaña de YouTube y marca solo el reproductor: tu video muestra el clip y tu cara, nada más.',
+        'La próxima vez, la misma área ya aparece marcada. Toca «Toda la pantalla» si quieres grabar todo.',
+      ],
+    },
+  },
 ];

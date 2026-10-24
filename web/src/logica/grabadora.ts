@@ -23,7 +23,31 @@ export type Ajustes = {
   bordeColores: boolean;
   transcribir: boolean;
   idiomaVoz: string; // 'en-US' | 'es-ES' ...
+  /** Con la pantalla completa: preguntar qué parte grabar (lo de afuera no sale en el video). */
+  elegirArea?: boolean;
+  /** La última parte elegida, en fracciones de la pantalla (0 a 1), para dejarla marcada la próxima vez. */
+  area?: Area | null;
 };
+
+/** Una parte de la pantalla, en fracciones de su ancho y alto (sirve igual en cualquier resolución). */
+export type Area = { x: number; y: number; ancho: number; alto: number };
+
+/**
+ * El área elegida en píxeles de la pantalla compartida: dentro de la pantalla, de al menos 160 px y con medidas
+ * pares (el formato H.264 no acepta medidas impares).
+ */
+export function areaEnPixeles(
+  area: Area,
+  ancho: number,
+  alto: number,
+): { sx: number; sy: number; sw: number; sh: number } {
+  const par = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
+  const sw = par(Math.min(ancho, Math.max(160, area.ancho * ancho)));
+  const sh = par(Math.min(alto, Math.max(160, area.alto * alto)));
+  const sx = Math.round(Math.min(Math.max(0, area.x * ancho), ancho - sw));
+  const sy = Math.round(Math.min(Math.max(0, area.y * alto), alto - sh));
+  return { sx, sy, sw, sh };
+}
 
 export const AJUSTES_INICIALES: Ajustes = {
   modo: 'pantalla_camara',
@@ -181,6 +205,28 @@ export class Grabadora {
   congelar = false;
   private videoPantalla: HTMLVideoElement | null = null;
   private videoCamara: HTMLVideoElement | null = null;
+  /** Parte de la pantalla que se graba (null = toda). */
+  private area: Area | null = null;
+  /** La pantalla compartida tal cual (para elegir el área sobre ella). */
+  pantallaCruda: MediaStream | null = null;
+
+  /** Qué se compartió: «monitor» (pantalla completa), «window» (una ventana) o «browser» (una pestaña). */
+  superficie(): string {
+    const p = this.flujos[0]?.getVideoTracks()[0];
+    return (p?.getSettings() as { displaySurface?: string } | undefined)?.displaySurface ?? '';
+  }
+
+  /** Graba solo esta parte de la pantalla (null = toda). Se elige antes de empezar. */
+  fijarArea(area: Area | null) {
+    this.area = area;
+    const vp = this.videoPantalla;
+    if (!vp?.videoWidth || !this.lienzo) return;
+    const r = area ? areaEnPixeles(area, vp.videoWidth, vp.videoHeight) : null;
+    this.lienzo.width = r ? r.sw : vp.videoWidth;
+    this.lienzo.height = r ? r.sh : vp.videoHeight;
+    this.ancho = this.lienzo.width;
+    this.alto = this.lienzo.height;
+  }
 
   constructor(
     private a: Ajustes,
@@ -289,10 +335,17 @@ export class Grabadora {
 
     // Todo pasa por el lienzo (también la pantalla sola y la cámara sola): ahí se pintan los lápices.
     let video: MediaStreamTrack;
+    this.pantallaCruda = pantalla;
     if (pantalla && camara && this.a.flotante && this.ventanaFlotante) {
       // Modo flotante: la burbuja vive en su ventanita encima de todo y sale en la propia pantalla.
       this.camara = camara;
-      video = await this.componer(pantalla, null);
+      // Pero si se compartió UNA pestaña o UNA ventana, la ventanita queda fuera de lo que se graba: entonces la
+      // cámara se pinta dentro del video (la ventanita queda solo para verse uno mismo).
+      const s = pantalla.getVideoTracks()[0]?.getSettings() as { displaySurface?: string } | undefined;
+      video = await this.componer(
+        pantalla,
+        s?.displaySurface && s.displaySurface !== 'monitor' ? camara : null,
+      );
     } else if (pantalla) video = await this.componer(pantalla, camara);
     else video = await this.componer(camara!, null);
     this.previa = new MediaStream([video]);
@@ -323,23 +376,33 @@ export class Grabadora {
     const fija = document.createElement('canvas');
     const fctx = fija.getContext('2d')!;
     let ultimaFija = 0;
+    // Qué parte de la pantalla va al video: toda, o el área elegida.
+    const fuente = () =>
+      this.area && vp.videoWidth
+        ? areaEnPixeles(this.area, vp.videoWidth, vp.videoHeight)
+        : { sx: 0, sy: 0, sw: vp.videoWidth, sh: vp.videoHeight };
     const dibujar = () => {
-      if (vp.videoWidth && (vp.videoWidth !== lienzo.width || vp.videoHeight !== lienzo.height)) {
+      if (
+        !this.area &&
+        vp.videoWidth &&
+        (vp.videoWidth !== lienzo.width || vp.videoHeight !== lienzo.height)
+      ) {
         // La ventana compartida cambió de tamaño: el lienzo la sigue.
         lienzo.width = vp.videoWidth;
         lienzo.height = vp.videoHeight;
       }
+      const { sx, sy, sw, sh } = fuente();
       const ahora = performance.now();
       // Mientras la persona está en OTRO programa se guarda una foto de su pantalla cada medio segundo.
       // Al volver a Pantalay para dibujar, «congelar» graba esa foto y no a Pantalay mismo (sin efecto espejo).
       if (vp.videoWidth && ahora - ultimaFija > 500 && (document.hidden || !document.hasFocus())) {
         fija.width = lienzo.width;
         fija.height = lienzo.height;
-        fctx.drawImage(vp, 0, 0, fija.width, fija.height);
+        if (sw && sh) fctx.drawImage(vp, sx, sy, sw, sh, 0, 0, fija.width, fija.height);
         ultimaFija = ahora;
       }
       if (this.congelar && ultimaFija) ctx.drawImage(fija, 0, 0, lienzo.width, lienzo.height);
-      else ctx.drawImage(vp, 0, 0, lienzo.width, lienzo.height);
+      else if (sw && sh) ctx.drawImage(vp, sx, sy, sw, sh, 0, 0, lienzo.width, lienzo.height);
       if (vc) this.pintarBurbuja(ctx, vc, lienzo.width, lienzo.height);
       pintar(ctx, this.pizarra, lienzo.width, lienzo.height, ahora);
     };

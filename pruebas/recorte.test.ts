@@ -73,3 +73,44 @@ describe('CANDADO C-RECORTE-ACELERADO: las puntas se preparan cuadro por cuadro'
     expect(cuadroCercano([], 1)).toBeNull();
   });
 });
+
+describe('CANDADO C-AREA: grabar solo una parte de la pantalla', () => {
+  it('el área se marca hacia cualquier lado, se mueve y se estira sin salirse de la pantalla', async () => {
+    const { areaEntre, moverArea, estirarArea, areaValida } = await import('../web/src/logica/area');
+    const casi = (a: Record<string, number>, b: Record<string, number>) =>
+      Object.keys(b).forEach((k) => expect(a[k]).toBeCloseTo(b[k]!, 6));
+    casi(areaEntre({ x: 0.8, y: 0.9 }, { x: 0.2, y: 0.1 }), { x: 0.2, y: 0.1, ancho: 0.6, alto: 0.8 });
+    casi(moverArea({ x: 0.5, y: 0.5, ancho: 0.4, alto: 0.4 }, 0.5, -1), {
+      x: 0.6,
+      y: 0,
+      ancho: 0.4,
+      alto: 0.4,
+    });
+    casi(estirarArea({ x: 0.2, y: 0.2, ancho: 0.4, alto: 0.4 }, 'se', { x: 0.9, y: 0.7 }), {
+      x: 0.2,
+      y: 0.2,
+      ancho: 0.7,
+      alto: 0.5,
+    });
+    casi(estirarArea({ x: 0.2, y: 0.2, ancho: 0.4, alto: 0.4 }, 'no', { x: 0.1, y: 0.1 }), {
+      x: 0.1,
+      y: 0.1,
+      ancho: 0.5,
+      alto: 0.5,
+    });
+    expect(areaValida({ x: 0, y: 0, ancho: 0.02, alto: 0.5 })).toBe(false);
+    expect(areaValida(null)).toBe(false);
+  });
+
+  it('en píxeles queda dentro de la pantalla, con medidas pares y de al menos 160 px', async () => {
+    const { areaEnPixeles } = await import('../web/src/logica/grabadora');
+    expect(areaEnPixeles({ x: 0.1, y: 0.1, ancho: 0.5, alto: 0.5 }, 1921, 1081)).toEqual({
+      sx: 192,
+      sy: 108,
+      sw: 960,
+      sh: 540,
+    });
+    const r = areaEnPixeles({ x: 0.99, y: 0.99, ancho: 0.01, alto: 0.01 }, 1920, 1080);
+    expect(r).toEqual({ sx: 1760, sy: 920, sw: 160, sh: 160 });
+  });
+});

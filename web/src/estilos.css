@@ -3919,3 +3919,99 @@ main {
     height: 16px;
   }
 }
+
+/* ---------- elegir qué parte de la pantalla grabar ---------- */
+.elegir-area {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #0b0d11;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+}
+.elegir-area-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: #fff;
+}
+.elegir-area-cabeza h2 {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+}
+.elegir-area-cabeza p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9rem;
+}
+.elegir-area-cabeza .fila-botones {
+  margin: 0;
+}
+.elegir-area-pantalla {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.elegir-area-pantalla video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.elegir-area-lienzo {
+  position: absolute;
+  cursor: crosshair;
+  touch-action: none;
+}
+.area-fuera {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.area-marco {
+  position: absolute;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  cursor: move;
+}
+.area-esquina {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border: 2px solid var(--rojo);
+  border-radius: 50%;
+}
+.area-esquina.no {
+  left: -9px;
+  top: -9px;
+  cursor: nwse-resize;
+}
+.area-esquina.ne {
+  right: -9px;
+  top: -9px;
+  cursor: nesw-resize;
+}
+.area-esquina.so {
+  left: -9px;
+  bottom: -9px;
+  cursor: nesw-resize;
+}
+.area-esquina.se {
+  right: -9px;
+  bottom: -9px;
+  cursor: nwse-resize;
+}
+
+.elegir-area .boton.area-grabar {
+  background: var(--rojo);
+  border-color: var(--rojo);
+  color: #fff;
+}
+.elegir-area .boton.area-grabar:disabled {
+  opacity: 0.45;
+}

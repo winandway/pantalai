@@ -106,6 +106,14 @@ const en = {
   microfono: 'Microphone',
   sinMicrofono: 'No microphone',
   sinCamara: 'No camera',
+  areaOpcion: 'Choose which part of the screen to record',
+  areaOpcionAyuda:
+    'With the entire screen: you mark the area with your mouse and the rest (dock, icons, menu bar) is left out. Sharing just a tab or a window? Your camera goes inside the video.',
+  areaTitulo: 'Which part do you want to record?',
+  areaAyuda:
+    'Drag to mark it. Move it or stretch it from the corners. Everything outside is left out of the video.',
+  areaToda: 'Entire screen',
+  areaGrabar: 'Record this area',
   audioSistema: 'Record computer sound (videos, music, calls)',
   calidad: 'Quality',
   burbuja: 'Camera bubble',
@@ -572,6 +580,14 @@ const es: Record<Clave, string> = {
   microfono: 'Micrófono',
   sinMicrofono: 'Sin micrófono',
   sinCamara: 'Sin cámara',
+  areaOpcion: 'Elegir qué parte de la pantalla grabar',
+  areaOpcionAyuda:
+    'Con la pantalla completa: marcas el área con el mouse y lo demás (Dock, íconos, barra de arriba) no sale. ¿Compartes solo una pestaña o una ventana? Tu cámara va dentro del video.',
+  areaTitulo: '¿Qué parte quieres grabar?',
+  areaAyuda:
+    'Arrastra para marcarla. Muévela o estírala desde las esquinas. Lo de afuera no sale en el video.',
+  areaToda: 'Toda la pantalla',
+  areaGrabar: 'Grabar esta área',
   audioSistema: 'Grabar el sonido de la computadora (videos, música, llamadas)',
   calidad: 'Calidad',
   burbuja: 'Burbuja de cámara',
