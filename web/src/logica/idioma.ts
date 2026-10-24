@@ -340,7 +340,7 @@ const en = {
     'Choose what to record. To include installed apps (not just this browser), pick “Entire screen”.',
   sinPermiso: 'We need permission to use your screen, camera or microphone. Check your browser settings.',
   navegadorNoSirve: 'Your browser can’t record the screen. Use Chrome, Edge or Firefox on a computer.',
-  limiteSinLimite: 'No time limit. No watermark.',
+  limiteSinLimite: 'No time limit.',
   vistaPrevia: 'Preview',
   // video
   compartir: 'Share',
@@ -845,7 +845,7 @@ const es: Record<Clave, string> = {
     'Hace falta permiso para usar tu pantalla, cámara o micrófono. Revisa los ajustes del navegador.',
   navegadorNoSirve:
     'Tu navegador no puede grabar la pantalla. Usa Chrome, Edge o Firefox en una computadora.',
-  limiteSinLimite: 'Sin límite de tiempo. Sin marca de agua.',
+  limiteSinLimite: 'Sin límite de tiempo.',
   vistaPrevia: 'Vista previa',
   compartir: 'Compartir',
   editar: 'Editar',
