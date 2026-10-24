@@ -64,6 +64,7 @@ import {
   ErrorIA,
   PLANTILLAS,
   analizar,
+  kitYoutube,
   gastoDelMes,
   generar,
   iaConfigurada,
@@ -74,6 +75,7 @@ import {
   type Plantilla,
   type Segmento,
 } from './ia/motor';
+import type { KitYoutube } from '../web/src/logica/youtube';
 
 export type Env = EnvPago &
   EnvCorreo & {
@@ -1137,6 +1139,7 @@ async function borrarVideo(c: C, v: FilaVideo) {
       'video_mp4 WHERE video_id',
       'video_mp4_recorte WHERE video_id',
       'revisiones WHERE video_id',
+      'video_youtube WHERE video_id',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} = ?`).bind(v.id)),
   );
 }
@@ -2036,6 +2039,30 @@ app.get('/datos/ia', requiereSesion, async (c) => {
   );
 });
 
+async function leerKitYoutube(c: C, videoId: string): Promise<KitYoutube | null> {
+  const f = await c.env.DB.prepare('SELECT datos FROM video_youtube WHERE video_id = ?')
+    .bind(videoId)
+    .first<{ datos: string }>();
+  return f ? (jsonSeguro(f.datos) as KitYoutube) : null;
+}
+
+/** Escribe y guarda los textos para YouTube a partir de la transcripción. */
+async function crearKitYoutube(
+  c: C,
+  v: FilaVideo,
+  segmentos: Segmento[],
+  idioma: string,
+): Promise<KitYoutube> {
+  const kit = await kitYoutube(c.env, segmentos, idioma);
+  await c.env.DB.prepare(
+    `INSERT INTO video_youtube (video_id, datos, actualizado) VALUES (?, ?, ?)
+     ON CONFLICT (video_id) DO UPDATE SET datos = excluded.datos, actualizado = excluded.actualizado`,
+  )
+    .bind(v.id, JSON.stringify(kit), Date.now())
+    .run();
+  return kit;
+}
+
 app.get('/datos/videos/:id/ia', requiereSesion, async (c) => {
   const v = await videoDelDueno(c);
   if (!v) return err(c, 404, 'no_existe');
@@ -2050,6 +2077,7 @@ app.get('/datos/videos/:id/ia', requiereSesion, async (c) => {
         tareas: f ? jsonSeguro(f.tareas) : [],
         muletillas: muletillas(palabras),
         palabras: palabras.length,
+        youtube: await leerKitYoutube(c, v.id),
       },
     },
     200,
@@ -2161,13 +2189,38 @@ app.post('/datos/videos/:id/ia/analizar', requiereSesion, async (c) => {
     )
       .bind(JSON.stringify(a.tareas), Date.now(), v.id)
       .run();
-    return c.json({ ok: true, analisis: a });
+    // Los textos para YouTube salen junto con el resumen. Si fallan, el resumen igual queda (se reintentan con el botón).
+    let youtube: KitYoutube | null = null;
+    try {
+      youtube = await crearKitYoutube(c, v, segmentos, f.idioma || v.idioma);
+    } catch (e) {
+      console.error('ia: textos para YouTube', e);
+    }
+    return c.json({ ok: true, analisis: a, youtube });
   } catch (e) {
     await c.env.DB.prepare(
       `UPDATE video_ia SET estado = 'error', error = ?, actualizado = ? WHERE video_id = ?`,
     )
       .bind(e instanceof ErrorIA ? e.codigo : 'servidor', Date.now(), v.id)
       .run();
+    return errorIA(c, e);
+  }
+});
+
+// «Para YouTube»: volver a escribirlos (o crearlos en videos analizados antes de que existiera esto).
+app.post('/datos/videos/:id/ia/youtube', requiereSesion, async (c) => {
+  const sinPlan = await exigirIA(c);
+  if (sinPlan) return sinPlan;
+  if (!(await dentroDelLimite(c.env.DB, 'ia_texto', c.get('usuario')!.id, 40, UNA_HORA)))
+    return err(c, 429, 'demasiados');
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const f = await filaIA(c, v.id);
+  const segmentos = f ? (jsonSeguro(f.segmentos) as Segmento[]) : [];
+  if (!f || !segmentos.length) return err(c, 409, 'sin_transcripcion');
+  try {
+    return c.json({ youtube: await crearKitYoutube(c, v, segmentos, f.idioma || v.idioma) });
+  } catch (e) {
     return errorIA(c, e);
   }
 });

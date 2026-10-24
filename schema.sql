@@ -234,3 +234,11 @@ CREATE TABLE IF NOT EXISTS errores_cliente (
   agente TEXT NOT NULL DEFAULT '',
   momento INTEGER NOT NULL
 );
+
+-- «Para YouTube» (23 oct 2026): tres títulos, gancho, palabras clave y hashtags que escribe la IA. Tabla aparte para no
+-- tocar columnas de video_ia.
+CREATE TABLE IF NOT EXISTS video_youtube (
+  video_id TEXT PRIMARY KEY,
+  datos TEXT NOT NULL,
+  actualizado INTEGER NOT NULL
+);

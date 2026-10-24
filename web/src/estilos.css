@@ -3759,3 +3759,121 @@ main {
   color: var(--exito, #16a34a);
   font-weight: 600;
 }
+
+/* ---------- Para YouTube ---------- */
+.video-resumen h2.con-boton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.para-youtube {
+  margin-top: 16px;
+}
+.yt-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.yt-cabeza h2 {
+  margin: 0;
+}
+.yt-cabeza .fila-botones {
+  margin: 0;
+  align-items: center;
+}
+.yt-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 20px;
+  border-radius: 6px;
+  background: #ff0033;
+  color: #fff;
+  font-size: 0.7rem;
+}
+.para-youtube h3 {
+  font-size: 0.95rem;
+  margin: 18px 0 8px;
+}
+.yt-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.yt-fila h3 {
+  margin-bottom: 8px;
+}
+.yt-titulos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.yt-titulos li {
+  display: grid;
+  grid-template-columns: 110px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.yt-estilo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gris);
+}
+.yt-texto {
+  font-weight: 600;
+}
+.yt-largo {
+  font-size: 0.75rem;
+  color: var(--gris);
+}
+.yt-caja {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  background: var(--fondo-suave, #f6f7f9);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+.yt-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.yt-etiquetas span {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.82rem;
+}
+.yt-hashtags {
+  color: #065fd4;
+  font-weight: 600;
+  margin: 0;
+}
+@media (max-width: 620px) {
+  .yt-titulos li {
+    grid-template-columns: 1fr auto;
+  }
+  .yt-estilo,
+  .yt-texto {
+    grid-column: 1 / -1;
+  }
+}

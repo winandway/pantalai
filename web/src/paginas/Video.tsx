@@ -23,6 +23,8 @@ import { useSesion } from '../logica/sesion';
 import { buscarEnTranscripcion, formatoTiempo, segmentoActual, textoPlano } from '../logica/tiempo';
 import { copiar } from './Biblioteca';
 import { AvisoIA, Generar, Tareas } from '../componentes/IA';
+import { ParaYoutube } from '../componentes/Youtube';
+import { textoResumen } from '../logica/youtube';
 import { PreparadorMp4 } from '../componentes/Mp4';
 import { DOMINIO, origenPublico } from '../logica/sitio';
 import { BotonDescargar } from '../componentes/Descargar';
@@ -274,7 +276,20 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
           <section className="video-resumen">
             {video.descripcion && (
               <>
-                <h2>{t('resumen')}</h2>
+                <h2 className="con-boton">
+                  {t('resumen')}
+                  <button
+                    type="button"
+                    className="boton secundario chico"
+                    onClick={() =>
+                      void copiar(textoResumen(video.descripcion, video.capitulos)).then(
+                        (ok) => ok && avisar(t('copiado')),
+                      )
+                    }
+                  >
+                    ⧉ {t('copiarResumen')}
+                  </button>
+                </h2>
                 <p className="descripcion">{video.descripcion}</p>
               </>
             )}
@@ -299,6 +314,9 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
             )}
             {video.es_dueno && ia && <Tareas tareas={ia.tareas} />}
           </section>
+        )}
+        {video.es_dueno && ia?.cerebro && (video.descripcion || ia.youtube) && (
+          <ParaYoutube video={video} kit={ia.youtube} cambiar={(k) => setIa({ ...ia, youtube: k })} />
         )}
         {generando && (
           <Generar

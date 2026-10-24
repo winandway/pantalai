@@ -38,6 +38,17 @@ const respuestaGemini = (json: object) => ({
   usageMetadata: { promptTokenCount: 2000, candidatesTokenCount: 500, thoughtsTokenCount: 0 },
 });
 
+const KIT = {
+  titulos: [
+    { estilo: 'impactante', texto: '"Nadie te enseña esto del alta de clientes" #viral' },
+    { estilo: 'descriptivo', texto: 'Cómo dar de alta clientes paso a paso' },
+    { estilo: 'directo', texto: 'Alta de clientes en 2 minutos' },
+  ],
+  gancho: 'Aprende a dar de alta a un cliente sin errores.',
+  etiquetas: ['Alta de clientes', '#crm', 'alta de clientes', 'tutorial crm', 'x'.repeat(40)],
+  hashtags: ['CRM', 'Alta Clientes', '#crm', 'Tutorial', 'Extra'],
+};
+
 function proveedorFalso(
   gemini: object = {
     titulo: 'Alta de clientes',
@@ -57,6 +68,7 @@ function proveedorFalso(
       expect(u).not.toContain('key=');
       const cuerpo = JSON.parse(String(init?.body));
       expect(cuerpo.generationConfig.thinkingConfig.thinkingBudget).toBe(0);
+      if (JSON.stringify(cuerpo).includes('YouTube titles')) return Response.json(respuestaGemini(KIT));
       return Response.json(respuestaGemini(gemini));
     }
     throw new Error(`llamada inesperada a ${u}`);
@@ -283,6 +295,22 @@ describe('rutas de IA de punta a punta (con proveedores simulados)', () => {
     expect(ia.estado).toBe('listo');
     expect(ia.tareas).toEqual(['Revisar el teléfono']);
     expect(ia.muletillas).toHaveLength(2);
+    // «Para YouTube» sale junto con el resumen: tres títulos en orden, limpios, y etiquetas listas para pegar.
+    const yt = (
+      (await (await pedir(`/datos/videos/${id}/ia`)).json()) as {
+        ia: {
+          youtube: { titulos: { estilo: string; texto: string }[]; etiquetas: string[]; hashtags: string[] };
+        };
+      }
+    ).ia.youtube;
+    expect(yt.titulos.map((x) => x.estilo)).toEqual(['descriptivo', 'directo', 'impactante']);
+    expect(yt.titulos[2]!.texto).toBe('Nadie te enseña esto del alta de clientes');
+    expect(yt.etiquetas).toEqual(['alta de clientes', 'crm', 'tutorial crm']);
+    expect(yt.hashtags).toEqual(['#CRM', '#AltaClientes', '#Tutorial']);
+    // Se puede volver a escribir con el botón.
+    const otra = await pedir(`/datos/videos/${id}/ia/youtube`, { method: 'POST' });
+    expect(otra.status).toBe(200);
+    expect(((await otra.json()) as { youtube: { gancho: string } }).youtube.gancho).toContain('dar de alta');
     const gen = await pedir(`/datos/videos/${id}/ia/generar`, {
       method: 'POST',
       json: { plantilla: 'nada' },

@@ -712,4 +712,35 @@ export const GUIAS: Guia[] = [
       ],
     },
   },
+  {
+    slug: 'youtube-texts',
+    seccion: 'ia',
+    icono: '▶️',
+    en: {
+      titulo: 'Ready-to-paste texts for YouTube',
+      resumen:
+        'Three titles to choose from, the description, keywords and hashtags, each with its own Copy button.',
+      cuerpo: [
+        'When AI finishes your summary, a “For YouTube” card appears under it, only for you. It is written from what you actually say in the video, following what helps a video get found on YouTube today.',
+        'Titles: pick one. You get three different styles: descriptive (says exactly what the viewer will see, with the main topic first), direct (short and punchy) and bold (creates curiosity, without promising anything the video does not have). Each one shows its length: YouTube allows 100 characters, but only the first 60 to 70 show in search.',
+        'Description. It starts with a one-line hook that shows before “Show more”, then your summary, your chapters (only when they follow YouTube’s rule: first at 0:00, at least three, 10 seconds or longer) and three hashtags.',
+        'Keywords (tags). Up to 35 search phrases, separated by commas, that always fit YouTube’s 500-character limit. Copy them and paste them in Tags in YouTube Studio: no errors.',
+        'Hashtags. Three: one broad, one niche and one about your topic. YouTube shows up to three above your title.',
+        'Press Copy next to each part, or “Copy everything” to take it all at once. Want different options? Press “Write again”. The summary also has its own Copy button.',
+      ],
+    },
+    es: {
+      titulo: 'Textos listos para pegar en YouTube',
+      resumen:
+        'Tres títulos para elegir, la descripción, las palabras clave y los hashtags, cada uno con su botón de copiar.',
+      cuerpo: [
+        'Cuando la IA termina tu resumen, debajo aparece la tarjeta «Para YouTube», que solo ves tú. Se escribe con lo que de verdad dices en el video, siguiendo lo que hoy ayuda a que un video se encuentre en YouTube.',
+        'Títulos: elige uno. Recibes tres estilos distintos: descriptivo (dice exactamente lo que se va a ver, con el tema al principio), directo (corto y al grano) e impactante (despierta curiosidad, sin prometer nada que el video no tenga). Cada uno muestra su largo: YouTube permite 100 caracteres, pero en la búsqueda solo se ven los primeros 60 a 70.',
+        'Descripción. Empieza con una línea gancho que se ve antes de «Mostrar más», sigue tu resumen, tus capítulos (solo cuando cumplen la regla de YouTube: el primero en 0:00, al menos tres y de 10 segundos o más) y tres hashtags.',
+        'Palabras clave (etiquetas). Hasta 35 frases de búsqueda separadas por coma que siempre caben en el límite de 500 caracteres de YouTube. Cópialas y pégalas en Etiquetas de YouTube Studio: sin errores.',
+        'Hashtags. Tres: uno general, uno de nicho y uno de tu tema. YouTube muestra hasta tres encima de tu título.',
+        'Toca Copiar al lado de cada parte, o «Copiar todo» para llevártelo de una vez. ¿Quieres otras opciones? Toca «Escribir otra vez». El resumen también tiene su propio botón de copiar.',
+      ],
+    },
+  },
 ];

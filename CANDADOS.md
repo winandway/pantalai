@@ -358,3 +358,16 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `pruebas/recorte.test.ts` (tramos y cuadro más cercano) y `e2e/recortar-puntas.spec.ts` con
   `e2e/datos/fragmentado.mp4` (MP4 fragmentado como el de Chrome), comprobada en rojo quitando la previsualización.
 - NO volver a llamar al reproductor en cada movimiento del puntero.
+
+## C-YOUTUBE (23 oct 2026)
+
+- «Para YouTube» (solo el dueño, debajo del resumen): tres títulos (descriptivo, directo, impactante), descripción
+  armada (gancho + resumen + capítulos + hashtags), hasta 35 palabras clave y 3 hashtags, cada parte con su botón de
+  copiar y «Copiar todo». El resumen también tiene «Copiar resumen». Estudio: `docs/YOUTUBE-POSICIONAMIENTO-2026.md`.
+- La IA (Gemini 2.5 Flash, mismo tope de gasto) los escribe junto con el resumen (`kitYoutube` en
+  `servidor/ia/motor.ts`) y se guardan en la tabla `video_youtube`; «Escribir otra vez» usa
+  `POST /datos/videos/:id/ia/youtube`. Si fallan, el resumen igual queda.
+- Reglas que NO se tocan (`web/src/logica/youtube.ts`): etiquetas que nunca pasan de 500 caracteres (comas y comillas
+  incluidas), sin «#», «<», «>» ni comas internas; máximo 3 hashtags sin espacios ni repetidos; capítulos en la
+  descripción solo si cumplen la regla oficial (0:00, tres o más, 10 s o más).
+- Pruebas: `pruebas/youtube.test.ts` y la de rutas en `pruebas/ia.test.ts`.

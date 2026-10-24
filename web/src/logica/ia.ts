@@ -1,4 +1,5 @@
 // Flujo de IA desde el navegador del dueño: audio en pedazos → oído (Whisper) → cerebro (Gemini).
+import type { KitYoutube } from './youtube';
 import { pedir } from './api';
 import { audioDelVideo, partir } from './audio';
 
@@ -10,6 +11,7 @@ export type EstadoIA = {
   tareas: string[];
   muletillas: { inicio: number; fin: number; palabra: string }[];
   palabras: number;
+  youtube?: KitYoutube | null;
 };
 
 export type Documento = {

@@ -1,6 +1,13 @@
 // Motor de IA de PANTALAI: el «oído» (Whisper en Cloudflare) y el «cerebro» (Gemini).
 // Toda llamada pasa por la guardia de modelos y por el tope de gasto.
 import { asegurarModelo, costoGemini, costoWhisper } from './guardia';
+import {
+  limpiarEtiquetas,
+  limpiarHashtags,
+  MAX_GANCHO,
+  MAX_TITULO,
+  type KitYoutube,
+} from '../../web/src/logica/youtube';
 
 export type EnvIA = {
   DB: D1Database;
@@ -336,6 +343,76 @@ export async function analizar(
       .map((t) => t.trim())
       .filter(Boolean)
       .slice(0, 30),
+  };
+}
+
+// ---------- «Para YouTube»: títulos, gancho, palabras clave y hashtags ----------
+// Qué funciona en 2026 y por qué: docs/YOUTUBE-POSICIONAMIENTO-2026.md.
+
+export async function kitYoutube(
+  env: EnvIA,
+  segmentos: Segmento[],
+  idioma: string,
+  pedir: typeof fetch = fetch,
+): Promise<KitYoutube> {
+  const lengua = NOMBRE_IDIOMA[idioma.slice(0, 2)] ?? 'the same language as the transcript';
+  const prompt = [
+    'You receive the transcript of a video that will be uploaded to YouTube. Each line starts with the second where it is said.',
+    `Write everything in ${lengua}. Use only what the video really contains: never promise anything it does not show.`,
+    '- titulos: exactly 3 YouTube titles, each different in style, each at most 70 characters, main topic in the first words, no emojis, no ALL CAPS, no hashtags, no quotes:',
+    '  1) estilo "descriptivo": says clearly what the viewer will see, with the main search keyword at the start.',
+    '  2) estilo "directo": short and punchy, at most 50 characters.',
+    '  3) estilo "impactante": creates curiosity or emotion, bold but honest (no misleading clickbait).',
+    '- gancho: one or two sentences, at most 150 characters, with the main keyword and the reason to watch. It is the first line of the description.',
+    '- etiquetas: 30 to 35 search phrases people would really type to find this video: mix 1-2 word topics with 3-5 word specific searches; include names, places and products mentioned. Lowercase, no "#", each at most 30 characters, no duplicates.',
+    '- hashtags: exactly 3 hashtags without "#" and without spaces (join words): one broad, one niche, one about the specific topic.',
+    '',
+    'TRANSCRIPT:',
+    textoConMinutos(segmentos).slice(0, 120_000),
+  ].join('\n');
+  const esquema = {
+    type: 'OBJECT',
+    properties: {
+      titulos: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            estilo: { type: 'STRING', enum: ['descriptivo', 'directo', 'impactante'] },
+            texto: { type: 'STRING' },
+          },
+          required: ['estilo', 'texto'],
+        },
+      },
+      gancho: { type: 'STRING' },
+      etiquetas: { type: 'ARRAY', items: { type: 'STRING' } },
+      hashtags: { type: 'ARRAY', items: { type: 'STRING' } },
+    },
+    required: ['titulos', 'gancho', 'etiquetas', 'hashtags'],
+  };
+  const r = (await preguntarGemini(env, prompt, esquema, pedir)) as Partial<{
+    titulos: { estilo: string; texto: string }[];
+    gancho: string;
+    etiquetas: string[];
+    hashtags: string[];
+  }>;
+  const estilos = ['descriptivo', 'directo', 'impactante'] as const;
+  const titulos = estilos
+    .map((estilo) => ({
+      estilo,
+      texto: (r.titulos?.find((t) => t.estilo === estilo)?.texto ?? '')
+        .replace(/#\S+/g, '')
+        .trim()
+        .replace(/^["“'«]+|["”'»]+$/g, '')
+        .trim()
+        .slice(0, MAX_TITULO),
+    }))
+    .filter((t) => t.texto);
+  return {
+    titulos,
+    gancho: (r.gancho ?? '').trim().slice(0, MAX_GANCHO * 2),
+    etiquetas: limpiarEtiquetas(r.etiquetas ?? []),
+    hashtags: limpiarHashtags(r.hashtags ?? []),
   };
 }
 
