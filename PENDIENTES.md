@@ -72,3 +72,4 @@
 - [x] Marca de agua gris «Pantalay» en el reproductor para el plan gratis, aunque el cobro siga apagado (23 oct 2026, C-MARCA-AGUA).
 - [ ] Marca grabada también en el MP4 descargado del plan gratis (hay que re-codificar el video en el navegador).
 - [x] Grabar solo una parte de la pantalla y cámara dentro del video al compartir una pestaña (24 oct 2026, C-AREA, C-CAMARA-EN-PESTANA).
+- [x] Short vertical para reacciones: encuadre, cámara arriba o abajo, preparación antes de grabar (24 oct 2026, C-SHORT).

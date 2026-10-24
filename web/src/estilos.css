@@ -4015,3 +4015,99 @@ main {
 .elegir-area .boton.area-grabar:disabled {
   opacity: 0.45;
 }
+
+/* ---------- Short vertical ---------- */
+.selector-formato {
+  margin-top: 4px;
+}
+.maqueta-short {
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 9/16;
+  max-height: 440px;
+  margin: 0 auto 12px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--borde);
+}
+.maqueta-short.abajo {
+  flex-direction: column-reverse;
+}
+.maqueta-short-camara {
+  flex: 0 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+.maqueta-short-camara video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.maqueta-short-pantalla {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #23262e, #3a3f4b);
+  border-top: 2px solid rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 2rem;
+}
+.maqueta-short.abajo .maqueta-short-pantalla {
+  border-top: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+}
+.es-short .grabar-previa {
+  aspect-ratio: 9/16;
+  width: min(100%, calc(78vh * 9 / 16));
+  margin: 0 auto;
+}
+.short-preparar {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto 16px;
+}
+.short-preparar h2 {
+  margin: 0;
+}
+.short-preparar .ayuda {
+  margin: 0;
+}
+.short-preparar input[type='range'] {
+  width: 100%;
+}
+.short-arrancar {
+  margin-top: 4px;
+}
+/* En computadora: el Short a la izquierda y los controles (preparación, barra, lápices) a la derecha. */
+@media (min-width: 900px) {
+  .grabar-en-curso.es-short {
+    display: grid;
+    grid-template-columns: auto minmax(320px, 440px);
+    justify-content: center;
+    align-items: start;
+    column-gap: 24px;
+    row-gap: 12px;
+  }
+  .grabar-en-curso.es-short > .grabar-previa {
+    grid-column: 1;
+    grid-row: 1 / span 6;
+    width: calc(80vh * 9 / 16);
+  }
+  .grabar-en-curso.es-short > :not(.grabar-previa) {
+    grid-column: 2;
+  }
+  .grabar-en-curso.es-short .short-preparar {
+    margin: 0;
+  }
+  .grabar-en-curso.es-short .barra-grabacion {
+    flex-wrap: wrap;
+  }
+}
+.es-short .grabar-previa {
+  box-shadow: 0 0 0 1px var(--borde);
+}

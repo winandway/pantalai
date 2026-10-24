@@ -27,7 +27,55 @@ export type Ajustes = {
   elegirArea?: boolean;
   /** La última parte elegida, en fracciones de la pantalla (0 a 1), para dejarla marcada la próxima vez. */
   area?: Area | null;
+  /** Short vertical (9:16): lo que se comparte en una mitad y la cámara en la otra, sin burbuja. */
+  vertical?: boolean;
+  /** En el Short: la cámara arriba (true) o abajo (false). */
+  camaraArriba?: boolean;
+  /** En el Short: qué parte del alto ocupa la cámara (0,3 a 0,6). */
+  reparto?: number;
+  /** Última área elegida para el Short (tiene otra forma que la del video horizontal). */
+  areaVertical?: Area | null;
 };
+
+export type Rect = { x: number; y: number; w: number; h: number };
+
+/** Medidas del Short: 9:16, a 1080 × 1920 (720 × 1280 si el plan graba en 720). */
+export function medidaVertical(calidad: Calidad): { ancho: number; alto: number } {
+  return calidad === '720' ? { ancho: 720, alto: 1280 } : { ancho: 1080, alto: 1920 };
+}
+
+export const REPARTO_MIN = 0.3;
+export const REPARTO_MAX = 0.6;
+export const REPARTO_INICIAL = 0.45;
+
+/** Las dos partes del Short: la cámara y lo compartido, una arriba de la otra, sin huecos. */
+export function partesVertical(
+  ancho: number,
+  alto: number,
+  camaraArriba: boolean,
+  reparto: number,
+): { camara: Rect; pantalla: Rect } {
+  const r = Math.min(REPARTO_MAX, Math.max(REPARTO_MIN, reparto));
+  const hc = Math.round(alto * r);
+  const camara = { x: 0, y: camaraArriba ? 0 : alto - hc, w: ancho, h: hc };
+  const pantalla = { x: 0, y: camaraArriba ? hc : 0, w: ancho, h: alto - hc };
+  return { camara, pantalla };
+}
+
+/** Proporción (ancho / alto) de la parte de lo compartido en el Short: así se encuadra con la forma exacta. */
+export function proporcionPantallaVertical(calidad: Calidad, reparto: number): number {
+  const { ancho, alto } = medidaVertical(calidad);
+  const { pantalla } = partesVertical(ancho, alto, true, reparto);
+  return pantalla.w / pantalla.h;
+}
+
+/** Qué parte de una imagen (sw × sh) usar para LLENAR un recuadro (dw × dh) sin deformar: se recorta al centro. */
+export function cubrir(sw: number, sh: number, dw: number, dh: number): Rect {
+  const escala = Math.max(dw / sw, dh / sh);
+  const w = dw / escala;
+  const h = dh / escala;
+  return { x: (sw - w) / 2, y: (sh - h) / 2, w, h };
+}
 
 /** Una parte de la pantalla, en fracciones de su ancho y alto (sirve igual en cualquier resolución). */
 export type Area = { x: number; y: number; ancho: number; alto: number };
@@ -220,7 +268,8 @@ export class Grabadora {
   fijarArea(area: Area | null) {
     this.area = area;
     const vp = this.videoPantalla;
-    if (!vp?.videoWidth || !this.lienzo) return;
+    // En el Short el lienzo es siempre 9:16: el área solo cambia qué se ve en su mitad.
+    if (this.a.vertical || !vp?.videoWidth || !this.lienzo) return;
     const r = area ? areaEnPixeles(area, vp.videoWidth, vp.videoHeight) : null;
     this.lienzo.width = r ? r.sw : vp.videoWidth;
     this.lienzo.height = r ? r.sh : vp.videoHeight;
@@ -283,8 +332,9 @@ export class Grabadora {
       camara = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: this.a.camaraId ? { exact: this.a.camaraId } : undefined,
-          width: { ideal: this.a.modo === 'camara' ? Math.round((alto * 16) / 9) : 640 },
-          height: { ideal: this.a.modo === 'camara' ? alto : 640 },
+          // La cámara sola y el Short la usan grande (ocupa media pantalla o toda); la burbuja, chica.
+          width: { ideal: this.a.modo === 'camara' || this.a.vertical ? Math.round((alto * 16) / 9) : 640 },
+          height: { ideal: this.a.modo === 'camara' || this.a.vertical ? alto : 640 },
         },
         audio: false,
       });
@@ -336,7 +386,12 @@ export class Grabadora {
     // Todo pasa por el lienzo (también la pantalla sola y la cámara sola): ahí se pintan los lápices.
     let video: MediaStreamTrack;
     this.pantallaCruda = pantalla;
-    if (pantalla && camara && this.a.flotante && this.ventanaFlotante) {
+    if (pantalla && camara && this.a.vertical) {
+      // Short vertical: la cámara SIEMPRE va dentro del video (en su mitad); la ventanita flotante, si está abierta,
+      // muestra cómo va quedando el Short.
+      this.camara = camara;
+      video = await this.componer(pantalla, camara);
+    } else if (pantalla && camara && this.a.flotante && this.ventanaFlotante) {
       // Modo flotante: la burbuja vive en su ventanita encima de todo y sale en la propia pantalla.
       this.camara = camara;
       // Pero si se compartió UNA pestaña o UNA ventana, la ventanita queda fuera de lo que se graba: entonces la
@@ -368,6 +423,12 @@ export class Grabadora {
     const s = pantalla.getVideoTracks()[0]!.getSettings();
     this.ancho = (s.width ?? vp.videoWidth) || 1920;
     this.alto = (s.height ?? vp.videoHeight) || 1080;
+    const vertical = Boolean(this.a.vertical && vc);
+    if (vertical) {
+      const m = medidaVertical(this.a.calidad);
+      this.ancho = m.ancho;
+      this.alto = m.alto;
+    }
     const lienzo = document.createElement('canvas');
     lienzo.width = this.ancho;
     lienzo.height = this.alto;
@@ -383,6 +444,7 @@ export class Grabadora {
         : { sx: 0, sy: 0, sw: vp.videoWidth, sh: vp.videoHeight };
     const dibujar = () => {
       if (
+        !vertical &&
         !this.area &&
         vp.videoWidth &&
         (vp.videoWidth !== lienzo.width || vp.videoHeight !== lienzo.height)
@@ -401,9 +463,14 @@ export class Grabadora {
         if (sw && sh) fctx.drawImage(vp, sx, sy, sw, sh, 0, 0, fija.width, fija.height);
         ultimaFija = ahora;
       }
-      if (this.congelar && ultimaFija) ctx.drawImage(fija, 0, 0, lienzo.width, lienzo.height);
-      else if (sw && sh) ctx.drawImage(vp, sx, sy, sw, sh, 0, 0, lienzo.width, lienzo.height);
-      if (vc) this.pintarBurbuja(ctx, vc, lienzo.width, lienzo.height);
+      const congelada = this.congelar && ultimaFija;
+      if (vertical && vc) {
+        this.pintarVertical(ctx, congelada ? fija : vp, congelada ? null : { sx, sy, sw, sh }, vc);
+      } else {
+        if (congelada) ctx.drawImage(fija, 0, 0, lienzo.width, lienzo.height);
+        else if (sw && sh) ctx.drawImage(vp, sx, sy, sw, sh, 0, 0, lienzo.width, lienzo.height);
+        if (vc) this.pintarBurbuja(ctx, vc, lienzo.width, lienzo.height);
+      }
       pintar(ctx, this.pizarra, lienzo.width, lienzo.height, ahora);
     };
     const codigo = 'let t=setInterval(()=>postMessage(0),1000/30);onmessage=()=>clearInterval(t)';
@@ -411,6 +478,48 @@ export class Grabadora {
     this.reloj.onmessage = dibujar;
     dibujar();
     return lienzo.captureStream(30).getVideoTracks()[0]!;
+  }
+
+  /** Short: lo compartido llena su mitad (recortado al centro, sin deformar) y la cámara la otra, en espejo. */
+  private pintarVertical(
+    ctx: CanvasRenderingContext2D,
+    fuente: HTMLVideoElement | HTMLCanvasElement,
+    recorte: { sx: number; sy: number; sw: number; sh: number } | null,
+    vc: HTMLVideoElement,
+  ) {
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const arriba = this.a.camaraArriba ?? true;
+    const { camara, pantalla } = partesVertical(W, H, arriba, this.a.reparto ?? REPARTO_INICIAL);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    const r = recorte ?? { sx: 0, sy: 0, sw: fuente.width, sh: fuente.height };
+    if (r.sw && r.sh) {
+      const c = cubrir(r.sw, r.sh, pantalla.w, pantalla.h);
+      ctx.drawImage(fuente, r.sx + c.x, r.sy + c.y, c.w, c.h, pantalla.x, pantalla.y, pantalla.w, pantalla.h);
+    }
+    if (vc.videoWidth) {
+      const c = cubrir(vc.videoWidth, vc.videoHeight, camara.w, camara.h);
+      ctx.save();
+      ctx.translate(camara.x + camara.w, camara.y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(vc, c.x, c.y, c.w, c.h, 0, 0, camara.w, camara.h);
+      ctx.restore();
+    }
+    // Línea fina entre las dos partes: separa sin robar espacio.
+    const linea = Math.max(2, Math.round(H * 0.002));
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillRect(0, (arriba ? camara.h : pantalla.h) - linea / 2, W, linea);
+  }
+
+  /** true si este video es un Short vertical (cámara dentro, 9:16). */
+  esVertical(): boolean {
+    return Boolean(this.a.vertical && this.videoCamara);
+  }
+
+  /** En la preparación del Short: cámara arriba o abajo y cuánto ocupa (se ve al instante). */
+  ajustarVertical(cambios: { camaraArriba?: boolean; reparto?: number }) {
+    this.a = { ...this.a, ...cambios };
   }
 
   private pintarBurbuja(ctx: CanvasRenderingContext2D, vc: HTMLVideoElement, ancho: number, alto: number) {

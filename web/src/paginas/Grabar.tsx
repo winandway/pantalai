@@ -16,6 +16,10 @@ import {
   reconocimientoDisponible,
   type Ajustes,
   type Area,
+  proporcionPantallaVertical,
+  REPARTO_INICIAL,
+  REPARTO_MAX,
+  REPARTO_MIN,
 } from '../logica/grabadora';
 import { ElegirArea } from '../componentes/ElegirArea';
 import { textoError, useIdioma } from '../logica/idioma';
@@ -36,7 +40,7 @@ import {
 import { formatoTiempo, tituloAutomatico, type Segmento } from '../logica/tiempo';
 import { copiar } from './Biblioteca';
 
-type Estado = 'ajustes' | 'cuenta' | 'grabando' | 'pausa' | 'subiendo' | 'fallo';
+type Estado = 'ajustes' | 'preparando' | 'cuenta' | 'grabando' | 'pausa' | 'subiendo' | 'fallo';
 
 function leerAjustes(idioma: 'en' | 'es'): Ajustes {
   try {
@@ -70,9 +74,15 @@ export function Grabar() {
   const [microfonos, setMicrofonos] = useState<MediaDeviceInfo[]>([]);
   const [confirmar, setConfirmar] = useState<'descartar' | 'reiniciar' | null>(null);
   // Elegir qué parte de la pantalla completa se graba (se muestra después de compartirla).
-  const [eligiendo, setEligiendo] = useState<{ flujo: MediaStream; listo: (x: Area | null) => void } | null>(
-    null,
-  );
+  const [eligiendo, setEligiendo] = useState<{
+    flujo: MediaStream;
+    listo: (x: Area | null) => void;
+    proporcion?: number;
+    inicial?: Area | null;
+  } | null>(null);
+  // Short vertical: la preparación espera a que la persona toque «Empezar a grabar» (o cancele).
+  const preparacion = useRef<((seguir: boolean) => void) | null>(null);
+  const corto = a.modo === 'pantalla_camara' && !!a.vertical;
   const grabadora = useRef<Grabadora | null>(null);
   const subidor = useRef<Subidor | null>(null);
   const videoId = useRef<string | null>(null);
@@ -134,7 +144,7 @@ export function Grabar() {
       vivo = false;
       flujoCam?.getTracks().forEach((p) => p.stop());
     };
-  }, [estado, a.modo, a.camaraId, leerDispositivos]);
+  }, [estado, a.modo, a.camaraId, corto, leerDispositivos]);
 
   useEffect(() => {
     if (estado !== 'grabando') return;
@@ -209,8 +219,11 @@ export function Grabar() {
     const ajustes =
       limites && Number(a.calidad) > Number(limites.calidad) ? { ...a, calidad: limites.calidad } : a;
     // La ventanita flotante se abre PRIMERO, con el gesto del clic (Chrome lo exige).
+    // En el Short la ventanita es vertical y muestra cómo va quedando el video.
     const ventana =
-      a.modo === 'pantalla_camara' && a.flotante && puedeFlotar() ? await abrirVentana(a) : null;
+      a.modo === 'pantalla_camara' && a.flotante && puedeFlotar()
+        ? await abrirVentana(corto ? { burbujaTamano: 'grande', burbujaForma: 'vertical' } : a)
+        : null;
     const g = new Grabadora(ajustes, {
       pedazo: (b) => {
         subidor.current?.agregar(b);
@@ -237,7 +250,11 @@ export function Grabar() {
     }
     // «Elegir qué parte»: se marca el área sobre la imagen de lo compartido (pantalla, ventana o pestaña) antes de
     // empezar. Con la pestaña de YouTube, por ejemplo, queda solo el reproductor.
-    if (a.modo !== 'camara' && a.elegirArea && g.pantallaCruda) {
+    if (corto && g.pantallaCruda) {
+      // Short: siempre se encuadra lo que se va a reaccionar, con la forma exacta de su mitad.
+      const elegida = await encuadrar(g, ajustes.calidad, a.reparto ?? REPARTO_INICIAL, a.areaVertical);
+      g.fijarArea(elegida);
+    } else if (a.modo !== 'camara' && a.elegirArea && g.pantallaCruda) {
       const flujoPantalla = g.pantallaCruda;
       const elegida = await new Promise<Area | null>((listo) =>
         setEligiendo({ flujo: flujoPantalla, listo }),
@@ -247,6 +264,19 @@ export function Grabar() {
       if (elegida) setA((x) => ({ ...x, area: elegida }));
     }
     grabadora.current = g;
+    if (corto) {
+      // Se ve el Short armado; recién al tocar «Empezar a grabar» arranca la cuenta regresiva.
+      setEstado('preparando');
+      const seguir = await new Promise<boolean>((ok) => (preparacion.current = ok));
+      preparacion.current = null;
+      if (!seguir || grabadora.current !== g) {
+        ventana?.close();
+        g.liberar();
+        grabadora.current = null;
+        setEstado('ajustes');
+        return;
+      }
+    }
     void leerDispositivos();
     setSinSonido(g.sinSonidoSistema);
     pararNiveles.current();
@@ -258,8 +288,8 @@ export function Grabar() {
     if (ventana && g.camara) {
       flotante.current = montarBurbuja(
         ventana,
-        g.camara,
-        a,
+        corto && g.previa ? g.previa : g.camara,
+        corto ? { burbujaForma: 'vertical', bordeColores: false, espejo: false } : a,
         {
           pausar: () => pausarRef.current(),
           continuar: () => continuarRef.current(),
@@ -360,6 +390,27 @@ export function Grabar() {
     setEstado('grabando');
   };
 
+  /** Short: abre el encuadre con la forma de la mitad de lo compartido y guarda el área para la próxima vez. */
+  async function encuadrar(
+    g: Grabadora,
+    calidad: Ajustes['calidad'],
+    reparto: number,
+    inicial: Area | null | undefined,
+  ): Promise<Area | null> {
+    const flujoPantalla = g.pantallaCruda!;
+    const elegida = await new Promise<Area | null>((listo) =>
+      setEligiendo({
+        flujo: flujoPantalla,
+        listo,
+        proporcion: proporcionPantallaVertical(calidad, reparto),
+        inicial,
+      }),
+    );
+    setEligiendo(null);
+    if (elegida) setA((x) => ({ ...x, areaVertical: elegida }));
+    return elegida;
+  }
+
   async function descartar() {
     const id = videoId.current;
     await grabadora.current?.terminar('usuario');
@@ -417,7 +468,23 @@ export function Grabar() {
 
   return (
     <div className="grabar">
-      {eligiendo && <ElegirArea flujo={eligiendo.flujo} inicial={a.area} listo={eligiendo.listo} />}
+      {eligiendo && (
+        <ElegirArea
+          flujo={eligiendo.flujo}
+          inicial={eligiendo.proporcion ? eligiendo.inicial : a.area}
+          listo={eligiendo.listo}
+          proporcion={eligiendo.proporcion}
+          textos={
+            eligiendo.proporcion
+              ? {
+                  titulo: t('shortEncuadreTitulo'),
+                  ayuda: t('shortEncuadreAyuda'),
+                  boton: t('shortEncuadreListo'),
+                }
+              : undefined
+          }
+        />
+      )}
       {estado === 'ajustes' && (
         <div className="grabar-ajustes">
           <section className="tarjeta">
@@ -445,6 +512,31 @@ export function Grabar() {
                 </label>
               ))}
             </fieldset>
+            {a.modo === 'pantalla_camara' && (
+              <fieldset className="selector-modo selector-formato">
+                <legend>{t('formato')}</legend>
+                {(
+                  [
+                    [false, t('formatoHorizontal'), '▭'],
+                    [true, t('formatoShort'), '▯'],
+                  ] as const
+                ).map(([v, etiqueta, icono]) => (
+                  <label key={String(v)} className={!!a.vertical === v ? 'activo' : ''}>
+                    <input
+                      type="radio"
+                      name="formato"
+                      checked={!!a.vertical === v}
+                      onChange={() => cambiar('vertical', v)}
+                    />
+                    <span className="modo-icono" aria-hidden="true">
+                      {icono}
+                    </span>
+                    {etiqueta}
+                  </label>
+                ))}
+              </fieldset>
+            )}
+            {corto && <p className="ayuda">{t('formatoShortAyuda')}</p>}
 
             {a.modo !== 'pantalla' && (
               <div className="campo">
@@ -489,7 +581,7 @@ export function Grabar() {
                 {t('audioSistema')}
               </label>
             )}
-            {a.modo !== 'camara' && (
+            {a.modo !== 'camara' && !corto && (
               <>
                 <label className="interruptor">
                   <input
@@ -559,27 +651,61 @@ export function Grabar() {
 
           <section className="tarjeta grabar-previa-ajustes">
             <h2>{t('vistaPrevia')}</h2>
-            <div className={`maqueta-pantalla modo-${a.modo}`}>
-              {a.modo !== 'camara' && <div className="maqueta-escritorio" aria-hidden="true" />}
-              {a.modo !== 'pantalla' && (
+            {corto ? (
+              <div className={`maqueta-short ${(a.camaraArriba ?? true) ? 'arriba' : 'abajo'}`}>
                 <div
-                  className={`camara-previa-marco forma-${a.burbujaForma} ${a.bordeColores && a.modo !== 'camara' ? 'con-borde' : ''} ${a.modo === 'camara' ? 'completa' : ''}`}
-                  style={
-                    a.modo === 'camara'
-                      ? undefined
-                      : {
-                          left: `${(burbuja.x / 320) * 100}%`,
-                          top: `${(burbuja.y / 180) * 100}%`,
-                          width: `${(burbuja.ancho / 320) * 100}%`,
-                          height: `${(burbuja.alto / 180) * 100}%`,
-                        }
-                  }
+                  className="maqueta-short-camara"
+                  style={{ flexBasis: `${(a.reparto ?? REPARTO_INICIAL) * 100}%` }}
                 >
                   <video ref={camaraPrevia} autoPlay muted playsInline className="camara-previa" />
                 </div>
-              )}
-            </div>
-            {a.modo === 'pantalla_camara' && (
+                <div className="maqueta-short-pantalla">
+                  <span>▶</span>
+                </div>
+              </div>
+            ) : (
+              <div className={`maqueta-pantalla modo-${a.modo}`}>
+                {a.modo !== 'camara' && <div className="maqueta-escritorio" aria-hidden="true" />}
+                {a.modo !== 'pantalla' && (
+                  <div
+                    className={`camara-previa-marco forma-${a.burbujaForma} ${a.bordeColores && a.modo !== 'camara' ? 'con-borde' : ''} ${a.modo === 'camara' ? 'completa' : ''}`}
+                    style={
+                      a.modo === 'camara'
+                        ? undefined
+                        : {
+                            left: `${(burbuja.x / 320) * 100}%`,
+                            top: `${(burbuja.y / 180) * 100}%`,
+                            width: `${(burbuja.ancho / 320) * 100}%`,
+                            height: `${(burbuja.alto / 180) * 100}%`,
+                          }
+                    }
+                  >
+                    <video ref={camaraPrevia} autoPlay muted playsInline className="camara-previa" />
+                  </div>
+                )}
+              </div>
+            )}
+            {corto && (
+              <div className="fila-botones izquierda" role="group" aria-label={t('shortCamara')}>
+                <button
+                  type="button"
+                  className={`boton chico ${(a.camaraArriba ?? true) ? '' : 'secundario'}`}
+                  aria-pressed={a.camaraArriba ?? true}
+                  onClick={() => cambiar('camaraArriba', true)}
+                >
+                  ⬆ {t('shortCamaraArriba')}
+                </button>
+                <button
+                  type="button"
+                  className={`boton chico ${(a.camaraArriba ?? true) ? 'secundario' : ''}`}
+                  aria-pressed={!(a.camaraArriba ?? true)}
+                  onClick={() => cambiar('camaraArriba', false)}
+                >
+                  ⬇ {t('shortCamaraAbajo')}
+                </button>
+              </div>
+            )}
+            {a.modo === 'pantalla_camara' && !corto && (
               <div className="ajustes-burbuja">
                 <div className="campo">
                   <label htmlFor="tam">{t('burbujaTamano')}</label>
@@ -645,8 +771,81 @@ export function Grabar() {
         </div>
       )}
 
-      {(enCurso || estado === 'subiendo' || estado === 'fallo') && (
-        <div className="grabar-en-curso">
+      {(enCurso || estado === 'preparando' || estado === 'subiendo' || estado === 'fallo') && (
+        <div className={`grabar-en-curso ${grabadora.current?.esVertical() ? 'es-short' : ''}`}>
+          {estado === 'preparando' && (
+            <div className="tarjeta short-preparar">
+              <h2>{t('shortPrepararTitulo')}</h2>
+              <p className="ayuda">{t('shortPrepararAyuda')}</p>
+              <div className="fila-botones izquierda" role="group" aria-label={t('shortCamara')}>
+                <button
+                  type="button"
+                  className={`boton chico ${(a.camaraArriba ?? true) ? '' : 'secundario'}`}
+                  aria-pressed={a.camaraArriba ?? true}
+                  onClick={() => {
+                    cambiar('camaraArriba', true);
+                    grabadora.current?.ajustarVertical({ camaraArriba: true });
+                  }}
+                >
+                  ⬆ {t('shortCamaraArriba')}
+                </button>
+                <button
+                  type="button"
+                  className={`boton chico ${(a.camaraArriba ?? true) ? 'secundario' : ''}`}
+                  aria-pressed={!(a.camaraArriba ?? true)}
+                  onClick={() => {
+                    cambiar('camaraArriba', false);
+                    grabadora.current?.ajustarVertical({ camaraArriba: false });
+                  }}
+                >
+                  ⬇ {t('shortCamaraAbajo')}
+                </button>
+              </div>
+              <div className="campo">
+                <label htmlFor="reparto">
+                  {t('shortReparto')}: {Math.round((a.reparto ?? REPARTO_INICIAL) * 100)} %
+                </label>
+                <input
+                  id="reparto"
+                  type="range"
+                  min={REPARTO_MIN}
+                  max={REPARTO_MAX}
+                  step={0.01}
+                  value={a.reparto ?? REPARTO_INICIAL}
+                  onChange={(e) => {
+                    const r = Number(e.target.value);
+                    cambiar('reparto', r);
+                    grabadora.current?.ajustarVertical({ reparto: r });
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                className="boton secundario"
+                onClick={() => {
+                  const g = grabadora.current;
+                  if (!g) return;
+                  void encuadrar(g, a.calidad, a.reparto ?? REPARTO_INICIAL, a.areaVertical).then((x) =>
+                    g.fijarArea(x),
+                  );
+                }}
+              >
+                ⬚ {t('shortReencuadrar')}
+              </button>
+              <div className="fila-botones izquierda short-arrancar">
+                <button type="button" className="boton grande" onClick={() => preparacion.current?.(true)}>
+                  <span className="punto-rojo" aria-hidden="true" /> {t('empezarGrabacion')}
+                </button>
+                <button
+                  type="button"
+                  className="boton secundario"
+                  onClick={() => preparacion.current?.(false)}
+                >
+                  {t('cancelar')}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grabar-previa">
             <video ref={previa} autoPlay muted playsInline />
             {(estado === 'grabando' || estado === 'pausa') && (
@@ -673,76 +872,86 @@ export function Grabar() {
               </p>
             )}
           </div>
-          <div className="barra-grabacion" role="toolbar">
-            <span className={`indicador ${estado === 'grabando' ? 'vivo' : ''}`}>
-              {estado === 'pausa'
-                ? t('enPausa')
-                : estado === 'subiendo'
-                  ? t('procesando')
-                  : estado === 'cuenta'
-                    ? `${t('cuentaRegresiva')} ${cuenta}`
-                    : t('grabando')}
-            </span>
-            <span className="cronometro">{formatoTiempo(segundos)}</span>
-            {enCurso && (
-              <span className="niveles" aria-label={t('nivelesSonido')}>
-                {grabadora.current?.pistaMicro && (
-                  <span className="nivel" title={t('microfono')}>
-                    🎤
-                    <span className="nivel-barra">
-                      <span style={{ width: `${Math.round(niveles.micro * 100)}%` }} />
-                    </span>
-                  </span>
-                )}
-                {grabadora.current?.pistaSistema && (
-                  <span className="nivel" title={t('sonidoComputadora')}>
-                    🔊
-                    <span className="nivel-barra">
-                      <span style={{ width: `${Math.round(niveles.sistema * 100)}%` }} />
-                    </span>
-                  </span>
-                )}
+          {estado !== 'preparando' && (
+            <div className="barra-grabacion" role="toolbar">
+              <span className={`indicador ${estado === 'grabando' ? 'vivo' : ''}`}>
+                {estado === 'pausa'
+                  ? t('enPausa')
+                  : estado === 'subiendo'
+                    ? t('procesando')
+                    : estado === 'cuenta'
+                      ? `${t('cuentaRegresiva')} ${cuenta}`
+                      : t('grabando')}
               </span>
-            )}
-            {estado === 'grabando' && (
-              <button type="button" className="boton secundario" onClick={() => pausarRef.current()}>
-                ⏸ {t('pausar')}
-              </button>
-            )}
-            {estado === 'pausa' && (
-              <button type="button" className="boton secundario" onClick={() => continuarRef.current()}>
-                ▶ {t('continuar')}
-              </button>
-            )}
-            {(estado === 'grabando' || estado === 'pausa') && (
-              <>
-                <button
-                  type="button"
-                  className={`boton ${lapices.activo ? '' : 'secundario'}`}
-                  aria-pressed={lapices.activo}
-                  disabled={limites?.lapices === false}
-                  title={limites?.lapices === false ? t('soloBusiness') : undefined}
-                  onClick={() => cambiarLapices({ activo: !lapices.activo })}
-                >
-                  ✏️ {lapices.activo ? t('dejarDeDibujar') : t('dibujar')}
+              <span className="cronometro">{formatoTiempo(segundos)}</span>
+              {enCurso && (
+                <span className="niveles" aria-label={t('nivelesSonido')}>
+                  {grabadora.current?.pistaMicro && (
+                    <span className="nivel" title={t('microfono')}>
+                      🎤
+                      <span className="nivel-barra">
+                        <span style={{ width: `${Math.round(niveles.micro * 100)}%` }} />
+                      </span>
+                    </span>
+                  )}
+                  {grabadora.current?.pistaSistema && (
+                    <span className="nivel" title={t('sonidoComputadora')}>
+                      🔊
+                      <span className="nivel-barra">
+                        <span style={{ width: `${Math.round(niveles.sistema * 100)}%` }} />
+                      </span>
+                    </span>
+                  )}
+                </span>
+              )}
+              {estado === 'grabando' && (
+                <button type="button" className="boton secundario" onClick={() => pausarRef.current()}>
+                  ⏸ {t('pausar')}
                 </button>
-                <button type="button" className="boton secundario" onClick={() => setConfirmar('reiniciar')}>
-                  ↺ {t('reiniciar')}
+              )}
+              {estado === 'pausa' && (
+                <button type="button" className="boton secundario" onClick={() => continuarRef.current()}>
+                  ▶ {t('continuar')}
                 </button>
-                <button type="button" className="boton secundario" onClick={() => setConfirmar('descartar')}>
-                  {t('descartar')}
-                </button>
-                <button type="button" className="boton" onClick={() => void terminar()}>
-                  ■ {t('terminar')}
-                </button>
-              </>
-            )}
-            {estado === 'subiendo' && (
-              <div className="progreso" aria-label={t('subiendo')}>
-                <div style={{ width: `${Math.round(progreso * 100)}%` }} />
-              </div>
-            )}
-          </div>
+              )}
+              {(estado === 'grabando' || estado === 'pausa') && (
+                <>
+                  <button
+                    type="button"
+                    className={`boton ${lapices.activo ? '' : 'secundario'}`}
+                    aria-pressed={lapices.activo}
+                    disabled={limites?.lapices === false}
+                    title={limites?.lapices === false ? t('soloBusiness') : undefined}
+                    onClick={() => cambiarLapices({ activo: !lapices.activo })}
+                  >
+                    ✏️ {lapices.activo ? t('dejarDeDibujar') : t('dibujar')}
+                  </button>
+                  <button
+                    type="button"
+                    className="boton secundario"
+                    onClick={() => setConfirmar('reiniciar')}
+                  >
+                    ↺ {t('reiniciar')}
+                  </button>
+                  <button
+                    type="button"
+                    className="boton secundario"
+                    onClick={() => setConfirmar('descartar')}
+                  >
+                    {t('descartar')}
+                  </button>
+                  <button type="button" className="boton" onClick={() => void terminar()}>
+                    ■ {t('terminar')}
+                  </button>
+                </>
+              )}
+              {estado === 'subiendo' && (
+                <div className="progreso" aria-label={t('subiendo')}>
+                  <div style={{ width: `${Math.round(progreso * 100)}%` }} />
+                </div>
+              )}
+            </div>
+          )}
           {(estado === 'grabando' || estado === 'pausa') && (
             <BarraLapices
               l={lapices}

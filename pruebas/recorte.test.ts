@@ -114,3 +114,50 @@ describe('CANDADO C-AREA: grabar solo una parte de la pantalla', () => {
     expect(r).toEqual({ sx: 1760, sy: 920, sw: 160, sh: 160 });
   });
 });
+
+describe('CANDADO C-SHORT: el Short vertical se arma bien', () => {
+  it('9:16 y las dos partes llenan todo el alto, con la cámara arriba o abajo', async () => {
+    const { medidaVertical, partesVertical, REPARTO_MAX } = await import('../web/src/logica/grabadora');
+    expect(medidaVertical('1080')).toEqual({ ancho: 1080, alto: 1920 });
+    expect(medidaVertical('2160')).toEqual({ ancho: 1080, alto: 1920 });
+    expect(medidaVertical('720')).toEqual({ ancho: 720, alto: 1280 });
+    const arriba = partesVertical(1080, 1920, true, 0.45);
+    expect(arriba.camara).toEqual({ x: 0, y: 0, w: 1080, h: 864 });
+    expect(arriba.pantalla).toEqual({ x: 0, y: 864, w: 1080, h: 1056 });
+    const abajo = partesVertical(1080, 1920, false, 0.45);
+    expect(abajo.pantalla.y).toBe(0);
+    expect(abajo.camara.y + abajo.camara.h).toBe(1920);
+    // El reparto se limita a lo razonable.
+    expect(partesVertical(1080, 1920, true, 0.9).camara.h).toBe(Math.round(1920 * REPARTO_MAX));
+  });
+
+  it('llenar un recuadro recorta al centro sin deformar', async () => {
+    const { cubrir } = await import('../web/src/logica/grabadora');
+    // Cámara 1920×1080 en un recuadro de 1080×864: se usa el centro, 1350×1080.
+    expect(cubrir(1920, 1080, 1080, 864)).toEqual({ x: 285, y: 0, w: 1350, h: 1080 });
+    const c = cubrir(1000, 1000, 100, 200);
+    expect(c.w / c.h).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('CANDADO C-SHORT-ENCUADRE: el área del Short tiene la forma exacta de su mitad', () => {
+  it('se marca, se estira y se ajusta sin perder la forma ni salirse', async () => {
+    const { rectConProporcion, ajustarProporcion } = await import('../web/src/logica/area');
+    const r = 0.6;
+    const a = rectConProporcion({ x: 0.2, y: 0.2 }, { x: 0.5, y: 0.9 }, r);
+    expect(a.ancho / a.alto).toBeCloseTo(r, 6);
+    expect(a.y + a.alto).toBeLessThanOrEqual(1.000001);
+    // Hacia arriba y a la izquierda.
+    const b = rectConProporcion({ x: 0.8, y: 0.8 }, { x: 0.6, y: 0.1 }, r);
+    expect(b.ancho / b.alto).toBeCloseTo(r, 6);
+    expect(b.x + b.ancho).toBeCloseTo(0.8, 6);
+    expect(b.y).toBeGreaterThanOrEqual(0);
+    // Un área horizontal de antes se lleva a la forma del Short, centrada y dentro de la pantalla.
+    const c = ajustarProporcion({ x: 0.1, y: 0.1, ancho: 0.8, alto: 0.5 }, r);
+    expect(c.ancho / c.alto).toBeCloseTo(r, 6);
+    expect(c.x).toBeGreaterThanOrEqual(0);
+    expect(c.y + c.alto).toBeLessThanOrEqual(1.000001);
+    const d = ajustarProporcion(null, r);
+    expect(d.ancho / d.alto).toBeCloseTo(r, 6);
+  });
+});

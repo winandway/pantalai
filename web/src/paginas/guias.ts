@@ -774,4 +774,37 @@ export const GUIAS: Guia[] = [
       ],
     },
   },
+  {
+    slug: 'record-a-vertical-short',
+    seccion: 'grabar',
+    icono: '📱',
+    en: {
+      titulo: 'Record a vertical Short to react to a video',
+      resumen:
+        'A 9:16 video for Shorts, TikTok and Reels: the clip in one half, your camera in the other. Frame it, arrange it, then record.',
+      cuerpo: [
+        'Open Record, choose Screen + Cam and, under Format, choose “Vertical Short (9:16)”. The preview shows how your Short will look; pick Camera on top or Camera at the bottom.',
+        'Open the video you will react to in another tab (for example, on YouTube). Back in Pantalay, press Start recording and share that tab: only the page shows, with no browser bar, dock or icons.',
+        'Frame what you are reacting to. Drag to mark it: the box keeps the exact shape of its half of the Short, so what you mark is exactly what goes in the video. Press “Use this frame”.',
+        'Arrange it before recording. You see the Short already put together: move the camera up or down, make it bigger or smaller, or reframe. Nothing is recorded yet.',
+        'Press Start recording when everything is ready. After a 3-second countdown, react: play and pause the clip, talk, point with your finger or draw with the pencils. Use Pause and Resume as many times as you need, and Finish when you are done.',
+        'Your Short comes out at 1080 × 1920, with your camera sharp and your microphone and computer sound together. Download it as MP4 and upload it to YouTube Shorts, TikTok or Instagram Reels. Use “For YouTube” for its titles, description and tags.',
+        'Tip: if the floating window is on, it shows your Short as it is being recorded, so you can keep an eye on it while you react in the other tab.',
+      ],
+    },
+    es: {
+      titulo: 'Graba un Short vertical para reaccionar a un video',
+      resumen:
+        'Un video 9:16 para Shorts, TikTok y Reels: el clip en una mitad y tu cámara en la otra. Lo encuadras, lo acomodas y recién ahí grabas.',
+      cuerpo: [
+        'Abre Grabar, elige Pantalla y cámara y, en Formato, elige «Short vertical (9:16)». La vista previa muestra cómo va a quedar tu Short; elige Cámara arriba o Cámara abajo.',
+        'Abre en otra pestaña el video al que vas a reaccionar (por ejemplo, en YouTube). Vuelve a Pantalay, toca Empezar a grabar y comparte esa pestaña: sale solo la página, sin barra del navegador, Dock ni íconos.',
+        'Encuadra lo que vas a reaccionar. Arrastra para marcarlo: el recuadro tiene la forma exacta de su mitad del Short, así que lo que marcas es justo lo que sale en el video. Toca «Usar este encuadre».',
+        'Acomódalo antes de grabar. Ves el Short ya armado: pon la cámara arriba o abajo, hazla más grande o más chica, o vuelve a encuadrar. Todavía no se graba nada.',
+        'Toca Empezar a grabar cuando todo esté listo. Después de la cuenta de 3 segundos, reacciona: reproduce y pausa el clip, habla, señala con el dedo o dibuja con los lápices. Usa Pausar y Continuar las veces que quieras, y Terminar cuando acabes.',
+        'Tu Short sale en 1080 × 1920, con tu cámara nítida y tu micrófono y el sonido de la computadora juntos. Descárgalo en MP4 y súbelo a YouTube Shorts, TikTok o Reels de Instagram. Usa «Para YouTube» para sus títulos, descripción y etiquetas.',
+        'Consejo: si la ventanita flotante está encendida, muestra tu Short mientras se graba, así lo vigilas mientras reaccionas en la otra pestaña.',
+      ],
+    },
+  },
 ];

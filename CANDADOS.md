@@ -409,3 +409,15 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: «C-MARCA-CONFIGURABLE» en `pruebas/servidor.test.ts` y la del borrador en `pruebas/borrador.test.tsx`,
   las dos comprobadas en rojo.
 - Superadmin en producción (24 oct 2026): `SUPERADMIN_CORREOS` = solo la cuenta de Richard.
+
+## C-SHORT (24 oct 2026)
+
+- Short vertical para reacciones (Grabar → Pantalla y cámara → Formato «Short vertical (9:16)»): 1080 × 1920 (720 ×
+  1280 en el plan gratis), lo compartido en una mitad y la cámara en la otra (`partesVertical`, `cubrir`,
+  `pintarVertical` en `web/src/logica/grabadora.ts`). La cámara se pide en 1080p para que se vea nítida.
+- Encuadre con forma fija (`rectConProporcion`, `ajustarProporcion` en `web/src/logica/area.ts`; `ElegirArea` con
+  `proporcion`): lo que se marca es exactamente lo que sale. El área del Short se guarda aparte (`areaVertical`).
+- Paso «preparando»: se ve el Short armado, cámara arriba/abajo, tamaño de la cámara (30 a 60 %), volver a encuadrar;
+  NO se crea el video ni se graba hasta «Empezar a grabar». La ventanita flotante muestra el Short (sin espejo).
+- Prueba: `e2e/grabar-short.spec.ts` (forma del encuadre, 1080 × 1920, cámara abajo, pausa) con lo compartido simulado
+  en blanco; comprobada en rojo dejando la cámara fija arriba. Cuentas en `pruebas/recorte.test.ts`.

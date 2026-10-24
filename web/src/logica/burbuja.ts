@@ -64,7 +64,7 @@ button.alto { background: #e5484d; color: #fff; }
 export function montarBurbuja(
   ventana: Window,
   camara: MediaStream,
-  a: Pick<Ajustes, 'burbujaForma' | 'bordeColores'>,
+  a: Pick<Ajustes, 'burbujaForma' | 'bordeColores'> & { espejo?: boolean },
   controles: Controles,
   textos: Textos,
 ): Burbuja {
@@ -81,6 +81,8 @@ export function montarBurbuja(
   video.playsInline = true;
   video.autoplay = true;
   video.srcObject = camara;
+  // En el Short la ventanita muestra el video armado: sin espejo y entero (no recortado).
+  if (a.espejo === false) video.style.cssText = 'transform:none;object-fit:contain';
   marco.appendChild(video);
   d.body.appendChild(marco);
   void video.play().catch(() => undefined);
