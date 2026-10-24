@@ -16,7 +16,7 @@
 
 ## 👤 Almacenamiento a 500 GB (decidido por Richard el 20 oct 2026)
 
-- 👤 Subir el almacenamiento del sitio `pantalai` a 500 GB en la sesión de YaDominios (YaPanel), cobrando lo que cuesta
+- ✅ (24 oct 2026, hecho) Subir el almacenamiento del sitio `pantalai` a 500 GB en la sesión de YaDominios (YaPanel), cobrando lo que cuesta
   en Cloudflare (0,015 USD por GB al mes). Encargo listo en el chat del 20 oct 2026. Cuando esté hecho, aquí: poner la
   variable del sitio `ALMACEN_LIMITE_GB=500` y republicar, para que el superadmin muestre el tope nuevo.
 
@@ -74,3 +74,4 @@
 - [ ] Los videos grabados ANTES del 24 oct no la tienen dentro (solo en el reproductor).
 - [x] Grabar solo una parte de la pantalla y cámara dentro del video al compartir una pestaña (24 oct 2026, C-AREA, C-CAMARA-EN-PESTANA).
 - [x] Short vertical para reacciones: encuadre, cámara arriba o abajo, preparación antes de grabar (24 oct 2026, C-SHORT).
+- [x] Almacenamiento a 500 GB (YaDominios, 24 oct 2026) y `ALMACEN_LIMITE_GB=500` puesto.

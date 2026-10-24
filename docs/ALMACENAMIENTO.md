@@ -38,7 +38,8 @@ tope del plan del sitio.**
 ## Decisión (20 oct 2026)
 
 Richard eligió la opción 1: **subir el sitio `pantalai` a 500 GB en YaDominios, cobrando lo que cuesta en Cloudflare.**
-Se hace en la sesión de YaDominios (es otro proyecto). Después, aquí: `ALMACEN_LIMITE_GB=500`.
+✅ Hecho el 24 oct 2026: la sesión de YaDominios dejó el sitio en 500 GB (20 del plan + 480 extra, 7,20 USD al mes) y
+aquí se puso `ALMACEN_LIMITE_GB=500`. Uso ese día: unos 950 MB.
 
 ## Las opciones que se miraron
 
