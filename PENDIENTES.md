@@ -70,6 +70,7 @@
 - [x] «Para YouTube»: tres títulos, descripción, palabras clave y hashtags con botones de copiar (23 oct 2026, C-YOUTUBE).
 - [ ] Miniatura para YouTube generada desde el video (Richard la hace aparte por ahora).
 - [x] Marca de agua gris «Pantalay» en el reproductor para el plan gratis, aunque el cobro siga apagado (23 oct 2026, C-MARCA-AGUA).
-- [ ] Marca grabada también en el MP4 descargado del plan gratis (hay que re-codificar el video en el navegador).
+- [x] Marca «pantalay.com» grabada dentro de los videos nuevos del plan gratis: sale en el MP4 descargado (24 oct 2026, C-MARCA-GRABADA).
+- [ ] Los videos grabados ANTES del 24 oct no la tienen dentro (solo en el reproductor).
 - [x] Grabar solo una parte de la pantalla y cámara dentro del video al compartir una pestaña (24 oct 2026, C-AREA, C-CAMARA-EN-PESTANA).
 - [x] Short vertical para reacciones: encuadre, cámara arriba o abajo, preparación antes de grabar (24 oct 2026, C-SHORT).

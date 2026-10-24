@@ -181,9 +181,18 @@ function jsonSeguro(texto: string): unknown {
   }
 }
 
-function videoPublico(v: FilaVideo, autor: string, esDueno: boolean, tieneMp4 = false, marca = false) {
+function videoPublico(
+  v: FilaVideo,
+  autor: string,
+  esDueno: boolean,
+  tieneMp4 = false,
+  marca = false,
+  marcaGrabada = false,
+) {
   return {
     tiene_mp4: tieneMp4,
+    /** La marca ya va dentro de la imagen del video: el reproductor no le pone otra encima. */
+    marca_grabada: marcaGrabada,
     /** «Hecho con Pantalay» (plan gratis del dueño, solo con el cobro encendido). */
     marca,
     id: v.id,
@@ -1186,6 +1195,7 @@ async function borrarVideo(c: C, v: FilaVideo) {
       'video_mp4_recorte WHERE video_id',
       'revisiones WHERE video_id',
       'video_youtube WHERE video_id',
+      'video_marca WHERE video_id',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} = ?`).bind(v.id)),
   );
 }
@@ -1646,7 +1656,12 @@ app.post('/datos/videos', requiereSesion, async (c) => {
   )
     .bind(id, c.get('usuario')!.id, titulo, tipo, d.ancho, d.alto, d.idioma, subida.uploadId, ahora, ahora)
     .run();
-  return c.json({ id, parte_minima: PARTE_MIN }, 201);
+  // ¿Esta cuenta lleva marca de agua? Lo decide el servidor: la grabadora la pinta DENTRO del video (también sale en
+  // el MP4 descargado) y queda anotado para que el reproductor no ponga otra encima.
+  const u = c.get('usuario')!;
+  const marca = await llevaMarca(c, u.id, u.correo);
+  if (marca) await c.env.DB.prepare('INSERT OR IGNORE INTO video_marca (video_id) VALUES (?)').bind(id).run();
+  return c.json({ id, parte_minima: PARTE_MIN, marca }, 201);
 });
 
 async function videoDelDueno(c: C): Promise<FilaVideo | null> {
@@ -1789,6 +1804,7 @@ app.get('/datos/videos/:id', async (c) => {
         u?.id === v.usuario_id,
         await tieneMp4(c, v),
         await llevaMarca(c, v.usuario_id, autor?.correo ?? ''),
+        Boolean(await c.env.DB.prepare('SELECT 1 FROM video_marca WHERE video_id = ?').bind(v.id).first()),
       ),
     },
     200,
@@ -1891,6 +1907,12 @@ app.post('/datos/videos/:id/duplicar', requiereSesion, async (c) => {
      FROM videos WHERE id = ?`,
   )
     .bind(id, v.idioma === 'es' ? ' (copia)' : ' (copy)', ahora, ahora, v.id)
+    .run();
+  // La copia es el mismo archivo: si el original trae la marca grabada, la copia también.
+  await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO video_marca (video_id) SELECT ? FROM video_marca WHERE video_id = ?',
+  )
+    .bind(id, v.id)
     .run();
   return c.json({ id }, 201);
 });

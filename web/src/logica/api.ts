@@ -55,6 +55,8 @@ export type Video = {
   id: string;
   tiene_mp4?: boolean;
   marca?: boolean;
+  /** La marca de agua ya va grabada dentro de la imagen. */
+  marca_grabada?: boolean;
   titulo: string;
   descripcion: string;
   estado: string;

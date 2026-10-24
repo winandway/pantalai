@@ -113,7 +113,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Press Record. Choose a mode: Screen + Cam puts your face in a bubble over the screen, Screen only records just the screen, and Cam only records just you.',
         'Pick your camera and microphone. “Record computer sound” comes on by default, so the sound of a video, music or a meeting is recorded too.',
-        'Choose the quality: 720p, 1080p HD or 4K. On the free plan your videos show a small gray Pantalay mark in the corner; paid plans have no mark.',
+        'Choose the quality: 720p, 1080p HD or 4K. On the free plan a small gray “pantalay.com” mark is recorded into your video (it also shows in the MP4 you download; in a vertical Short it goes over your camera); paid plans have no mark.',
         'Press Start recording. Your browser asks what to share. To record installed apps too (not only the browser), choose “Entire screen”. A window or a tab only records that window or tab. Press Share and, after a 3-second countdown, you are live.',
         'While recording you can Pause, Resume, Restart or Discard. When you are done, press Finish, or press “Stop sharing” in the bar of your browser.',
         'Shortcuts while the Pantalay tab is open: Alt + Shift + P pauses or resumes, Alt + Shift + S finishes, Alt + Shift + D opens the drawing tools.',
@@ -125,7 +125,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Toca Grabar. Elige el modo: Pantalla + cámara pone tu cara en una burbuja sobre la pantalla, Solo pantalla graba únicamente la pantalla y Solo cámara te graba solo a ti.',
         'Elige tu cámara y tu micrófono. «Grabar el sonido de la computadora» viene encendido, así que también se graba el sonido de un video, de la música o de una reunión.',
-        'Elige la calidad: 720p, 1080p HD o 4K. En el plan gratis tus videos llevan una pequeña marca gris de Pantalay en la esquina; los planes pagos no llevan marca.',
+        'Elige la calidad: 720p, 1080p HD o 4K. En el plan gratis se graba dentro de tu video una pequeña marca gris «pantalay.com» (sale también en el MP4 que descargas; en el Short vertical va sobre tu cámara); los planes pagos no llevan marca.',
         'Toca Empezar a grabar. El navegador te pregunta qué compartir. Para que también salgan los programas instalados (no solo el navegador), elige «Pantalla completa». Una ventana o una pestaña graba solo esa ventana o esa pestaña. Toca Compartir y, tras una cuenta de 3 segundos, estás grabando.',
         'Mientras grabas puedes Pausar, Seguir, Reiniciar o Descartar. Cuando termines, toca Terminar, o toca «Dejar de compartir» en la barra del navegador.',
         'Atajos con la pestaña de Pantalay abierta: Alt + Shift + P pausa o sigue, Alt + Shift + S termina, Alt + Shift + D abre los lápices.',
@@ -692,7 +692,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Open Settings. Press your name at the top right and choose Settings.',
         'Change your name and company. Write them in Profile and press Save. Your name is what viewers see on your videos and comments.',
-        'Watermark. On the free plan your videos always show a small gray Pantalay mark. On a paid plan it is off, and you can turn it on in Settings whenever you want it (for example, for promo videos).',
+        'Watermark. On the free plan a small gray “pantalay.com” mark is always recorded into your videos, so it also shows in the MP4 you download. On a paid plan it is off, and you can turn it on in Settings whenever you want it (for example, for promo videos).',
         'Change your password. Write your current password and the new one (at least 8 characters) and press Change password. Every other device where you were logged in is logged out, and you get an email so you know it happened.',
         'See your plan. Plan shows what you have and the date it renews. Press See plans to compare or upgrade.',
         'Cancel your plan. Press Cancel plan and confirm. Nothing is charged again: you keep your paid features until the end of the period you already paid, and then your account moves to the free plan with all your videos. Changed your mind? Press Keep my plan before that date.',
@@ -706,7 +706,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Abre Configuración. Toca tu nombre arriba a la derecha y elige Configuración.',
         'Cambia tu nombre y tu empresa. Escríbelos en Perfil y toca Guardar. Tu nombre es el que ven quienes miran tus videos y comentarios.',
-        'Marca de agua. En el plan gratis tus videos llevan siempre una pequeña marca gris de Pantalay. Con un plan pago va apagada, y la puedes encender en Configuración cuando la quieras (por ejemplo, para videos de publicidad).',
+        'Marca de agua. En el plan gratis siempre se graba dentro de tus videos una pequeña marca gris «pantalay.com», así que sale también en el MP4 que descargas. Con un plan pago va apagada, y la puedes encender en Configuración cuando la quieras (por ejemplo, para videos de publicidad).',
         'Cambia tu contraseña. Escribe la actual y la nueva (al menos 8 caracteres) y toca Cambiar contraseña. Se cierra la sesión en los demás equipos donde habías entrado, y te llega un correo para que sepas que pasó.',
         'Mira tu plan. En Plan ves lo que tienes y la fecha en que se renueva. Toca Ver planes para comparar o subir de plan.',
         'Cancela tu plan. Toca Cancelar plan y confirma. No se vuelve a cobrar: conservas las funciones pagas hasta el final del período que ya pagaste y después tu cuenta pasa al plan gratis con todos tus videos. ¿Cambiaste de idea? Toca Mantener mi plan antes de esa fecha.',

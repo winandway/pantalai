@@ -421,3 +421,15 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   NO se crea el video ni se graba hasta «Empezar a grabar». La ventanita flotante muestra el Short (sin espejo).
 - Prueba: `e2e/grabar-short.spec.ts` (forma del encuadre, 1080 × 1920, cámara abajo, pausa) con lo compartido simulado
   en blanco; comprobada en rojo dejando la cámara fija arriba. Cuentas en `pruebas/recorte.test.ts`.
+
+## C-MARCA-GRABADA (24 oct 2026)
+
+- Qué pasaba: la marca solo se pintaba encima del reproductor; el MP4 descargado (y el Short subido a TikTok o
+  YouTube) salía limpio. Además decía «Pantalay» sin el «.com».
+- Ahora: al crear el video (`POST /datos/videos`) el servidor decide con `llevaMarca` si esa cuenta lleva marca, lo
+  anota en `video_marca` y responde `marca`; la grabadora la pinta DENTRO de la imagen (`pintarMarca`/`marcaEn` en
+  `web/src/logica/grabadora.ts`): logo gris + «pantalay.com». En el Short va abajo a la derecha de la CÁMARA; en lo
+  demás, abajo a la derecha del video. El reproductor ya no pone otra encima (`marca_grabada`); a los videos viejos se
+  la sigue poniendo el reproductor, con «pantalay.com».
+- Pruebas: «C-MARCA-GRABADA» en `pruebas/servidor.test.ts` y el Short en `e2e/grabar-short.spec.ts` (busca las letras
+  claras de la marca sobre la cámara; rojo sin pintarla).

@@ -44,6 +44,18 @@ export function medidaVertical(calidad: Calidad): { ancho: number; alto: number 
   return calidad === '720' ? { ancho: 720, alto: 1280 } : { ancho: 1080, alto: 1920 };
 }
 
+/** Medidas de la marca de agua según el lado corto del video (se ve igual en 720p, 1080p o 4K). */
+export function marcaEn(zona: Rect, ladoCorto: number) {
+  const letra = Math.round(ladoCorto * 0.026);
+  return {
+    letra,
+    icono: Math.round(letra * 1.3),
+    espacio: Math.round(letra * 0.4),
+    relleno: Math.round(letra * 0.5),
+    margen: Math.round(Math.min(zona.w, zona.h) * 0.04),
+  };
+}
+
 export const REPARTO_MIN = 0.3;
 export const REPARTO_MAX = 0.6;
 export const REPARTO_INICIAL = 0.45;
@@ -255,6 +267,9 @@ export class Grabadora {
   private videoCamara: HTMLVideoElement | null = null;
   /** Parte de la pantalla que se graba (null = toda). */
   private area: Area | null = null;
+  /** Marca de agua «pantalay.com» grabada dentro del video (la decide el servidor al crear el video). */
+  marca = false;
+  private logo: HTMLImageElement | null = null;
   /** La pantalla compartida tal cual (para elegir el área sobre ella). */
   pantallaCruda: MediaStream | null = null;
 
@@ -472,6 +487,7 @@ export class Grabadora {
         if (vc) this.pintarBurbuja(ctx, vc, lienzo.width, lienzo.height);
       }
       pintar(ctx, this.pizarra, lienzo.width, lienzo.height, ahora);
+      if (this.marca) this.pintarMarca(ctx, vertical);
     };
     const codigo = 'let t=setInterval(()=>postMessage(0),1000/30);onmessage=()=>clearInterval(t)';
     this.reloj = new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' })));
@@ -515,6 +531,44 @@ export class Grabadora {
   /** true si este video es un Short vertical (cámara dentro, 9:16). */
   esVertical(): boolean {
     return Boolean(this.a.vertical && this.videoCamara);
+  }
+
+  /**
+   * Marca de agua grabada en la imagen: logo + «pantalay.com», gris y discreta. En el Short va sobre la cámara (la
+   * parte que es nuestra); en lo demás, abajo a la derecha.
+   */
+  private pintarMarca(ctx: CanvasRenderingContext2D, vertical: boolean) {
+    if (!this.logo) {
+      this.logo = new Image();
+      this.logo.src = '/icon.png';
+    }
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const zona = vertical
+      ? partesVertical(W, H, this.a.camaraArriba ?? true, this.a.reparto ?? REPARTO_INICIAL).camara
+      : { x: 0, y: 0, w: W, h: H };
+    const m = marcaEn(zona, Math.min(W, H));
+    ctx.save();
+    ctx.font = `700 ${m.letra}px Inter, system-ui, sans-serif`;
+    const texto = 'pantalay.com';
+    const ancho = m.icono + m.espacio + ctx.measureText(texto).width + m.relleno * 2;
+    const alto = m.icono + m.relleno;
+    const x = zona.x + zona.w - m.margen - ancho;
+    const y = zona.y + zona.h - m.margen - alto;
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, ancho, alto, alto / 2);
+    ctx.fill();
+    if (this.logo.complete && this.logo.naturalWidth) {
+      ctx.filter = 'grayscale(1) brightness(1.6)';
+      ctx.drawImage(this.logo, x + m.relleno, y + m.relleno / 2, m.icono, m.icono);
+      ctx.filter = 'none';
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(texto, x + m.relleno + m.icono + m.espacio, y + alto / 2);
+    ctx.restore();
   }
 
   /** En la preparación del Short: cámara arriba o abajo y cuánto ocupa (se ve al instante). */

@@ -1033,3 +1033,30 @@ describe('CANDADO C-MARCA-CONFIGURABLE: la marca de agua se enciende en Configur
     expect(await marca(ana, id)).toBe(true);
   });
 });
+
+describe('CANDADO C-MARCA-GRABADA: la marca va dentro del video (también en el MP4 descargado)', () => {
+  it('al crear el video el servidor dice si se graba con marca y lo anota; la copia la conserva', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com' } as typeof env;
+    const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    const nuevo = (await (
+      await ana('/datos/videos', { method: 'POST', json: { tipo: 'video/mp4' } })
+    ).json()) as { id: string; marca: boolean };
+    expect(nuevo.marca).toBe(true);
+    const { id } = await videoListo(ana);
+    const v = (await (await ana(`/datos/videos/${id}`)).json()) as { video: { marca_grabada: boolean } };
+    expect(v.video.marca_grabada).toBe(true);
+    const copia = (await (await ana(`/datos/videos/${id}/duplicar`, { method: 'POST' })).json()) as {
+      id: string;
+    };
+    const vc = (await (await ana(`/datos/videos/${copia.id}`)).json()) as {
+      video: { marca_grabada: boolean };
+    };
+    expect(vc.video.marca_grabada).toBe(true);
+
+    const soporte = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    const s = (await (
+      await soporte('/datos/videos', { method: 'POST', json: { tipo: 'video/mp4' } })
+    ).json()) as { marca: boolean };
+    expect(s.marca).toBe(false);
+  });
+});

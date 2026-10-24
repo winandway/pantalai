@@ -277,7 +277,7 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
           </div>
         ))}
         {encima}
-        {video.marca && (
+        {video.marca && !video.marca_grabada && (
           // Marca de agua del plan gratis: gris, discreta y siempre encima del video.
           <a
             className="marca-agua"
@@ -287,7 +287,7 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
             aria-label={t('hechoCon')}
             onClick={(e) => e.stopPropagation()}
           >
-            <img src="/icon.png" alt="" /> Pantalay
+            <img src="/icon.png" alt="" /> pantalay.com
           </a>
         )}
         {noSeVe && <div className="no-se-ve">{t('noSeVeAqui')}</div>}

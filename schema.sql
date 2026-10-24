@@ -251,3 +251,9 @@ CREATE TABLE IF NOT EXISTS ajustes_cuenta (
   marca INTEGER NOT NULL DEFAULT 0,
   actualizado INTEGER NOT NULL
 );
+
+-- Videos que llevan la marca de agua GRABADA dentro de la imagen (24 oct 2026): así el MP4 descargado también la
+-- lleva, y el reproductor no le pone otra encima.
+CREATE TABLE IF NOT EXISTS video_marca (
+  video_id TEXT PRIMARY KEY
+);

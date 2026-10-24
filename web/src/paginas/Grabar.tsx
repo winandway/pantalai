@@ -300,7 +300,7 @@ export function Grabar() {
     } else ventana?.close();
     // El video se crea en el servidor durante la cuenta regresiva: así el enlace existe desde el primer segundo.
     try {
-      const r = await pedir<{ id: string; parte_minima: number }>('/datos/videos', {
+      const r = await pedir<{ id: string; parte_minima: number; marca?: boolean }>('/datos/videos', {
         method: 'POST',
         json: {
           tipo: g.tipo.split(';')[0],
@@ -310,6 +310,8 @@ export function Grabar() {
         },
       });
       videoId.current = r.id;
+      // El plan gratis (o quien la encendió en Configuración) lleva la marca dentro del video.
+      g.marca = Boolean(r.marca);
       subidor.current = new Subidor({
         videoId: r.id,
         parteMinima: r.parte_minima,
