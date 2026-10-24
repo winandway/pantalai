@@ -1,0 +1,253 @@
+-- PANTALAI — tablas. Corre en CADA publicación: solo CREATE ... IF NOT EXISTS.
+-- Una columna nueva en una tabla que ya existe NO se agrega sola: va con migración aparte (ver CANDADOS.md).
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id TEXT PRIMARY KEY,
+  correo TEXT NOT NULL UNIQUE,
+  nombre TEXT NOT NULL,
+  clave_hash TEXT NOT NULL,
+  clave_sal TEXT NOT NULL,
+  creado INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sesiones (
+  token_hash TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  creada INTEGER NOT NULL,
+  vence INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sesiones_usuario ON sesiones (usuario_id);
+
+CREATE TABLE IF NOT EXISTS intentos (
+  clave TEXT NOT NULL,
+  momento INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS intentos_clave ON intentos (clave, momento);
+
+CREATE TABLE IF NOT EXISTS carpetas (
+  id TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  creada INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS carpetas_usuario ON carpetas (usuario_id);
+
+CREATE TABLE IF NOT EXISTS videos (
+  id TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  titulo TEXT NOT NULL,
+  descripcion TEXT NOT NULL DEFAULT '',
+  estado TEXT NOT NULL DEFAULT 'subiendo',
+  tipo TEXT NOT NULL DEFAULT 'video/webm',
+  bytes INTEGER NOT NULL DEFAULT 0,
+  duracion REAL NOT NULL DEFAULT 0,
+  ancho INTEGER NOT NULL DEFAULT 0,
+  alto INTEGER NOT NULL DEFAULT 0,
+  privacidad TEXT NOT NULL DEFAULT 'enlace',
+  carpeta_id TEXT,
+  archivado INTEGER NOT NULL DEFAULT 0,
+  subida_id TEXT,
+  tiene_miniatura INTEGER NOT NULL DEFAULT 0,
+  idioma TEXT NOT NULL DEFAULT 'en',
+  transcripcion TEXT NOT NULL DEFAULT '[]',
+  capitulos TEXT NOT NULL DEFAULT '[]',
+  cortes TEXT NOT NULL DEFAULT '[]',
+  recorte_inicio REAL NOT NULL DEFAULT 0,
+  recorte_fin REAL NOT NULL DEFAULT 0,
+  superposiciones TEXT NOT NULL DEFAULT '[]',
+  cta_texto TEXT NOT NULL DEFAULT '',
+  cta_url TEXT NOT NULL DEFAULT '',
+  permitir_descarga INTEGER NOT NULL DEFAULT 1,
+  permitir_comentarios INTEGER NOT NULL DEFAULT 1,
+  creado INTEGER NOT NULL,
+  actualizado INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS videos_usuario ON videos (usuario_id, creado);
+
+CREATE TABLE IF NOT EXISTS comentarios (
+  id TEXT PRIMARY KEY,
+  video_id TEXT NOT NULL,
+  usuario_id TEXT,
+  nombre TEXT NOT NULL,
+  texto TEXT NOT NULL,
+  segundo REAL,
+  creado INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS comentarios_video ON comentarios (video_id, creado);
+
+CREATE TABLE IF NOT EXISTS reacciones (
+  id TEXT PRIMARY KEY,
+  video_id TEXT NOT NULL,
+  emoji TEXT NOT NULL,
+  segundo REAL NOT NULL,
+  creado INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS reacciones_video ON reacciones (video_id);
+
+CREATE TABLE IF NOT EXISTS vistas (
+  video_id TEXT NOT NULL,
+  visitante TEXT NOT NULL,
+  segundos REAL NOT NULL DEFAULT 0,
+  completado INTEGER NOT NULL DEFAULT 0,
+  cta_clic INTEGER NOT NULL DEFAULT 0,
+  primera INTEGER NOT NULL,
+  ultima INTEGER NOT NULL,
+  PRIMARY KEY (video_id, visitante)
+);
+
+-- IA (19 oct 2026): tablas nuevas, así no se tocan columnas de tablas que ya existen en producción.
+CREATE TABLE IF NOT EXISTS video_ia (
+  video_id TEXT PRIMARY KEY,
+  estado TEXT NOT NULL DEFAULT 'pendiente',
+  error TEXT NOT NULL DEFAULT '',
+  palabras TEXT NOT NULL DEFAULT '[]',
+  segmentos TEXT NOT NULL DEFAULT '[]',
+  tareas TEXT NOT NULL DEFAULT '[]',
+  idioma TEXT NOT NULL DEFAULT '',
+  titulo_original TEXT NOT NULL DEFAULT '',
+  minutos REAL NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ia_gasto (
+  dia TEXT NOT NULL,
+  proveedor TEXT NOT NULL,
+  usd REAL NOT NULL DEFAULT 0,
+  unidades REAL NOT NULL DEFAULT 0,
+  llamadas INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (dia, proveedor)
+);
+
+-- Copia MP4 de cada video (19 oct 2026): la arma el navegador del dueño. Sirve para iPhone, Final Cut y YouTube.
+CREATE TABLE IF NOT EXISTS video_mp4 (
+  video_id TEXT PRIMARY KEY,
+  estado TEXT NOT NULL DEFAULT 'subiendo',
+  subida_id TEXT,
+  bytes INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);
+
+-- Con qué recorte se armó la copia MP4 (20 oct 2026). Si el dueño cambia las puntas, la copia se vuelve a armar
+-- y la descarga sale recortada. Tabla aparte para no tocar video_mp4 (columna nueva = migración).
+CREATE TABLE IF NOT EXISTS video_mp4_recorte (
+  video_id TEXT PRIMARY KEY,
+  firma TEXT NOT NULL
+);
+
+-- Plan de cada cuenta (20 oct 2026). Sin fila = Starter. La llena la pasarela de pago cuando esté conectada.
+CREATE TABLE IF NOT EXISTS suscripciones (
+  usuario_id TEXT PRIMARY KEY,
+  plan TEXT NOT NULL DEFAULT 'starter',
+  fundador INTEGER NOT NULL DEFAULT 0,
+  estado TEXT NOT NULL DEFAULT 'activa',
+  actualizado INTEGER NOT NULL
+);
+
+-- Cliente y suscripción de Stripe de cada cuenta (20 oct 2026). El plan vigente vive en «suscripciones».
+CREATE TABLE IF NOT EXISTS pagos_stripe (
+  usuario_id TEXT PRIMARY KEY,
+  cliente TEXT NOT NULL,
+  suscripcion TEXT,
+  ciclo TEXT,
+  uso_prueba INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);
+
+-- Registro de lo que hace el superadmin (20 oct 2026): quién miró qué y cuándo. Se ve en el propio panel.
+CREATE TABLE IF NOT EXISTS registro_admin (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id TEXT NOT NULL,
+  accion TEXT NOT NULL,
+  objetivo TEXT NOT NULL DEFAULT '',
+  momento INTEGER NOT NULL
+);
+
+-- Superadmin completo (20 oct 2026): accesos, suspensiones, IP bloqueadas, estado del pago y revisión de videos.
+CREATE TABLE IF NOT EXISTS accesos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  pais TEXT NOT NULL DEFAULT '',
+  agente TEXT NOT NULL DEFAULT '',
+  momento INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS accesos_usuario ON accesos (usuario_id, momento);
+
+CREATE TABLE IF NOT EXISTS suspensiones (
+  usuario_id TEXT PRIMARY KEY,
+  motivo TEXT NOT NULL DEFAULT '',
+  videos TEXT NOT NULL DEFAULT '[]',
+  admin_id TEXT NOT NULL,
+  momento INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ips_bloqueadas (
+  ip TEXT PRIMARY KEY,
+  motivo TEXT NOT NULL DEFAULT '',
+  admin_id TEXT NOT NULL,
+  momento INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS estado_stripe (
+  usuario_id TEXT PRIMARY KEY,
+  status TEXT NOT NULL,
+  monto INTEGER NOT NULL DEFAULT 0,
+  intervalo TEXT NOT NULL DEFAULT 'month',
+  periodo_fin INTEGER NOT NULL DEFAULT 0,
+  cancela_al_final INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS revisiones (
+  video_id TEXT PRIMARY KEY,
+  resultado TEXT NOT NULL,
+  admin_id TEXT NOT NULL,
+  momento INTEGER NOT NULL
+);
+
+-- Correo (20 oct 2026): idioma de cada cuenta para escribirle en el suyo, y enlaces para recuperar la contraseña.
+CREATE TABLE IF NOT EXISTS perfil (
+  usuario_id TEXT PRIMARY KEY,
+  idioma TEXT NOT NULL DEFAULT 'en'
+);
+CREATE TABLE IF NOT EXISTS recuperaciones (
+  token_hash TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  vence INTEGER NOT NULL,
+  usado INTEGER NOT NULL DEFAULT 0
+);
+
+-- Cuántos correos salieron cada día (20 oct 2026), para verlo en el superadmin frente a la cuota del plan.
+CREATE TABLE IF NOT EXISTS correo_dia (
+  dia TEXT PRIMARY KEY,
+  enviados INTEGER NOT NULL DEFAULT 0,
+  fallidos INTEGER NOT NULL DEFAULT 0
+);
+
+-- Errores que pasan en la computadora de los clientes (20 oct 2026): antes se quedaban en su navegador y nadie los veía.
+CREATE TABLE IF NOT EXISTS errores_cliente (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id TEXT NOT NULL,
+  donde TEXT NOT NULL,
+  mensaje TEXT NOT NULL,
+  video_id TEXT NOT NULL DEFAULT '',
+  agente TEXT NOT NULL DEFAULT '',
+  momento INTEGER NOT NULL
+);
+
+-- «Para YouTube» (23 oct 2026): tres títulos, gancho, palabras clave y hashtags que escribe la IA. Tabla aparte para no
+-- tocar columnas de video_ia.
+CREATE TABLE IF NOT EXISTS video_youtube (
+  video_id TEXT PRIMARY KEY,
+  datos TEXT NOT NULL,
+  actualizado INTEGER NOT NULL
+);
+
+-- Configuración de la cuenta (24 oct 2026): empresa y si los videos llevan la marca de agua. El plan gratis la lleva
+-- siempre; los planes pagos y el superadmin la pueden encender (por ejemplo, para videos de publicidad).
+CREATE TABLE IF NOT EXISTS ajustes_cuenta (
+  usuario_id TEXT PRIMARY KEY,
+  empresa TEXT NOT NULL DEFAULT '',
+  marca INTEGER NOT NULL DEFAULT 0,
+  actualizado INTEGER NOT NULL
+);
