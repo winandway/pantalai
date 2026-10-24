@@ -69,3 +69,5 @@
 - [ ] Raíz para quien MIRA: el MP4 que graba Chrome viene sin índice y saltar a un minuto lejano tarda. Al terminar de grabar, reacomodar el archivo (sin re-codificar) con el índice al principio.
 - [x] «Para YouTube»: tres títulos, descripción, palabras clave y hashtags con botones de copiar (23 oct 2026, C-YOUTUBE).
 - [ ] Miniatura para YouTube generada desde el video (Richard la hace aparte por ahora).
+- [x] Marca de agua gris «Pantalay» en el reproductor para el plan gratis, aunque el cobro siga apagado (23 oct 2026, C-MARCA-AGUA).
+- [ ] Marca grabada también en el MP4 descargado del plan gratis (hay que re-codificar el video en el navegador).

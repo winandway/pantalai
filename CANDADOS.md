@@ -371,3 +371,13 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   incluidas), sin «#», «<», «>» ni comas internas; máximo 3 hashtags sin espacios ni repetidos; capítulos en la
   descripción solo si cumplen la regla oficial (0:00, tres o más, 10 s o más).
 - Pruebas: `pruebas/youtube.test.ts` y la de rutas en `pruebas/ia.test.ts`.
+
+## C-MARCA-AGUA (23 oct 2026)
+
+- Qué estaba mal: la marca dependía de los límites del plan, que siguen apagados hasta la primera compra real
+  (`COBRO_ACTIVO`), así que NINGÚN video gratis la llevaba; y además era solo un enlace debajo del video.
+- Ahora: `llevaMarca` en `servidor/app.ts` mira el plan real (sin plan pagado = marca), con o sin cobro encendido; las
+  cuentas de `SUPERADMIN_CORREOS` no la llevan. El reproductor (página del video e insertado en otras webs) pinta la
+  marca gris «Pantalay» con el logo abajo a la derecha (`.marca-agua`), con enlace a pantalay.com.
+- Falta (anotado en PENDIENTES): que el MP4 DESCARGADO del plan gratis también salga con la marca grabada.
+- Prueba: «C-MARCA-AGUA» en `pruebas/servidor.test.ts`, comprobada en rojo con la regla anterior.

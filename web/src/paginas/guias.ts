@@ -113,7 +113,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Press Record. Choose a mode: Screen + Cam puts your face in a bubble over the screen, Screen only records just the screen, and Cam only records just you.',
         'Pick your camera and microphone. “Record computer sound” comes on by default, so the sound of a video, music or a meeting is recorded too.',
-        'Choose the quality: 720p, 1080p HD or 4K. There is no time limit and no watermark.',
+        'Choose the quality: 720p, 1080p HD or 4K. On the free plan your videos show a small gray Pantalay mark in the corner; paid plans have no mark.',
         'Press Start recording. Your browser asks what to share. To record installed apps too (not only the browser), choose “Entire screen”. A window or a tab only records that window or tab. Press Share and, after a 3-second countdown, you are live.',
         'While recording you can Pause, Resume, Restart or Discard. When you are done, press Finish, or press “Stop sharing” in the bar of your browser.',
         'Shortcuts while the Pantalay tab is open: Alt + Shift + P pauses or resumes, Alt + Shift + S finishes, Alt + Shift + D opens the drawing tools.',
@@ -125,7 +125,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Toca Grabar. Elige el modo: Pantalla + cámara pone tu cara en una burbuja sobre la pantalla, Solo pantalla graba únicamente la pantalla y Solo cámara te graba solo a ti.',
         'Elige tu cámara y tu micrófono. «Grabar el sonido de la computadora» viene encendido, así que también se graba el sonido de un video, de la música o de una reunión.',
-        'Elige la calidad: 720p, 1080p HD o 4K. No hay límite de tiempo ni marca de agua.',
+        'Elige la calidad: 720p, 1080p HD o 4K. En el plan gratis tus videos llevan una pequeña marca gris de Pantalay en la esquina; los planes pagos no llevan marca.',
         'Toca Empezar a grabar. El navegador te pregunta qué compartir. Para que también salgan los programas instalados (no solo el navegador), elige «Pantalla completa». Una ventana o una pestaña graba solo esa ventana o esa pestaña. Toca Compartir y, tras una cuenta de 3 segundos, estás grabando.',
         'Mientras grabas puedes Pausar, Seguir, Reiniciar o Descartar. Cuando termines, toca Terminar, o toca «Dejar de compartir» en la barra del navegador.',
         'Atajos con la pestaña de Pantalay abierta: Alt + Shift + P pausa o sigue, Alt + Shift + S termina, Alt + Shift + D abre los lápices.',

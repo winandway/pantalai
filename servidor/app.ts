@@ -25,7 +25,7 @@ import {
   sitemap,
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
-import { cobroActivo, esPlan, limitesDe, PRECIOS, type Limites, type Plan } from './planes';
+import { cobroActivo, esPlan, LIMITES, limitesDe, PRECIOS, type Limites, type Plan } from './planes';
 import {
   cancelarAlFinal,
   crearCliente,
@@ -1709,13 +1709,22 @@ app.put('/datos/videos/:id/miniatura', requiereSesion, async (c) => {
 
 // ---------- videos: ver y editar ----------
 
+/**
+ * Marca de agua «Pantalay» encima del video: la llevan TODAS las cuentas sin plan pagado, aunque el cobro (y sus
+ * límites) todavía esté apagado. Así cada video gratis que circula hace publicidad. Las cuentas de superadmin no.
+ */
+async function llevaMarca(c: C, usuarioId: string, correo: string): Promise<boolean> {
+  if (correoSuperadmin(c.env, correo)) return false;
+  return LIMITES[(await planDe(c, usuarioId)).plan].marca;
+}
+
 app.get('/datos/videos/:id', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
   const u = c.get('usuario');
   if (!v || !puedeVer(v, u)) return err(c, 404, 'no_existe');
-  const autor = await c.env.DB.prepare('SELECT nombre FROM usuarios WHERE id = ?')
+  const autor = await c.env.DB.prepare('SELECT nombre, correo FROM usuarios WHERE id = ?')
     .bind(v.usuario_id)
-    .first<{ nombre: string }>();
+    .first<{ nombre: string; correo: string }>();
   return c.json(
     {
       video: videoPublico(
@@ -1723,7 +1732,7 @@ app.get('/datos/videos/:id', async (c) => {
         autor?.nombre ?? '',
         u?.id === v.usuario_id,
         await tieneMp4(c, v),
-        (await planDe(c, v.usuario_id)).limites.marca,
+        await llevaMarca(c, v.usuario_id, autor?.correo ?? ''),
       ),
     },
     200,

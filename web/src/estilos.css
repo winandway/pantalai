@@ -3877,3 +3877,45 @@ main {
     grid-column: 1 / -1;
   }
 }
+
+/* ---------- marca de agua del plan gratis ---------- */
+.marca-agua {
+  position: absolute;
+  right: 16px;
+  bottom: 64px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  opacity: 0.75;
+  transition: opacity 0.2s;
+}
+.marca-agua:hover {
+  opacity: 1;
+  color: #fff;
+}
+.marca-agua img {
+  width: 20px;
+  height: 20px;
+  filter: grayscale(1) brightness(1.6);
+  opacity: 0.85;
+}
+@media (max-width: 620px) {
+  .marca-agua {
+    right: 10px;
+    bottom: 54px;
+    font-size: 0.78rem;
+  }
+  .marca-agua img {
+    width: 16px;
+    height: 16px;
+  }
+}

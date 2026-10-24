@@ -3,6 +3,7 @@
 // Las ediciones (recortes, cortes y elementos sobre el video) se aplican al reproducir: el archivo no se toca.
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from 'react';
 import { archivoVideo, type Superposicion, type Video } from '../logica/api';
+import { DOMINIO } from '../logica/sitio';
 import { useIdioma } from '../logica/idioma';
 import {
   aVtt,
@@ -276,6 +277,19 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
           </div>
         ))}
         {encima}
+        {video.marca && (
+          // Marca de agua del plan gratis: gris, discreta y siempre encima del video.
+          <a
+            className="marca-agua"
+            href={`${DOMINIO}/?ref=marca`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('hechoCon')}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img src="/icon.png" alt="" /> Pantalay
+          </a>
+        )}
         {noSeVe && <div className="no-se-ve">{t('noSeVeAqui')}</div>}
         <div className="flotantes" aria-hidden="true">
           {flotantes.map((f) => (

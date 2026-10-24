@@ -965,3 +965,26 @@ describe('CANDADO C-CUENTA: la persona maneja su cuenta sola (nombre, contraseñ
     await registrado('Ana', 'ana@example.com', '9.9.9.1');
   });
 });
+
+describe('CANDADO C-MARCA-AGUA: los videos del plan gratis llevan la marca Pantalay', () => {
+  it('con el cobro todavía apagado: gratis con marca, plan pagado sin marca, superadmin sin marca', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com' } as typeof env;
+    const marca = async (c: ReturnType<typeof cliente>, id: string) =>
+      ((await (await c(`/datos/videos/${id}`)).json()) as { video: { marca: boolean } }).video.marca;
+    const ana = await registrado('Ana', 'ana@example.com', '1.1.1.1');
+    const { id } = await videoListo(ana);
+    expect(await marca(ana, id)).toBe(true);
+    // Quien lo mira sin cuenta (o insertado en otra web) también la ve.
+    expect(await marca(cliente('5.5.5.5'), id)).toBe(true);
+    const yo = (await (await ana('/datos/yo')).json()) as { usuario: { id: string } };
+    await env.DB.prepare(
+      "INSERT INTO suscripciones (usuario_id, plan, estado, actualizado) VALUES (?, 'business', 'activa', ?)",
+    )
+      .bind(yo.usuario.id, Date.now())
+      .run();
+    expect(await marca(ana, id)).toBe(false);
+    const soporte = await registrado('Soporte Pantalay', 'soporte@example.com', '2.2.2.2');
+    const s = await videoListo(soporte);
+    expect(await marca(soporte, s.id)).toBe(false);
+  });
+});
