@@ -22,6 +22,7 @@ import {
   REPARTO_MIN,
 } from '../logica/grabadora';
 import { ElegirArea } from '../componentes/ElegirArea';
+import { recargarSiQuedoVieja } from '../logica/version';
 import { textoError, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
 import { abrirVentana, montarBurbuja, type Burbuja } from '../logica/burbuja';
@@ -126,6 +127,11 @@ export function Grabar() {
     void leerDispositivos();
   }, [leerDispositivos]);
 
+  // Al abrir Grabar: si la página quedó vieja (se publicó algo con la pestaña abierta), se recarga ya.
+  useEffect(() => {
+    void recargarSiQuedoVieja();
+  }, []);
+
   // Vista previa de la cámara mientras se ajusta (la burbuja que se va a ver).
   useEffect(() => {
     if (estado !== 'ajustes' || a.modo === 'pantalla') return;
@@ -211,6 +217,8 @@ export function Grabar() {
 
   async function empezar() {
     setError('');
+    // Si se publicó una versión nueva con la pestaña abierta, se recarga antes de grabar (candado C-VERSION).
+    if (await recargarSiQuedoVieja()) return;
     if (a.modo !== 'camara' && !puedeGrabarPantalla()) {
       setError(t('navegadorNoSirve'));
       return;

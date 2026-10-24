@@ -161,3 +161,13 @@ describe('CANDADO C-SHORT-ENCUADRE: el área del Short tiene la forma exacta de 
     expect(d.ancho / d.alto).toBeCloseTo(r, 6);
   });
 });
+
+describe('CANDADO C-VERSION: una pestaña vieja se recarga antes de grabar', () => {
+  it('solo cuando la publicada es otra (en local nunca)', async () => {
+    const { paginaVieja } = await import('../web/src/logica/version');
+    expect(paginaVieja('a4c7753', 'e394ae5')).toBe(true);
+    expect(paginaVieja('e394ae5', 'e394ae5')).toBe(false);
+    expect(paginaVieja('local', 'e394ae5')).toBe(false);
+    expect(paginaVieja('e394ae5', null)).toBe(false);
+  });
+});

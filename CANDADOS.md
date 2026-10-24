@@ -433,3 +433,15 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   la sigue poniendo el reproductor, con «pantalay.com».
 - Pruebas: «C-MARCA-GRABADA» en `pruebas/servidor.test.ts` y el Short en `e2e/grabar-short.spec.ts` (busca las letras
   claras de la marca sobre la cámara; rojo sin pintarla).
+- 24 oct 2026 (tarde): en el Short la marca pasó ARRIBA a la derecha de la cámara (pedido de Richard: se ve más y tapa
+  menos). La prueba del Short exige la marca arriba y NADA abajo; `e2e/grabar-pestana.spec.ts` exige la píldora gris en
+  el video horizontal. Las dos comprobadas en rojo.
+
+## C-VERSION (24 oct 2026)
+
+- Qué pasó: Richard grabó un Short con la pestaña abierta desde antes de publicar; el servidor ya anotaba la marca pero
+  el grabador viejo de su navegador no la pintaba, y el video salió sin marca.
+- Arreglo: la página lleva el commit con el que se compiló (`__COMMIT__` en `vite.config.ts`) y Grabar lo compara con
+  `/datos/config` al abrir y al tocar «Empezar»; si quedó vieja, se recarga sola (`web/src/logica/version.ts`). Los
+  ajustes y borradores viven en el navegador: no se pierde nada.
+- Prueba: «C-VERSION» en `pruebas/recorte.test.ts`.

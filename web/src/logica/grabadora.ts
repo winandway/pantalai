@@ -534,8 +534,8 @@ export class Grabadora {
   }
 
   /**
-   * Marca de agua grabada en la imagen: logo + «pantalay.com», gris y discreta. En el Short va sobre la cámara (la
-   * parte que es nuestra); en lo demás, abajo a la derecha.
+   * Marca de agua grabada en la imagen: logo + «pantalay.com», gris y discreta. En el Short va arriba a la derecha
+   * de la cámara (la parte que es nuestra, sobre la cara); en lo demás, abajo a la derecha.
    */
   private pintarMarca(ctx: CanvasRenderingContext2D, vertical: boolean) {
     if (!this.logo) {
@@ -554,7 +554,8 @@ export class Grabadora {
     const ancho = m.icono + m.espacio + ctx.measureText(texto).width + m.relleno * 2;
     const alto = m.icono + m.relleno;
     const x = zona.x + zona.w - m.margen - ancho;
-    const y = zona.y + zona.h - m.margen - alto;
+    // En el Short va ARRIBA a la derecha de la cámara (se ve más y tapa menos); en lo demás, abajo a la derecha.
+    const y = vertical ? zona.y + m.margen : zona.y + zona.h - m.margen - alto;
     ctx.globalAlpha = 0.85;
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();

@@ -53,7 +53,17 @@ for (const superficie of ['browser', 'monitor'] as const) {
         Array.from(
           x.getImageData(Math.floor(c.width * fx), Math.floor(c.height * fy), 1, 1).data.slice(0, 3),
         );
-      return { burbuja: px(0.12, 0.82), centro: px(0.5, 0.4) };
+      // CANDADO C-MARCA-GRABADA (horizontal): la píldora gris de «pantalay.com» abajo a la derecha, sobre el blanco.
+      const d = x.getImageData(
+        Math.floor(c.width * 0.6),
+        Math.floor(c.height * 0.85),
+        Math.floor(c.width * 0.38),
+        Math.floor(c.height * 0.13),
+      ).data;
+      let grises = 0;
+      for (let i = 0; i < d.length; i += 4)
+        if (d[i]! < 210 && d[i]! > 60 && Math.abs(d[i]! - d[i + 2]!) < 20) grises++;
+      return { burbuja: px(0.12, 0.82), centro: px(0.5, 0.4), grises };
     });
     await page.getByRole('button', { name: /Finish/ }).click();
     await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
@@ -61,5 +71,6 @@ for (const superficie of ['browser', 'monitor'] as const) {
     const blanco = (p: number[]) => p.every((n) => n > 235);
     expect(blanco(pixeles.centro)).toBe(true);
     expect(blanco(pixeles.burbuja)).toBe(superficie === 'monitor');
+    expect(pixeles.grises).toBeGreaterThan(200);
   });
 }

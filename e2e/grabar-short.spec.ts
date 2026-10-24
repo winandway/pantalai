@@ -83,45 +83,58 @@ test('grabar un Short vertical para reaccionar', async ({ page }) => {
   await page.locator('.reproductor video').waitFor();
   const r = await page.evaluate(
     () =>
-      new Promise<{ w: number; h: number; arriba: number[]; abajo: number[]; claros: number; foto: string }>(
-        (ok) => {
-          const v = document.querySelector('.reproductor video') as HTMLVideoElement;
-          const sacar = () => {
-            const c = document.createElement('canvas');
-            c.width = v.videoWidth;
-            c.height = v.videoHeight;
-            const x = c.getContext('2d')!;
-            x.drawImage(v, 0, 0);
-            const px = (fy: number) =>
-              Array.from(
-                x.getImageData(Math.floor(c.width / 2), Math.floor(c.height * fy), 1, 1).data.slice(0, 3),
-              );
-            // La marca «pantalay.com» (letras claras) va abajo a la derecha de la cámara, que es verde en la prueba.
-            const zona = x.getImageData(
+      new Promise<{
+        w: number;
+        h: number;
+        arriba: number[];
+        abajo: number[];
+        claros: number;
+        clarosAbajo: number;
+        foto: string;
+      }>((ok) => {
+        const v = document.querySelector('.reproductor video') as HTMLVideoElement;
+        const sacar = () => {
+          const c = document.createElement('canvas');
+          c.width = v.videoWidth;
+          c.height = v.videoHeight;
+          const x = c.getContext('2d')!;
+          x.drawImage(v, 0, 0);
+          const px = (fy: number) =>
+            Array.from(
+              x.getImageData(Math.floor(c.width / 2), Math.floor(c.height * fy), 1, 1).data.slice(0, 3),
+            );
+          // La marca «pantalay.com» (letras claras) va abajo a la derecha de la cámara, que es verde en la prueba.
+          // Arriba a la derecha de la cámara (que en esta prueba está abajo y empieza en el 55 % del alto).
+          const contar = (fy: number, fh: number) => {
+            const d = x.getImageData(
               Math.floor(c.width * 0.55),
-              Math.floor(c.height * 0.9),
+              Math.floor(c.height * fy),
               Math.floor(c.width * 0.42),
-              Math.floor(c.height * 0.09),
+              Math.floor(c.height * fh),
             ).data;
-            let claros = 0;
-            for (let i = 0; i < zona.length; i += 4) if (zona[i]! > 170 && zona[i + 2]! > 170) claros++;
-            ok({
-              w: c.width,
-              h: c.height,
-              arriba: px(0.25),
-              abajo: px(0.6),
-              claros,
-              foto: c.toDataURL('image/jpeg', 0.7),
-            });
+            let n = 0;
+            for (let i = 0; i < d.length; i += 4) if (d[i]! > 170 && d[i + 2]! > 170) n++;
+            return n;
           };
-          const ir = () => {
-            v.currentTime = 1.5;
-            v.addEventListener('seeked', sacar, { once: true });
-          };
-          if (v.readyState >= 1) ir();
-          else v.addEventListener('loadedmetadata', ir, { once: true });
-        },
-      ),
+          const claros = contar(0.56, 0.05);
+          const clarosAbajo = contar(0.9, 0.09);
+          ok({
+            w: c.width,
+            h: c.height,
+            arriba: px(0.25),
+            abajo: px(0.6),
+            claros,
+            clarosAbajo,
+            foto: c.toDataURL('image/jpeg', 0.7),
+          });
+        };
+        const ir = () => {
+          v.currentTime = 1.5;
+          v.addEventListener('seeked', sacar, { once: true });
+        };
+        if (v.readyState >= 1) ir();
+        else v.addEventListener('loadedmetadata', ir, { once: true });
+      }),
   );
   writeFileSync(test.info().outputPath('short-grabado.jpg'), Buffer.from(r.foto.split(',')[1]!, 'base64'));
   expect({ w: r.w, h: r.h }).toEqual({ w: 1080, h: 1920 });
@@ -130,4 +143,5 @@ test('grabar un Short vertical para reaccionar', async ({ page }) => {
   expect(r.arriba.every((n) => n > 235)).toBe(true);
   // CANDADO C-MARCA-GRABADA: el Short descargado lleva «pantalay.com» sobre la cámara.
   expect(r.claros).toBeGreaterThan(50);
+  expect(r.clarosAbajo).toBe(0);
 });
