@@ -42,6 +42,7 @@ test('grabar solo el área marcada', async ({ page }) => {
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
 
   // El archivo grabado mide lo del rectángulo (la mitad), no lo de todo lo compartido.
+  await page.locator('.reproductor video').waitFor({ timeout: 30_000 });
   const medidas = await page.evaluate(
     () =>
       new Promise<{ w: number; h: number }>((ok) => {

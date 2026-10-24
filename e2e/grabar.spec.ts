@@ -52,6 +52,7 @@ test('grabar, subir y ver un video', async ({ page }) => {
   expect(datos.video.tiene_miniatura).toBe(true);
 
   // El archivo trae su duración escrita (se puede adelantar y la barra no queda en «infinito»).
+  await page.locator('.reproductor video').waitFor({ timeout: 30_000 });
   const duracion = await page.evaluate(
     () =>
       new Promise<number>((ok) => {
