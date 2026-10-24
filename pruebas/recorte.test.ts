@@ -171,3 +171,13 @@ describe('CANDADO C-VERSION: una pestaña vieja se recarga antes de grabar', () 
     expect(paginaVieja('e394ae5', null)).toBe(false);
   });
 });
+
+describe('CANDADO C-VERSION (servidor): una pestaña vieja no puede empezar a grabar', () => {
+  it('pide la misma versión publicada; sin versión (página muy vieja) también se frena', async () => {
+    const { grabadorViejo } = await import('../web/src/logica/version');
+    expect(grabadorViejo('1852122', undefined)).toBe(true);
+    expect(grabadorViejo('1852122', 'e394ae5')).toBe(true);
+    expect(grabadorViejo('1852122', '1852122')).toBe(false);
+    expect(grabadorViejo('local', undefined)).toBe(false);
+  });
+});

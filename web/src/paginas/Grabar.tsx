@@ -22,7 +22,7 @@ import {
   REPARTO_MIN,
 } from '../logica/grabadora';
 import { ElegirArea } from '../componentes/ElegirArea';
-import { recargarSiQuedoVieja } from '../logica/version';
+import { COMMIT_PAGINA, recargarSiQuedoVieja } from '../logica/version';
 import { textoError, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
 import { abrirVentana, montarBurbuja, type Burbuja } from '../logica/burbuja';
@@ -315,6 +315,7 @@ export function Grabar() {
           ancho: g.ancho,
           alto: g.alto,
           idioma: a.idiomaVoz.startsWith('es') ? 'es' : 'en',
+          version: COMMIT_PAGINA,
         },
       });
       videoId.current = r.id;
@@ -328,6 +329,12 @@ export function Grabar() {
       respaldo.current = { id: r.id, tipo: g.tipo.split(';')[0]!, creado: Date.now(), duracion: 0 };
     } catch (e) {
       g.liberar();
+      if (e instanceof ErrorApi && e.codigo === 'version_vieja') {
+        // Se publicó una versión nueva con esta pestaña abierta: se recarga y se graba con la nueva.
+        ventana?.close();
+        window.location.reload();
+        return;
+      }
       setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor'));
       return;
     }

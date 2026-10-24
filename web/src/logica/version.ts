@@ -23,3 +23,8 @@ export async function recargarSiQuedoVieja(): Promise<boolean> {
     return false;
   }
 }
+
+/** Del lado del servidor: ¿la página que quiere grabar es de otra versión (o tan vieja que no la manda)? */
+export function grabadorViejo(servidor: string, enviada: string | undefined): boolean {
+  return servidor !== 'local' && enviada !== servidor;
+}

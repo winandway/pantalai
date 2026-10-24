@@ -445,3 +445,8 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   `/datos/config` al abrir y al tocar «Empezar»; si quedó vieja, se recarga sola (`web/src/logica/version.ts`). Los
   ajustes y borradores viven en el navegador: no se pierde nada.
 - Prueba: «C-VERSION» en `pruebas/recorte.test.ts`.
+- 24 oct 2026 (noche): el Short «Loquillo y Lacran» volvió a salir sin marca: la pestaña de Richard estaba abierta
+  desde antes del mediodía (la app cambia de pantalla sin recargar) y su grabador era anterior a la marca y al aviso de
+  versión. Ahora también lo frena el SERVIDOR: `POST /datos/videos` exige `version` igual al commit publicado
+  (`grabadorViejo`); si no, 409 `version_vieja` y la página nueva se recarga sola. La subida de respaldos
+  (`respaldo: true`) no se frena. Prueba: «C-VERSION (servidor)» en `pruebas/recorte.test.ts`.

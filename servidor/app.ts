@@ -76,6 +76,7 @@ import {
   type Segmento,
 } from './ia/motor';
 import type { KitYoutube } from '../web/src/logica/youtube';
+import { grabadorViejo } from '../web/src/logica/version';
 
 export type Env = EnvPago &
   EnvCorreo & {
@@ -1627,6 +1628,10 @@ const esquemaNuevo = z.object({
   ancho: z.number().int().min(0).max(8192).default(0),
   alto: z.number().int().min(0).max(8192).default(0),
   idioma: z.enum(['en', 'es']).default('en'),
+  /** Versión de la página que graba (la pestaña puede haber quedado abierta desde antes de publicar). */
+  version: z.string().max(40).optional(),
+  /** Subida de un respaldo ya grabado (no se puede volver a grabar: no se exige la versión). */
+  respaldo: z.boolean().optional(),
 });
 
 /** El plan gratis tiene tope de videos: vale igual para grabar uno nuevo que para duplicar. */
@@ -1642,6 +1647,9 @@ async function sinCupoDeVideos(c: C): Promise<boolean> {
 app.post('/datos/videos', requiereSesion, async (c) => {
   const d = await cuerpo(c, esquemaNuevo);
   if (!d) return err(c, 400, 'datos');
+  // Una pestaña vieja (abierta desde antes de publicar) grabaría con el código anterior: por ejemplo, sin pintar la
+  // marca de agua. No se le deja empezar; la página nueva se recarga sola con este error (candado C-VERSION).
+  if (!d.respaldo && grabadorViejo(COMMIT, d.version)) return err(c, 409, 'version_vieja');
   if (await sinCupoDeVideos(c)) return err(c, 402, 'limite_videos');
   const id = nuevoId(20);
   const tipo = d.tipo.split(';')[0]!;

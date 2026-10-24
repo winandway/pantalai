@@ -146,7 +146,7 @@ export async function subirGrabacion(
 ): Promise<string> {
   const r = await llamar<{ id: string; parte_minima: number }>('/datos/videos', {
     method: 'POST',
-    json: { tipo: archivo.type.split(';')[0] || 'video/webm', idioma },
+    json: { tipo: archivo.type.split(';')[0] || 'video/webm', idioma, respaldo: true },
   });
   const subidor = new Subidor({
     videoId: r.id,
