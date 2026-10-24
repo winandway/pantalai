@@ -55,6 +55,16 @@ export async function prepararCuadros(
   try {
     const pista = await input.getPrimaryVideoTrack();
     if (!pista || !(await pista.canDecode())) throw new Error('no se puede decodificar el video aquí');
+    // Primero la tira de fotos (12 chiquitas): es lo primero que se ve.
+    const chica = new CanvasSink(pista, { height: 72 });
+    let i = 0;
+    for await (const r of chica.canvasesAtTimestamps(opciones.fotos)) {
+      if (!opciones.vivo()) return;
+      const imagen = r && (await aJpeg(r.canvas, 0.7));
+      if (imagen) opciones.alFoto(i, URL.createObjectURL(imagen));
+      i++;
+    }
+    // Después las puntas, cuadro por cuadro.
     const grande = new CanvasSink(pista, { height: 270 });
     const tramos = tramosPuntas(duracion);
     const total = tramos.reduce((n, [a, b]) => n + Math.ceil((b - a) / PASO), 0) || 1;
@@ -71,15 +81,6 @@ export async function prepararCuadros(
       }
     }
     opciones.alProgreso(1);
-    // La tira de fotos (chiquitas) al final: lo urgente son las puntas.
-    const chica = new CanvasSink(pista, { height: 72 });
-    let i = 0;
-    for await (const r of chica.canvasesAtTimestamps(opciones.fotos)) {
-      if (!opciones.vivo()) return;
-      const imagen = r && (await aJpeg(r.canvas, 0.7));
-      if (imagen) opciones.alFoto(i, URL.createObjectURL(imagen));
-      i++;
-    }
   } finally {
     input.dispose();
   }

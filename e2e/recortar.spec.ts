@@ -27,7 +27,9 @@ test('recortar las puntas y descargar el video recortado', async ({ page }) => {
   await expect(tira).toBeVisible();
   // Las fotos de la tira se cargan.
   await expect
-    .poll(() => page.locator('.recortador-fotos span[style*="background-image"]').count())
+    .poll(() => page.locator('.recortador-fotos span[style*="background-image"]').count(), {
+      timeout: 30_000,
+    })
     .toBeGreaterThan(3);
   const caja = (await tira.boundingBox())!;
   const duracion = Number(await page.getByRole('slider', { name: 'End' }).getAttribute('aria-valuemax'));

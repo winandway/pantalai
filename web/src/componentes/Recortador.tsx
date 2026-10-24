@@ -68,7 +68,15 @@ function useCuadros(id: string, duracion: number) {
     cuadros.current = [];
     setProgreso(0);
     setAcelerado(null);
-    const alFoto = (i: number, imagen: string) => setFotos((f) => f.map((x, j) => (j === i ? imagen : x)));
+    let alguna = false;
+    const alFoto = (i: number, imagen: string) => {
+      alguna = true;
+      setFotos((f) => f.map((x, j) => (j === i ? imagen : x)));
+    };
+    // Red de seguridad: si en 10 s no llegó ninguna foto (decodificador lento o trabado), entra el plan B.
+    const espera = setTimeout(() => {
+      if (vivo && !alguna && !soltarVideo) soltarVideo = fotosConVideo(id, duracion, alFoto, () => vivo);
+    }, 10_000);
     prepararCuadros(`${archivoVideo(id)}?formato=webm`, duracion, {
       fotos: segundosDeFotos(duracion, FOTOS),
       alFoto,
@@ -83,10 +91,11 @@ function useCuadros(id: string, duracion: number) {
       console.warn('recortador: sin acelerador de puntas', e);
       if (!vivo) return;
       setAcelerado(false);
-      soltarVideo = fotosConVideo(id, duracion, alFoto, () => vivo);
+      soltarVideo ??= fotosConVideo(id, duracion, alFoto, () => vivo);
     });
     return () => {
       vivo = false;
+      clearTimeout(espera);
       soltarVideo?.();
     };
   }, [id, duracion]);
