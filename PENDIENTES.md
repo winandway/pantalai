@@ -65,3 +65,5 @@
 - [ ] Renombrar carpeta con una ventanita propia en vez del cuadro del navegador.
 - [ ] Verificar el correo al registrarse (hoy no se pide).
 - [ ] Borrar cuenta y volver a registrarse con el mismo correo da otra prueba gratis: decidir si se guarda una huella.
+- [x] Recortador acelerado: 20 s de cada punta al instante y tira de fotos que ya no sale negra (23 oct 2026, C-RECORTE-ACELERADO).
+- [ ] Raíz para quien MIRA: el MP4 que graba Chrome viene sin índice y saltar a un minuto lejano tarda. Al terminar de grabar, reacomodar el archivo (sin re-codificar) con el índice al principio.

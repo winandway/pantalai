@@ -342,3 +342,19 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - `e2e/auditoria.spec.ts`: una persona real de punta a punta (registrarse, grabar, comentar, reaccionar, compartir
   privado y con enlace, insertar, carpetas, mover, buscar, duplicar, archivar, borrar, borrar carpeta sin perder
   videos, salir y entrar, Docs). Pasa local y contra el sitio en vivo con `URL_BASE=https://pantalay.com`.
+
+## C-RECORTE-ACELERADO (23 oct 2026)
+
+- Qué se rompió: con el MP4 que graba Chrome (fragmentado, sin índice: `moof`/`mvex`, sin `sidx`), al arrastrar una
+  agarradera del recortador el video no alcanzaba a pintar el cuadro (cada movimiento pedía una búsqueda nueva al
+  archivo en la nube y se cancelaban entre sí) y la tira de fotos quedaba negra (cada foto esperaba 5 s y se rendía).
+  Video donde se vio: «Reacción a un cómic de 1929», 55 MB, 99 s.
+- Arreglo: `web/src/logica/cuadros.ts` lee SOLO los primeros y últimos 20 s con pedidos por rangos (mediabunny
+  `UrlSource` + `CanvasSink`, WebCodecs), guarda un JPEG cada 0,25 s y arma la tira de 12 fotos. Al arrastrar, el
+  cuadro más cercano se pinta encima del video (`CuadroPrevio`) sin tocar el reproductor; al soltar, el reproductor
+  salta a ese punto. Fuera de las puntas o sin acelerador, las búsquedas se espacian cada 200 ms.
+- Plan B: si el navegador no decodifica el video (WebM en Safari, sin WebCodecs), el recortador sigue como antes y el
+  motivo queda en la consola.
+- Pruebas: `pruebas/recorte.test.ts` (tramos y cuadro más cercano) y `e2e/recortar-puntas.spec.ts` con
+  `e2e/datos/fragmentado.mp4` (MP4 fragmentado como el de Chrome), comprobada en rojo quitando la previsualización.
+- NO volver a llamar al reproductor en cada movimiento del puntero.

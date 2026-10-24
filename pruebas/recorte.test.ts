@@ -52,3 +52,24 @@ describe('recortador de puntas (C-RECORTE-DESCARGA)', () => {
     expect(firmaRecorte({ recorte_inicio: 1.234, recorte_fin: 0 })).toBe('1.2|0');
   });
 });
+
+describe('CANDADO C-RECORTE-ACELERADO: las puntas se preparan cuadro por cuadro', () => {
+  it('prepara 20 s de cada punta, o el video entero si es corto', async () => {
+    const { tramosPuntas } = await import('../web/src/logica/cuadros');
+    expect(tramosPuntas(99.4)).toEqual([
+      [0, 20],
+      [79.4, 99.4],
+    ]);
+    expect(tramosPuntas(30)).toEqual([[0, 30]]);
+    expect(tramosPuntas(0)).toEqual([]);
+  });
+
+  it('usa el cuadro guardado más cercano solo si está a menos de un cuarto de segundo', async () => {
+    const { cuadroCercano } = await import('../web/src/logica/cuadros');
+    const cuadros = [{ s: 0 }, { s: 0.25 }, { s: 0.5 }, { s: 80 }];
+    expect(cuadroCercano(cuadros, 0.3)).toEqual({ s: 0.25 });
+    expect(cuadroCercano(cuadros, 80.1)).toEqual({ s: 80 });
+    expect(cuadroCercano(cuadros, 40)).toBeNull();
+    expect(cuadroCercano([], 1)).toBeNull();
+  });
+});

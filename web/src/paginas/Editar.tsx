@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
-import { Recortador } from '../componentes/Recortador';
+import { CuadroPrevio, Recortador } from '../componentes/Recortador';
 import { Reproductor, type ManejoReproductor } from '../componentes/Reproductor';
 import { ErrorApi, archivoVideo, pedir, type Superposicion, type Video } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
@@ -77,6 +77,8 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
   const [analizando, setAnalizando] = useState(false);
   const [seleccion, setSeleccion] = useState<number | null>(null);
   const [vistaFinal, setVistaFinal] = useState(false);
+  // Cuadro de la punta que se está arrastrando, encima del video (sale del acelerador del recortador).
+  const [previa, setPrevia] = useState<{ s: number; imagen: Blob } | null>(null);
   const [ia, setIa] = useState<EstadoIA | null>(null);
   useEffect(() => {
     leerIA(video.id)
@@ -257,7 +259,12 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
           video={vista}
           saltarOcultos={vistaFinal}
           alTiempo={setAhora}
-          encima={vistaFinal ? undefined : capaArrastre}
+          encima={
+            <>
+              {!vistaFinal && capaArrastre}
+              {previa && <CuadroPrevio cuadro={previa} />}
+            </>
+          }
         />
         <section className="tarjeta tarjeta-recortar">
           <h2>✂ {t('recortarPuntas')}</h2>
@@ -271,6 +278,7 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
             ir={(s) => reproductor.current?.ir(s)}
             reproducir={() => reproductor.current?.reproducir()}
             pausar={() => reproductor.current?.pausar()}
+            previsualizar={setPrevia}
           />
           <div className="fila-botones">
             <button type="button" className="boton" disabled={guardando} onClick={() => void guardar()}>

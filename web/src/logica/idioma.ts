@@ -368,6 +368,8 @@ const en = {
   usarActual: 'Use current time',
   reproducirRecorte: 'Play trimmed video',
   quitarRecorte: 'Reset trim',
+  preparandoPuntas: 'Getting the ends ready…',
+  puntasListas: 'Ends ready: {n} s on each side, instant',
   recortadorAyuda:
     'Drag the handles to cut the start and the end. Press Save: your link, your downloads and the MP4 will come out trimmed.',
   recortarPuntas: 'Trim the ends',
@@ -817,6 +819,8 @@ const es: Record<Clave, string> = {
   usarActual: 'Usar el minuto actual',
   reproducirRecorte: 'Reproducir recortado',
   quitarRecorte: 'Quitar el recorte',
+  preparandoPuntas: 'Preparando las puntas…',
+  puntasListas: 'Puntas listas: {n} s de cada lado al instante',
   recortadorAyuda:
     'Arrastra las agarraderas para cortar el principio y el final. Toca Guardar: tu enlace, tus descargas y el MP4 salen ya recortados.',
   recortarPuntas: 'Recortar las puntas',
