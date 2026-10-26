@@ -30,7 +30,7 @@
     "@stripe/stripe-js": "^10.1.0",
     "fix-webm-duration": "^1.0.6",
     "hono": "^4.13.13",
-    "mediabunny": "^1.61.6",
+    "mediabunny": "^1.62.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "simple-icons": "^16.34.0",
