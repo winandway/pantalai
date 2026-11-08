@@ -1,0 +1,92 @@
+{
+  "nombre": {
+    "message": "Pantalay: draw, highlight and report bugs"
+  },
+  "descripcion": {
+    "message": "Draw on any web page, highlight your cursor and record bug reports with console and network logs for your Pantalay videos."
+  },
+  "atajoDibujo": {
+    "message": "Draw on this page (on / off)"
+  },
+  "atajoCursor": {
+    "message": "Cursor highlight (on / off)"
+  },
+  "enEstaPagina": {
+    "message": "On this page"
+  },
+  "dibujar": {
+    "message": "Draw on this page"
+  },
+  "cursor": {
+    "message": "Highlight my cursor"
+  },
+  "encendido": {
+    "message": "On"
+  },
+  "apagado": {
+    "message": "Off"
+  },
+  "noPermitida": {
+    "message": "Chrome does not let extensions work on this page (Chrome pages and the Chrome Web Store). Open any website to use it."
+  },
+  "reporte": {
+    "message": "Record a bug report"
+  },
+  "reporteAyuda": {
+    "message": "Opens Pantalay to record. The console messages and network requests of this tab are attached to your video. Never passwords, cookies or what you send."
+  },
+  "abrir": {
+    "message": "Record with Pantalay"
+  },
+  "comoFunciona": {
+    "message": "How it works"
+  },
+  "atajos": {
+    "message": "Shortcuts: Alt+Shift+A to draw, Alt+Shift+C for the cursor, Esc to stop drawing."
+  },
+  "lapiz": {
+    "message": "Pen"
+  },
+  "resaltador": {
+    "message": "Highlighter"
+  },
+  "flecha": {
+    "message": "Arrow"
+  },
+  "cuadro": {
+    "message": "Box"
+  },
+  "circulo": {
+    "message": "Circle"
+  },
+  "deshacer": {
+    "message": "Undo"
+  },
+  "borrarTodo": {
+    "message": "Clear all"
+  },
+  "dejarDeDibujar": {
+    "message": "Stop drawing (Esc)"
+  },
+  "herramientas": {
+    "message": "Pantalay drawing tools"
+  },
+  "rojo": {
+    "message": "Red"
+  },
+  "amarillo": {
+    "message": "Yellow"
+  },
+  "verde": {
+    "message": "Green"
+  },
+  "azul": {
+    "message": "Blue"
+  },
+  "blanco": {
+    "message": "White"
+  },
+  "negro": {
+    "message": "Black"
+  }
+}

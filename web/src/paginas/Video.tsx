@@ -29,9 +29,10 @@ import { PreparadorMp4 } from '../componentes/Mp4';
 import { DOMINIO, origenPublico } from '../logica/sitio';
 import { BotonDescargar } from '../componentes/Descargar';
 import type { EstadoIA } from '../logica/ia';
+import { PanelRegistros, PestanaRegistros, useRegistros } from '../componentes/Extension';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '👏', '🔥', '🙌'];
-type Pestana = 'actividad' | 'transcripcion' | 'estadisticas';
+type Pestana = 'actividad' | 'transcripcion' | 'estadisticas' | 'registros';
 
 export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: boolean }) {
   const { t, idioma } = useIdioma();
@@ -51,6 +52,8 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
   const [ia, setIa] = useState<EstadoIA | null>(null);
   const [generando, setGenerando] = useState(false);
   const reproductor = useRef<ManejoReproductor>(null);
+  // Consola y red del reporte de error (C-REPORTE-ERROR): la pestaña sale solo si el video los tiene.
+  const registros = useRegistros(id);
   const inicio = useMemo(() => {
     const v = Number(new URLSearchParams(location.search).get('t'));
     return Number.isFinite(v) && v > 0 ? v : undefined;
@@ -355,6 +358,9 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
           >
             {t('transcripcion')}
           </button>
+          {registros && (
+            <PestanaRegistros activa={pestana === 'registros'} elegir={() => setPestana('registros')} />
+          )}
           {video.es_dueno && (
             <button
               type="button"
@@ -388,6 +394,9 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
           />
         )}
         {pestana === 'estadisticas' && video.es_dueno && <PanelEstadisticas id={video.id} />}
+        {pestana === 'registros' && registros && (
+          <PanelRegistros datos={registros} ahora={ahora} ir={(s) => reproductor.current?.ir(s)} />
+        )}
       </aside>
       {!panel && (
         <button type="button" className="mostrar-panel boton secundario" onClick={() => setPanel(true)}>

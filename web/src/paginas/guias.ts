@@ -6,6 +6,8 @@ export type Guia = {
   imagen?: string;
   /** Una captura después de cada párrafo (misma posición que «cuerpo»); null = sin captura. */
   imagenes?: (string | null)[];
+  /** Botón de descarga arriba de la guía (por ejemplo, la extensión de Chrome). */
+  descarga?: { href: string; en: string; es: string };
   en: { titulo: string; resumen: string; cuerpo: string[] };
   es: { titulo: string; resumen: string; cuerpo: string[] };
 };
@@ -190,6 +192,88 @@ export const GUIAS: Guia[] = [
         '¿Compartes la pantalla completa? Al volver a Pantalay para dibujar, Pantalay mismo saldría en el video. Deja encendido «Congelar la pantalla mientras dibujas»: el video se queda con la última imagen del programa que estabas mostrando y tus dibujos van encima. Cuando dejas de dibujar, el video vuelve a estar en vivo.',
         '¿Compartes una sola ventana o pestaña? Dibujas encima en vivo, sin congelar nada. Consejo: con dos pantallas, deja Pantalay en una y presenta en la otra.',
         'Toca Dejar de dibujar (o Alt + Shift + D) para guardar los lápices. Tus dibujos se quedan hasta que los deshagas o los borres.',
+      ],
+    },
+  },
+  {
+    slug: 'chrome-extension',
+    seccion: 'grabar',
+    icono: '🧩',
+    imagen: 'extension-dibujo',
+    descarga: {
+      href: '/pantalay-extension.zip',
+      en: 'Download the Chrome extension',
+      es: 'Descarga la extensión de Chrome',
+    },
+    en: {
+      titulo: 'Draw on any web page and highlight your cursor (Chrome extension)',
+      resumen:
+        'With the Pantalay extension for Chrome you draw right on top of the page you are showing, without coming back to Pantalay, and your cursor stands out in the video.',
+      cuerpo: [
+        'Why the extension? While you record, the Pantalay pencils draw inside the Pantalay page. With the extension you draw directly on top of any website you are presenting, and since your screen or tab is being recorded, every drawing shows up in your video.',
+        'Install it. Press “Download the Chrome extension” and unzip the file. In Chrome, open the Extensions page (menu ⋮ → Extensions → Manage extensions), turn on Developer mode at the top right, press “Load unpacked” and choose the unzipped folder. Pin it with the puzzle icon so the Pantalay button is always at hand. Soon you will also find it in the Chrome Web Store with one click.',
+        'Draw on any page. Open the website you want to show, press the Pantalay button in the toolbar and choose “Draw on this page”, or press Alt + Shift + A. A small bar appears at the top: Pen, Highlighter, Arrow, Box and Circle, six colors, Undo and Clear all.',
+        'Stop drawing with Esc or the ✕ button: the page works normally again and your drawings stay until you clear them. Press Alt + Shift + A again to keep drawing.',
+        'Highlight your cursor. Choose “Highlight my cursor” or press Alt + Shift + C. A soft yellow circle follows your mouse and every click leaves a small red ring, so viewers never lose track of where you are pointing.',
+        'Record as usual. Start your recording in Pantalay and share the tab or the screen where you are drawing. Everything you draw and every click highlight is in the video.',
+        'Good to know: the extension works on websites in Chrome. Chrome does not allow any extension on its own pages (the ones that start with chrome://) or on the Chrome Web Store. It does not draw over desktop programs outside Chrome; for that, keep using the pencils inside Pantalay with “Freeze screen while drawing”. If you reload a page, turn drawing on again.',
+      ],
+    },
+    es: {
+      titulo: 'Dibuja sobre cualquier página web y resalta tu cursor (extensión de Chrome)',
+      resumen:
+        'Con la extensión de Pantalay para Chrome dibujas encima de la página que estás mostrando, sin volver a Pantalay, y tu cursor resalta en el video.',
+      cuerpo: [
+        '¿Para qué la extensión? Mientras grabas, los lápices de Pantalay dibujan dentro de la página de Pantalay. Con la extensión dibujas directamente encima de cualquier sitio web que estés presentando y, como se graba tu pantalla o tu pestaña, cada dibujo sale en tu video.',
+        'Instálala. Toca «Descarga la extensión de Chrome» y descomprime el archivo. En Chrome, abre la página de Extensiones (menú ⋮ → Extensiones → Administrar extensiones), activa el Modo de desarrollador arriba a la derecha, toca «Cargar descomprimida» y elige la carpeta que descomprimiste. Fíjala con el ícono de la pieza de rompecabezas para tener siempre a mano el botón de Pantalay. Pronto también la vas a encontrar en la tienda de Chrome, con un solo clic.',
+        'Dibuja sobre cualquier página. Abre el sitio que quieres mostrar, toca el botón de Pantalay en la barra y elige «Dibujar sobre esta página», o presiona Alt + Shift + A. Arriba aparece una barrita: Lápiz, Resaltador, Flecha, Cuadro y Círculo, seis colores, Deshacer y Borrar todo.',
+        'Deja de dibujar con Esc o con el botón ✕: la página vuelve a funcionar normal y tus dibujos se quedan hasta que los borres. Presiona Alt + Shift + A otra vez para seguir dibujando.',
+        'Resalta tu cursor. Elige «Resaltar mi cursor» o presiona Alt + Shift + C. Un círculo amarillo suave sigue a tu mouse y cada clic deja un pequeño anillo rojo, así quien mira nunca pierde de vista lo que señalas.',
+        'Graba como siempre. Empieza tu grabación en Pantalay y comparte la pestaña o la pantalla donde estás dibujando. Todo lo que dibujas y cada clic resaltado sale en el video.',
+        'Bueno saberlo: la extensión funciona sobre sitios web en Chrome. Chrome no permite ninguna extensión en sus propias páginas (las que empiezan con chrome://) ni en la tienda de Chrome. No dibuja encima de programas de escritorio fuera de Chrome; para eso sigue usando los lápices dentro de Pantalay con «Congelar la pantalla mientras dibujas». Si recargas una página, vuelve a encender el dibujo.',
+      ],
+    },
+  },
+  {
+    slug: 'bug-report',
+    seccion: 'grabar',
+    icono: '🐞',
+    imagen: 'reporte-video',
+    descarga: {
+      href: '/pantalay-extension.zip',
+      en: 'Download the Chrome extension',
+      es: 'Descarga la extensión de Chrome',
+    },
+    en: {
+      titulo: 'Record a bug report with console and network logs',
+      resumen:
+        'Show the bug on video and attach what the page was doing: console messages and network requests, lined up with each second of your video.',
+      cuerpo: [
+        'A video shows what went wrong; the console and the network show why. With the Pantalay extension for Chrome, your developers get both in the same link, without asking you for screenshots of the developer tools.',
+        '1. Go to the page with the problem. Press the Pantalay button in the Chrome toolbar and choose “Record a bug report”. From that moment the extension starts noting what that tab does.',
+        '2. Pantalay opens in a new tab, ready to record, with a line at the top that says which page the report is about. Press Start recording and share that tab (or your screen).',
+        '3. Reproduce the bug: click, fill in, wait for the error. Talk while you do it. Press Finish when you are done.',
+        '4. Your video opens with a new “Console & network” tab next to the transcript. Every message and every request has its minute: tap one and the video jumps to that moment. Use the filters to see only the console, only the network or only the errors (red messages, failed requests and answers of 400 or more).',
+        'What is saved: console messages (logs, info, warnings and errors), errors the page did not catch, and for each request its method, address, status, how long it took and its type. Up to 500 messages and 500 requests, the most recent ones.',
+        'What is never saved: what is sent or received in each request, cookies, headers (including sign-in data) and anything you type in password fields. In addresses, the values that look private (tokens, keys, passwords, emails) are replaced by [hidden], and so are obvious keys in console messages.',
+        'Who sees it: the same people who can watch the video. If the page has private information, set the video to private before sharing it. When you delete the video, its console and network logs are deleted too.',
+        'Good to know: the report starts when you press “Record a bug report”. If you reload that tab or open another address in it before finishing, start the report again. It works on websites in Chrome, not on Chrome’s own pages or the Chrome Web Store.',
+      ],
+    },
+    es: {
+      titulo: 'Graba un reporte de error con la consola y la red',
+      resumen:
+        'Muestra el fallo en video y adjunta lo que estaba haciendo la página: mensajes de consola y peticiones de red, alineados con cada segundo de tu video.',
+      cuerpo: [
+        'Un video muestra qué salió mal; la consola y la red muestran por qué. Con la extensión de Pantalay para Chrome, tu equipo técnico recibe las dos cosas en el mismo enlace, sin pedirte capturas de las herramientas de desarrollo.',
+        '1. Ve a la página que tiene el problema. Toca el botón de Pantalay en la barra de Chrome y elige «Grabar un reporte de error». Desde ese momento la extensión empieza a anotar lo que hace esa pestaña.',
+        '2. Pantalay se abre en una pestaña nueva, lista para grabar, con una línea arriba que dice de qué página es el reporte. Toca Empezar a grabar y comparte esa pestaña (o tu pantalla).',
+        '3. Repite el fallo: haz clic, llena los campos, espera el error. Habla mientras lo haces. Toca Terminar cuando acabes.',
+        '4. Tu video se abre con una pestaña nueva, «Consola y red», al lado de la transcripción. Cada mensaje y cada petición tiene su minuto: toca uno y el video salta a ese momento. Usa los filtros para ver solo la consola, solo la red o solo los errores (mensajes en rojo, peticiones que fallaron y respuestas de 400 o más).',
+        'Qué se guarda: los mensajes de consola (registros, información, advertencias y errores), los errores que la página no atrapó y, de cada petición, su método, su dirección, su estado, cuánto tardó y su tipo. Hasta 500 mensajes y 500 peticiones, los más recientes.',
+        'Qué nunca se guarda: lo que se envía o se recibe en cada petición, las cookies, las cabeceras (incluidos los datos de inicio de sesión) y lo que escribes en campos de contraseña. En las direcciones, los valores que parecen privados (tokens, claves, contraseñas, correos) se cambian por [hidden], y lo mismo pasa con las claves obvias en los mensajes de consola.',
+        'Quién lo ve: las mismas personas que pueden ver el video. Si la página tiene información privada, pon el video en privado antes de compartirlo. Cuando borras el video, también se borran su consola y su red.',
+        'Bueno saberlo: el reporte empieza cuando tocas «Grabar un reporte de error». Si recargas esa pestaña o abres otra dirección en ella antes de terminar, vuelve a empezar el reporte. Funciona sobre sitios web en Chrome, no en las páginas propias de Chrome ni en la tienda de Chrome.',
       ],
     },
   },

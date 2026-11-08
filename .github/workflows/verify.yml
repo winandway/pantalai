@@ -32,7 +32,8 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci
       - run: npm run build
-      - run: npx playwright install --with-deps webkit
+      # Chromium de Playwright: la e2e de la extensión lo necesita (el Chrome de marca ya no carga extensiones sueltas).
+      - run: npx playwright install --with-deps webkit chromium
       - run: npx wrangler d1 execute pantalai-local --local --file schema.sql
       - name: Sitio local + grabación real con Chrome
         run: |

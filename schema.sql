@@ -305,3 +305,13 @@ CREATE TABLE IF NOT EXISTS videos_equipo (
   PRIMARY KEY (video_id, equipo_id)
 );
 CREATE INDEX IF NOT EXISTS videos_equipo_equipo ON videos_equipo (equipo_id);
+-- Reporte de error con la extensión de Chrome (8 nov 2026, CANDADO C-REPORTE-ERROR): mensajes de consola y peticiones
+-- de red de la pestaña con el fallo, ya alineados con el segundo del video. Nunca cuerpos, cookies ni cabeceras.
+CREATE TABLE IF NOT EXISTS registros_video (
+  video_id TEXT PRIMARY KEY,
+  consola TEXT NOT NULL DEFAULT '[]',
+  red TEXT NOT NULL DEFAULT '[]',
+  pagina TEXT NOT NULL DEFAULT '',
+  navegador TEXT NOT NULL DEFAULT '',
+  creado INTEGER NOT NULL
+);

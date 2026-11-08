@@ -5,7 +5,19 @@ import hooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'salida', '.dist-worker', 'coverage', 'node_modules', '.wrangler', '.claude'] },
+  {
+    ignores: [
+      'dist',
+      'salida',
+      '.dist-worker',
+      'coverage',
+      'node_modules',
+      '.wrangler',
+      '.claude',
+      '.dist-extension',
+      '.dist-extension-pruebas',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   security.configs.recommended,
@@ -20,7 +32,17 @@ export default tseslint.config(
   {
     files: ['scripts/**/*.mjs'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly', setTimeout: 'readonly', localStorage: 'readonly', fetch: 'readonly', atob: 'readonly', document: 'readonly', URL: 'readonly', Blob: 'readonly' },
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        localStorage: 'readonly',
+        fetch: 'readonly',
+        atob: 'readonly',
+        document: 'readonly',
+        URL: 'readonly',
+        Blob: 'readonly',
+      },
     },
   },
   prettier,

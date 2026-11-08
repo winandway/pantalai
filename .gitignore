@@ -15,3 +15,7 @@ playwright-report
 .claude/
 docs/CUENTAS-Y-PAGOS-PROVEEDORES.md
 .codex/
+# Extensión de Chrome: se arma en cada build (CANDADO C-EXTENSION)
+.dist-extension
+.dist-extension-pruebas
+web/public/pantalay-extension.zip

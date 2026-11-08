@@ -1,0 +1,92 @@
+{
+  "nombre": {
+    "message": "Pantalay: dibuja, resalta y reporta fallos"
+  },
+  "descripcion": {
+    "message": "Dibuja sobre cualquier página web, resalta tu cursor y graba reportes de error con la consola y la red para tus videos de Pantalay."
+  },
+  "atajoDibujo": {
+    "message": "Dibujar sobre esta página (encender / apagar)"
+  },
+  "atajoCursor": {
+    "message": "Resaltar el cursor (encender / apagar)"
+  },
+  "enEstaPagina": {
+    "message": "En esta página"
+  },
+  "dibujar": {
+    "message": "Dibujar sobre esta página"
+  },
+  "cursor": {
+    "message": "Resaltar mi cursor"
+  },
+  "encendido": {
+    "message": "Encendido"
+  },
+  "apagado": {
+    "message": "Apagado"
+  },
+  "noPermitida": {
+    "message": "Chrome no deja que las extensiones trabajen en esta página (páginas de Chrome y la tienda de Chrome). Abre cualquier sitio web para usarla."
+  },
+  "reporte": {
+    "message": "Grabar un reporte de error"
+  },
+  "reporteAyuda": {
+    "message": "Abre Pantalay para grabar. Los mensajes de consola y las peticiones de red de esta pestaña se adjuntan a tu video. Nunca contraseñas, cookies ni lo que envías."
+  },
+  "abrir": {
+    "message": "Grabar con Pantalay"
+  },
+  "comoFunciona": {
+    "message": "Cómo funciona"
+  },
+  "atajos": {
+    "message": "Atajos: Alt+Shift+A para dibujar, Alt+Shift+C para el cursor, Esc para dejar de dibujar."
+  },
+  "lapiz": {
+    "message": "Lápiz"
+  },
+  "resaltador": {
+    "message": "Resaltador"
+  },
+  "flecha": {
+    "message": "Flecha"
+  },
+  "cuadro": {
+    "message": "Cuadro"
+  },
+  "circulo": {
+    "message": "Círculo"
+  },
+  "deshacer": {
+    "message": "Deshacer"
+  },
+  "borrarTodo": {
+    "message": "Borrar todo"
+  },
+  "dejarDeDibujar": {
+    "message": "Dejar de dibujar (Esc)"
+  },
+  "herramientas": {
+    "message": "Lápices de Pantalay"
+  },
+  "rojo": {
+    "message": "Rojo"
+  },
+  "amarillo": {
+    "message": "Amarillo"
+  },
+  "verde": {
+    "message": "Verde"
+  },
+  "azul": {
+    "message": "Azul"
+  },
+  "blanco": {
+    "message": "Blanco"
+  },
+  "negro": {
+    "message": "Negro"
+  }
+}

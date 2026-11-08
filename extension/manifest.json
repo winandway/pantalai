@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_nombre__",
+  "short_name": "Pantalay",
+  "description": "__MSG_descripcion__",
+  "version": "1.0.0",
+  "default_locale": "en",
+  "homepage_url": "https://pantalay.com/docs/chrome-extension",
+  "icons": {
+    "16": "iconos/icono-16.png",
+    "32": "iconos/icono-32.png",
+    "48": "iconos/icono-48.png",
+    "128": "iconos/icono-128.png"
+  },
+  "action": {
+    "default_popup": "ventanita.html",
+    "default_title": "__MSG_nombre__",
+    "default_icon": {
+      "16": "iconos/icono-16.png",
+      "32": "iconos/icono-32.png"
+    }
+  },
+  "background": { "service_worker": "fondo.js" },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "commands": {
+    "alternar-dibujo": {
+      "suggested_key": { "default": "Alt+Shift+A" },
+      "description": "__MSG_atajoDibujo__"
+    },
+    "alternar-cursor": {
+      "suggested_key": { "default": "Alt+Shift+C" },
+      "description": "__MSG_atajoCursor__"
+    }
+  },
+  "externally_connectable": {
+    "matches": [
+      "https://pantalay.com/*",
+      "https://www.pantalay.com/*",
+      "https://pantalai.sitios.dev/*",
+      "http://127.0.0.1/*",
+      "http://localhost/*"
+    ]
+  }
+}
