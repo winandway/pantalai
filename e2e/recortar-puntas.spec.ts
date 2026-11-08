@@ -56,6 +56,7 @@ test('al arrastrar las puntas el cuadro se ve al instante', async ({ page, reque
     })
     .toBeGreaterThan(8);
 
+  await page.locator('.recortador-tira').scrollIntoViewIfNeeded();
   const tira = (await page.locator('.recortador-tira').boundingBox())!;
   const y = tira.y + tira.height / 2;
   const x = (s: number) => tira.x + (s / 50) * tira.width;

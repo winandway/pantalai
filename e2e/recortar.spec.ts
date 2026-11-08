@@ -31,6 +31,8 @@ test('recortar las puntas y descargar el video recortado', async ({ page }) => {
       timeout: 30_000,
     })
     .toBeGreaterThan(3);
+  // La franja de «confirma tu correo» empuja la página: el recortador se trae a la vista antes de arrastrar.
+  await tira.scrollIntoViewIfNeeded();
   const caja = (await tira.boundingBox())!;
   const duracion = Number(await page.getByRole('slider', { name: 'End' }).getAttribute('aria-valuemax'));
   const x = (s: number) => caja.x + (s / duracion) * caja.width;
