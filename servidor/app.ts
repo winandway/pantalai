@@ -86,6 +86,7 @@ import {
 } from './ia/motor';
 import type { KitYoutube } from '../web/src/logica/youtube';
 import { grabadorViejo } from '../web/src/logica/version';
+import { copiaIndiceValida } from '../web/src/logica/cajasMp4';
 
 export type Env = EnvPago &
   EnvCorreo & {
@@ -2515,6 +2516,90 @@ app.post('/datos/videos/:id/mp4/completar', requiereSesion, async (c) => {
     .bind(obj.size, Date.now(), v.id)
     .run();
   return c.json({ ok: true, bytes: obj.size });
+});
+
+// ---------- índice al principio del MP4 (CANDADO C-INDICE-MP4) ----------
+// El navegador reordena el MP4 grabado (sin re-codificar) y lo sube aparte. Aquí se vuelve a comprobar ANTES de
+// reemplazar: que traiga el índice al principio, que pese parecido y que dure lo mismo. Si no, se borra la copia y
+// el original queda intacto. Sin segunda copia guardada.
+const claveIndice = (id: string) => `videos/${id}/indice.mp4`;
+
+async function videoParaIndice(c: C): Promise<FilaVideo | Response> {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  if (v.estado !== 'listo') return err(c, 409, 'no_listo');
+  if (!v.tipo.startsWith('video/mp4')) return err(c, 400, 'tipo');
+  return v;
+}
+
+app.post('/datos/videos/:id/indice', requiereSesion, async (c) => {
+  const v = await videoParaIndice(c);
+  if (v instanceof Response) return v;
+  const s = await c.env.BUCKET.createMultipartUpload(claveIndice(v.id), {
+    httpMetadata: { contentType: 'video/mp4' },
+  });
+  return c.json({ subida: s.uploadId, parte_minima: PARTE_MIN });
+});
+
+app.put('/datos/videos/:id/indice/partes/:n', requiereSesion, async (c) => {
+  const v = await videoParaIndice(c);
+  if (v instanceof Response) return v;
+  const subida = c.req.query('subida') ?? '';
+  const n = Number(c.req.param('n'));
+  if (!subida || subida.length > 1000) return err(c, 400, 'subida');
+  if (!Number.isInteger(n) || n < 1 || n > 10000) return err(c, 400, 'parte');
+  const datos = await c.req.arrayBuffer();
+  if (datos.byteLength === 0) return err(c, 400, 'parte_vacia');
+  if (datos.byteLength > PARTE_MAX) return err(c, 413, 'parte_grande');
+  try {
+    const p = await c.env.BUCKET.resumeMultipartUpload(claveIndice(v.id), subida).uploadPart(n, datos);
+    return c.json({ parte: { partNumber: p.partNumber, etag: p.etag } });
+  } catch (e) {
+    console.error('indice parte', v.id, e);
+    return err(c, 409, 'subida');
+  }
+});
+
+app.post('/datos/videos/:id/indice/completar', requiereSesion, async (c) => {
+  const v = await videoParaIndice(c);
+  if (v instanceof Response) return v;
+  const d = await cuerpo(
+    c,
+    z.object({
+      subida: z.string().min(1).max(1000),
+      partes: esquemaCompletar.shape.partes,
+      duracion: z
+        .number()
+        .min(0)
+        .max(24 * 3600),
+    }),
+  );
+  if (!d) return err(c, 400, 'datos');
+  const partes = [...d.partes].sort((a, b) => a.partNumber - b.partNumber);
+  let copia: R2Object;
+  try {
+    copia = await c.env.BUCKET.resumeMultipartUpload(claveIndice(v.id), d.subida).complete(partes);
+  } catch (e) {
+    console.error('indice completar', v.id, e);
+    return err(c, 409, 'partes');
+  }
+  const cabeza = await c.env.BUCKET.get(claveIndice(v.id), {
+    range: new Headers({ range: 'bytes=0-65535' }),
+  });
+  const bytesCabeza = cabeza ? new Uint8Array(await cabeza.arrayBuffer()) : new Uint8Array();
+  if (!copiaIndiceValida(bytesCabeza, copia.size, v.bytes, d.duracion, v.duracion)) {
+    await c.env.BUCKET.delete(claveIndice(v.id));
+    console.error('indice rechazado', v.id, copia.size, v.bytes, d.duracion, v.duracion);
+    return err(c, 422, 'copia_invalida');
+  }
+  const entera = await c.env.BUCKET.get(claveIndice(v.id));
+  if (!entera) return err(c, 409, 'partes');
+  await c.env.BUCKET.put(claveVideo(v.id), entera.body, { httpMetadata: { contentType: 'video/mp4' } });
+  await c.env.BUCKET.delete(claveIndice(v.id));
+  await c.env.DB.prepare('UPDATE videos SET bytes = ?, actualizado = ? WHERE id = ?')
+    .bind(copia.size, Date.now(), v.id)
+    .run();
+  return c.json({ ok: true, bytes: copia.size });
 });
 
 // ---------- archivos ----------

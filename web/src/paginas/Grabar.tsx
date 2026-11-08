@@ -388,6 +388,9 @@ export function Grabar() {
           headers: { 'content-type': 'image/jpeg' },
         }).catch((e) => console.error('miniatura', e));
       await borrarRespaldo(id);
+      // El MP4 que graba Chrome viene sin índice: se reordena de fondo (C-INDICE-MP4). El enlace ya funciona.
+      const grabado = s.archivo(g.tipo.split(';')[0]!);
+      void import('../logica/indice').then((m) => m.ponerIndiceDeFondo(id, grabado));
       const ok = await copiar(enlaceVideo(id));
       avisar(ok ? `${t('listo')} · ${t('enlaceCopiado')}` : t('listo'));
       limpiar();

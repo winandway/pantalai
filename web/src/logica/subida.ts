@@ -170,6 +170,8 @@ export async function subirGrabacion(
   subidor.agregar(archivo);
   const partes = await subidor.terminar();
   await llamar(`/datos/videos/${r.id}/completar`, { method: 'POST', json: { partes, duracion } });
+  // Un MP4 subido sin índice al principio (o en fragmentos) se reordena de fondo (C-INDICE-MP4).
+  if (llamar === pedir) void import('./indice').then((m) => m.ponerIndiceDeFondo(r.id, archivo));
   return r.id;
 }
 

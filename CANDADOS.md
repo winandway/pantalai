@@ -494,3 +494,23 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Renombrar una carpeta abre la misma ventanita que renombrar un video (`Renombrar` en `Biblioteca.tsx`), nunca el
   cuadro `prompt` del navegador. Prueba en `e2e/auditoria.spec.ts` (falla si se abre un cuadro del navegador),
   comprobada en rojo volviendo a `prompt`.
+
+## C-INDICE-MP4 (8 nov 2026)
+
+- Qué pasaba: Chrome graba el MP4 en fragmentos (ftyp, moov vacío, moof+mdat…) y sin índice; saltar a un minuto
+  lejano tardaba. Decidido por Gerencia: se REEMPLAZA el original, sin segunda copia.
+- Cómo funciona: al terminar de grabar (y al subir un MP4 desde la computadora o «Subir otra vez»), el navegador ya
+  tiene el archivo entero y llama de fondo a `ponerIndiceDeFondo` (`web/src/logica/indice.ts`): (1) mira las cajas
+  de los primeros 64 KB (`web/src/logica/cajasMp4.ts`); si ya trae moov antes de mdat y sin moof, no hace nada;
+  (2) reordena con mediabunny `Conversion` SIN re-codificar (`fastStart: 'in-memory'`), rechazando si se descarta
+  alguna pista; (3) `comprobarCopia`: índice al principio, misma duración (±0,5 s), tiene imagen, primer cuadro
+  legible y la misma cantidad de pistas de sonido; (4) sube a `videos/<id>/indice.mp4` por partes
+  (`POST/PUT /datos/videos/:id/indice…`) y el servidor, en `completar`, VUELVE a comprobar (`copiaIndiceValida`:
+  cajas, peso entre 0,8 y 1,1 del original, duración ±2 s o 3 %). Si vale, copia encima de `videos/<id>/video`,
+  borra la temporal y actualiza `bytes`. Si no, borra la temporal (422 `copia_invalida`) y el original queda igual.
+- Si falla en el navegador queda en `errores_cliente` con `donde = 'indice'` (se ve en el superadmin). Más de 1,5 GB
+  no se reordena (memoria); el original sigue funcionando.
+- Pruebas: `pruebas/indice.test.ts` (cajas con `e2e/datos/fragmentado.mp4`, reordenar de verdad en Node, servidor
+  acepta copia buena y rechaza sin índice u otra duración), comprobada en rojo quitando la comprobación de cajas.
+  E2E: `e2e/grabar.spec.ts` espera que el original quede `ftyp,moov,mdat`.
+- No tocar: que el servidor compruebe antes de reemplazar; reordenar nunca re-codifica.

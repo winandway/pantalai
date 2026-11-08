@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { cabecerasDePrueba } from './ayuda';
+import { cajasDeArriba } from '../web/src/logica/cajasMp4';
 
 test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
@@ -50,6 +51,27 @@ test('grabar, subir y ver un video', async ({ page }) => {
   expect(datos.video.duracion).toBeLessThan(13); // la pausa no cuenta
   expect(datos.video.bytes).toBeGreaterThan(10_000);
   expect(datos.video.tiene_miniatura).toBe(true);
+
+  // CANDADO C-INDICE-MP4: si Chrome grabó en MP4 (en fragmentos), al rato el original de la nube queda reordenado
+  // con el índice al principio (ftyp, moov, mdat; sin moof): saltar a cualquier minuto es instantáneo.
+  const tipo = await page.evaluate(
+    async (i) =>
+      ((await (await fetch(`/datos/videos/${i}`)).json()) as { video: { tipo: string } }).video.tipo,
+    id,
+  );
+  if (tipo.startsWith('video/mp4')) {
+    await expect
+      .poll(
+        async () => {
+          const r = await page.request.get(`/media/${id}/video?formato=webm`, {
+            headers: { range: 'bytes=0-65535' },
+          });
+          return cajasDeArriba(new Uint8Array(await r.body())).join(',');
+        },
+        { timeout: 60_000 },
+      )
+      .toMatch(/^ftyp,(free,)?moov(,mdat)?$/);
+  }
 
   // El archivo trae su duración escrita (se puede adelantar y la barra no queda en «infinito»).
   await page.locator('.reproductor video').waitFor({ timeout: 30_000 });
