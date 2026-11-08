@@ -27,12 +27,26 @@ describe('limpiar registros', () => {
       'https://pantalay.com/datos/salud?api_key=[hidden]',
     );
     expect(limpiarUrl('data:image/png;base64,AAAA')).toBe('data:…');
+    // Llaves dentro de la ruta (enlaces mágicos, invitaciones, uuid) también se tapan; las rutas normales no.
+    expect(limpiarUrl('https://app.example.com/reset/a1B2c3D4e5F6g7H8i9J0kL')).toBe(
+      'https://app.example.com/reset/[hidden]',
+    );
+    expect(limpiarUrl('https://x.com/s/123e4567-e89b-12d3-a456-426614174000/ver')).toBe(
+      'https://x.com/s/[hidden]/ver',
+    );
+    expect(limpiarUrl('https://x.com/products/winter-collection-2026')).toBe(
+      'https://x.com/products/winter-collection-2026',
+    );
     expect(limpiarUrl('no es una dirección?token=1')).toBe('no es una dirección');
     expect(limpiarUrl(`https://a.com/${'x'.repeat(900)}`).length).toBeLessThanOrEqual(TOPES.url);
   });
 
   it('tapa tokens obvios en los mensajes de consola y corta los muy largos', () => {
-    expect(limpiarTexto('Authorization: Bearer abcdefghijklmnop')).toBe('Authorization: Bearer [hidden]');
+    expect(limpiarTexto('Authorization: Bearer abcdefghijklmnop')).toBe('Authorization: [hidden]');
+    // Revisión del 8 nov 2026: cabeceras copiadas a la consola y correos también se tapan.
+    expect(limpiarTexto('Cookie: sid=abc123; theme=dark')).toBe('Cookie: [hidden]');
+    expect(limpiarTexto('Authorization: Token 9f8e7d6c')).toBe('Authorization: [hidden]');
+    expect(limpiarTexto('usuario ana@example.com entró')).toBe('usuario [hidden] entró');
     expect(limpiarTexto('jwt eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0.SflKxwRJSMeKKF2QT4')).toBe('jwt [hidden]');
     expect(limpiarTexto('{"password":"hunter22","ok":1}')).toBe('{"password":"[hidden]","ok":1}');
     // Clave de mentira armada por partes (el escáner de secretos no distingue una falsa de una real).
@@ -197,8 +211,11 @@ describe('endpoints de registros', () => {
     const id = await videoListo(ana);
     const r = await ana(`/datos/videos/${id}/registros`, { method: 'PUT', json: ejemplo });
     expect(r.status).toBe(200);
+    // Quien solo tiene el enlace público ve el video, pero NO la consola ni la red (revisión del 8 nov 2026).
     const otro = cliente('2.2.2.2');
-    const g = await otro(`/datos/videos/${id}/registros`);
+    expect((await otro(`/datos/videos/${id}`)).status).toBe(200);
+    expect((await otro(`/datos/videos/${id}/registros`)).status).toBe(404);
+    const g = await ana(`/datos/videos/${id}/registros`);
     expect(g.status).toBe(200);
     const d = (await g.json()) as {
       consola: { texto: string }[];

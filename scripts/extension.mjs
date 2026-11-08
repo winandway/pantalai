@@ -28,6 +28,8 @@ await build({
   platform: 'browser',
   target: 'chrome120',
   minify: !pruebas,
+  // La publicada solo habla con Pantalay; localhost/127.0.0.1 SOLO en la de pruebas (revisión del 8 nov 2026).
+  define: { __PRUEBAS__: JSON.stringify(pruebas) },
   outdir: salida,
   logLevel: 'warning',
 });
@@ -38,6 +40,12 @@ cpSync('extension/ventanita.html', join(salida, 'ventanita.html'));
 
 const manifiesto = JSON.parse(readFileSync('extension/manifest.json', 'utf8'));
 if (pruebas) manifiesto.host_permissions = ['http://127.0.0.1/*', 'http://localhost/*'];
+else
+  manifiesto.externally_connectable.matches = manifiesto.externally_connectable.matches.filter(
+    (m) => !/^http:\/\/(127\.0\.0\.1|localhost)\//.test(m),
+  );
+if (!pruebas && manifiesto.externally_connectable.matches.some((m) => m.startsWith('http:')))
+  throw new Error('La extensión publicada no acepta mensajes de localhost');
 writeFileSync(join(salida, 'manifest.json'), JSON.stringify(manifiesto, null, 2) + '\n');
 
 // Comprobaciones: los textos existen en los dos idiomas y caben donde Chrome los muestra.

@@ -1,7 +1,7 @@
 // Piezas de la extensión de Chrome dentro de la página: el botón para instalarla, la franja del modo reporte en
 // Grabar y el panel «Consola y red» del video (CANDADOS C-EXTENSION y C-REPORTE-ERROR).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { pedir } from '../logica/api';
+import { ErrorApi, pedir } from '../logica/api';
 import { useIdioma } from '../logica/idioma';
 import { esFallo, filaActual, filas, type Registros } from '../logica/registros';
 import { hablarConExtension } from '../logica/reporte';
@@ -78,7 +78,11 @@ export function useRegistros(id: string) {
     setR(null);
     pedir<DatosRegistros>(`/datos/videos/${id}/registros`)
       .then((d) => vivo && setR(d))
-      .catch(() => undefined); // sin registros = sin pestaña
+      .catch((e: unknown) => {
+        // Sin registros (o sin permiso) = sin pestaña. Cualquier otro error queda en la consola, no se esconde.
+        if (!(e instanceof ErrorApi && (e.codigo === 'sin_registros' || e.codigo === 'no_existe')))
+          console.error('registros', e);
+      });
     return () => {
       vivo = false;
     };

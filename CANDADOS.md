@@ -640,3 +640,15 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   dejando ver todo privado (fallan 3) y sin mirar el equipo (fallan 2). E2E: `e2e/equipos.spec.ts` (dos cuentas reales:
   crear, invitar, copiar enlace, unirse creando la cuenta, compartir un video privado y verlo).
 - No tocar: que `puedeVer` exija estado `listo` antes de mirar equipos, y que unirse compare el correo de la sesión.
+
+### Revisión del 8 nov 2026 (C-REPORTE-ERROR y C-EXTENSION)
+
+- La consola y la red las ven SOLO el dueño y los miembros del equipo con el que se compartió el video; quien solo tiene
+  el enlace público ve el video pero no los registros (`GET /datos/videos/:id/registros` mira el video como privado).
+- `limpiarUrl` también tapa pedazos de ruta que parecen llaves (`pareceLlave`: mayúsculas+minúsculas+números de 20+,
+  bloque de 24+ sin guiones con números, uuid, hexadecimal largo); un slug de palabras en minúscula no se tapa.
+  `limpiarTexto` tapa cabeceras copiadas (`Cookie:`, `Set-Cookie:`, `Authorization:`, `x-api-key:`) y correos.
+- La extensión PUBLICADA solo acepta mensajes de pantalay.com, www y pantalai.sitios.dev: `scripts/extension.mjs`
+  quita localhost/127.0.0.1 del manifiesto y compila `__PRUEBAS__ = false` (falla el armado si queda un `http:`). La
+  compilación `--pruebas` sí los acepta para la e2e.
+- Pruebas en `pruebas/registros.test.ts` y `pruebas/extension.test.tsx`; la de rutas comprobada en rojo.

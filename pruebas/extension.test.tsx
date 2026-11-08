@@ -36,12 +36,14 @@ function extensionFalsa(responder: (m: { tipo: string }) => unknown) {
 }
 
 describe('quién puede hablar con la extensión', () => {
-  it('solo Pantalay y la computadora local', () => {
+  it('solo Pantalay; la computadora local SOLO en la compilación de pruebas', () => {
     expect(origenPermitido('https://pantalay.com')).toBe(true);
     expect(origenPermitido('https://www.pantalay.com/record')).toBe(true);
     expect(origenPermitido('https://pantalai.sitios.dev')).toBe(true);
-    expect(origenPermitido('http://127.0.0.1:8791')).toBe(true);
-    expect(origenPermitido('http://localhost:5173')).toBe(true);
+    expect(origenPermitido('http://127.0.0.1:8791')).toBe(false);
+    expect(origenPermitido('http://localhost:5173')).toBe(false);
+    expect(origenPermitido('http://127.0.0.1:8791', true)).toBe(true);
+    expect(origenPermitido('http://localhost:5173', true)).toBe(true);
     expect(origenPermitido('http://pantalay.com')).toBe(false);
     expect(origenPermitido('https://pantalay.com.evil.com')).toBe(false);
     expect(origenPermitido('https://evilpantalay.com')).toBe(false);
@@ -53,8 +55,9 @@ describe('quién puede hablar con la extensión', () => {
     expect([...manifiesto.permissions].sort()).toEqual(['activeTab', 'scripting', 'storage']);
     expect(manifiesto).not.toHaveProperty('host_permissions');
     expect(manifiesto).not.toHaveProperty('content_scripts');
+    // El manifiesto fuente trae localhost para la compilación de pruebas; la publicada lo quita (scripts/extension.mjs).
     for (const m of manifiesto.externally_connectable.matches)
-      expect(origenPermitido(m.replace('/*', ''))).toBe(true);
+      expect(origenPermitido(m.replace('/*', ''), true)).toBe(true);
     expect(manifiesto.manifest_version).toBe(3);
   });
 });

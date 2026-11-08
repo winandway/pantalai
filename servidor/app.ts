@@ -2799,7 +2799,9 @@ app.put('/datos/videos/:id/registros', requiereSesion, async (c) => {
 // Los ve quien puede ver el video; a los demás, 404 (igual que el video).
 app.get('/datos/videos/:id/registros', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
-  if (!v || !(await puedeVer(c, v, c.get('usuario')))) return err(c, 404, 'no_existe');
+  // Consola y red son del dueño y de su equipo: quien solo tiene el enlace público ve el video, no los registros.
+  const u = c.get('usuario');
+  if (!v || !u || !(await puedeVer(c, { ...v, privacidad: 'privado' }, u))) return err(c, 404, 'no_existe');
   const f = await c.env.DB.prepare(
     'SELECT consola, red, pagina, navegador, creado FROM registros_video WHERE video_id = ?',
   )

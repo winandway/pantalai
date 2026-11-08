@@ -59,8 +59,25 @@ export function limpiarUrl(u: string, base?: string): string {
   for (const k of [...new Set(url.searchParams.keys())]) {
     if (SENSIBLE.test(k)) url.searchParams.set(k, OCULTO);
   }
+  // Pedazos de la ruta que parecen llaves (enlaces mágicos, invitaciones, ids largos) también se tapan.
+  url.pathname = url.pathname
+    .split('/')
+    .map((p) => (pareceLlave(decodeURIComponent(p)) ? OCULTO : p))
+    .join('/');
   // El [hidden] queda legible (sin %5B…%5D).
   return cortar(url.toString().replaceAll('%5Bhidden%5D', OCULTO), TOPES.url);
+}
+
+/** ¿Este pedazo de ruta parece una llave? 20+ letras/números seguidos, un uuid o un hexadecimal largo. */
+export function pareceLlave(p: string): boolean {
+  return (
+    // Llave: mezcla mayúsculas, minúsculas y números; o un bloque largo sin guiones con números. Un «slug» de palabras
+    // en minúscula separadas por guiones (winter-collection-2026) NO es llave.
+    (/^[A-Za-z0-9_-]{20,}$/.test(p) && /\d/.test(p) && /[a-z]/.test(p) && /[A-Z]/.test(p)) ||
+    (/^[A-Za-z0-9]{24,}$/.test(p) && /\d/.test(p)) ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p) ||
+    /^[0-9a-f]{16,}$/i.test(p)
+  );
 }
 
 /** Texto de consola sin los secretos más obvios (tokens «Bearer», JWT y claves largas) y con tope de largo. */
@@ -74,7 +91,11 @@ export function limpiarTexto(s: unknown): string {
       .replace(
         /((?:password|passwd|pwd|token|secret|api[_-]?key)["']?\s*[:=]\s*["']?)[^\s"'&,}]+/gi,
         `$1${OCULTO}`,
-      ),
+      )
+      // Cabeceras copiadas a la consola: «Cookie: …», «Authorization: Token …», «Set-Cookie: …» (la línea entera).
+      .replace(/((?:set-)?cookie|authorization|x-api-key)(["']?\s*:\s*)[^\n]+/gi, `$1$2${OCULTO}`)
+      // Correos impresos en la consola.
+      .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, OCULTO),
     TOPES.texto,
   );
 }
