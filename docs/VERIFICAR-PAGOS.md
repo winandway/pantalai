@@ -15,6 +15,26 @@
 - ✅ Construido: suscripción mensual y anual, prueba de 14 días configurable, aviso firmado (sin firma = 400) y canario
   `/datos/salud` → `pago.listo: true` (comprobado en vivo el 8 nov 2026).
 
+## 🎬 GUION DE LA COMPRA REAL DE RICHARD (5 pasos, listo el 8 nov 2026)
+
+Estado comprobado el 8 nov 2026 antes del guion: aviso de Stripe **activo** hacia `https://pantalay.com/datos/pago/aviso`
+(suscripción creada, cambiada y borrada, factura pagada y pago fallido); precio de fundador Business + AI mensual
+(12 USD) activo en Stripe; aviso sin firma → 400; canario `pago.listo: true`; `PAGO_DIAS_PRUEBA=0` (cobra en el
+momento, para el video).
+
+1. **Richard (grabando la pantalla):** entra a `https://pantalay.com` con su cuenta y abre `https://pantalay.com/pricing`.
+2. **Richard:** elige **Business + AI · mensual (12 USD)**, toca el botón del plan y escribe su tarjeta en el cuadro de
+   Stripe que aparece DENTRO de Pantalay. Confirma.
+3. **Richard:** espera unos segundos y abre «Mi cuenta»: tiene que decir Business + AI activo, con fecha de renovación.
+   Ahí termina el video.
+4. **IA (yo), en cuanto avise:** compruebo en Stripe el cobro de 12 USD, la factura enviada y la suscripción `active`;
+   en Pantalay el plan activo y en el superadmin la cuenta con Business + AI. Vuelvo `PAGO_DIAS_PRUEBA` a 14 y
+   republico. Anoto fecha y compra en la tabla de abajo.
+5. **Richard + IA:** en «Mi cuenta» Richard toca «Cancelar plan» (Stripe debe decir «cancela el <fecha>») y luego
+   «Mantener mi plan» (vuelve a renovar). Con eso en verde y su sí: `COBRO_ACTIVO=1`, la página de precios al menú y
+   se quita el noindex. Anual, Apple Pay / Google Pay y la prueba de 14 días siguen en rojo hasta que una compra
+   real los use.
+
 ## Comprobado en vivo el 20 oct 2026 (sin cobrar)
 
 - Las claves funcionan; la página crea sola el producto y el precio de fundador (Business + AI mensual, 12 USD:

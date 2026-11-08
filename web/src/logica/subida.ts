@@ -143,10 +143,16 @@ export async function subirGrabacion(
   idioma: 'en' | 'es',
   progreso?: (subidos: number, total: number) => void,
   llamar: typeof pedir = pedir,
+  titulo?: string,
 ): Promise<string> {
   const r = await llamar<{ id: string; parte_minima: number }>('/datos/videos', {
     method: 'POST',
-    json: { tipo: archivo.type.split(';')[0] || 'video/webm', idioma, respaldo: true },
+    json: {
+      tipo: archivo.type.split(';')[0] || 'video/webm',
+      idioma,
+      respaldo: true,
+      ...(titulo ? { titulo } : {}),
+    },
   });
   const subidor = new Subidor({
     videoId: r.id,

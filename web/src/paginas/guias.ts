@@ -268,6 +268,31 @@ export const GUIAS: Guia[] = [
     },
   },
   {
+    slug: 'upload-a-video',
+    seccion: 'grabar',
+    icono: '⬆',
+    en: {
+      titulo: 'Upload a video from your computer',
+      resumen: 'Turn an MP4 or WebM file you already have into a Pantalay video with its own link.',
+      cuerpo: [
+        'Open your library and press “Upload a video”, right under New recording. Choose an MP4 or WebM file from your computer (up to 5 GB).',
+        'The file uploads in pieces and keeps trying on its own if the connection drops. You will see the progress on the button.',
+        'When it finishes, your video opens with its link ready to share. The title comes from the file name; you can change it any time.',
+        'Everything else works the same as with a recording: comments, reactions, privacy, folders, trimming and the MP4 download.',
+      ],
+    },
+    es: {
+      titulo: 'Sube un video desde tu computadora',
+      resumen: 'Convierte un archivo MP4 o WebM que ya tienes en un video de Pantalay con su propio enlace.',
+      cuerpo: [
+        'Abre tu biblioteca y toca «Subir un video», justo debajo de Nueva grabación. Elige un archivo MP4 o WebM de tu computadora (hasta 5 GB).',
+        'El archivo se sube por partes y sigue intentando solo si se cae la conexión. Verás el avance en el mismo botón.',
+        'Al terminar se abre tu video con el enlace listo para compartir. El título sale del nombre del archivo; lo puedes cambiar cuando quieras.',
+        'Todo lo demás funciona igual que con una grabación: comentarios, reacciones, privacidad, carpetas, recorte y la descarga en MP4.',
+      ],
+    },
+  },
+  {
     slug: 'share-a-video',
     seccion: 'compartir',
     icono: '🔗',

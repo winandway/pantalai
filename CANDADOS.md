@@ -475,3 +475,20 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   de acción con enlace piden Business (402 `plan_edicion`). Quitar el botón siempre se puede. Límite `edicion` en
   `servidor/planes.ts`; la pantalla de editar desactiva esos campos y dice «Parte de Business».
 - Prueba: «C-PLANES-EDICION» en `pruebas/servidor.test.ts`, comprobada en rojo quitando las dos compuertas.
+
+## C-SUBIR-VIDEO (8 nov 2026)
+
+- «Subir un video» en la Biblioteca (`web/src/componentes/SubirVideo.tsx`, cuentas en `web/src/logica/archivoVideo.ts`):
+  MP4 o WebM de hasta 5 GB, título del nombre del archivo, duración leída con mediabunny, misma subida por partes y
+  con reintentos que «Subir otra vez» (`subirGrabacion` con `titulo`). El servidor cumple el plan igual que con una
+  grabación (tope de videos y de minutos). Límite honesto: un archivo subido no lleva la marca grabada dentro (la
+  marca del reproductor sí sale para el plan gratis).
+- Guía pública: Docs → «Sube un video desde tu computadora» (`upload-a-video`).
+- Pruebas: `pruebas/archivo-video.test.ts` y `e2e/subir-video.spec.ts` (sube `e2e/datos/fragmentado.mp4`), comprobada
+  en rojo quitando el título.
+
+## C-RENOMBRAR-CARPETA (8 nov 2026)
+
+- Renombrar una carpeta abre la misma ventanita que renombrar un video (`Renombrar` en `Biblioteca.tsx`), nunca el
+  cuadro `prompt` del navegador. Prueba en `e2e/auditoria.spec.ts` (falla si se abre un cuadro del navegador),
+  comprobada en rojo volviendo a `prompt`.

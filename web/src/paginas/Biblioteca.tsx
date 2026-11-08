@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
+import { SubirVideo } from '../componentes/SubirVideo';
 import { Confirmar, Modal } from '../componentes/Modal';
 import {
   ErrorApi,
@@ -47,6 +48,7 @@ export function Biblioteca() {
   const [borrando, setBorrando] = useState<VideoLista | null>(null);
   const [nuevaCarpeta, setNuevaCarpeta] = useState(false);
   const [borrandoCarpeta, setBorrandoCarpeta] = useState<Carpeta | null>(null);
+  const [renombrandoCarpeta, setRenombrandoCarpeta] = useState<Carpeta | null>(null);
 
   useEffect(() => {
     if (!cargando && !usuario) navegar('/login?volver=/library', true);
@@ -105,6 +107,7 @@ export function Biblioteca() {
         <a className="boton ancho" href="/record" onClick={alClicEnlace}>
           <span className="punto-rojo" aria-hidden="true" /> {t('nuevaGrabacion')}
         </a>
+        <SubirVideo />
         <nav>
           <button
             type="button"
@@ -136,13 +139,7 @@ export function Biblioteca() {
                 opciones={[
                   {
                     etiqueta: t('renombrar'),
-                    accion: () => {
-                      const nombre = prompt(t('nombreCarpeta'), c.nombre)?.trim();
-                      if (nombre)
-                        void pedir(`/datos/carpetas/${c.id}`, { method: 'PATCH', json: { nombre } }).then(
-                          () => cargar(),
-                        );
-                    },
+                    accion: () => setRenombrandoCarpeta(c),
                   },
                   {
                     etiqueta: t('eliminar'),
@@ -260,9 +257,26 @@ export function Biblioteca() {
         </div>
       </section>
 
+      {renombrandoCarpeta && (
+        <Renombrar
+          inicial={renombrandoCarpeta.nombre}
+          etiqueta={t('nombreCarpeta')}
+          maximo={80}
+          cerrar={() => setRenombrandoCarpeta(null)}
+          guardar={(nombre) => {
+            const c = renombrandoCarpeta;
+            setRenombrandoCarpeta(null);
+            void pedir(`/datos/carpetas/${c.id}`, { method: 'PATCH', json: { nombre } })
+              .then(() => cargar())
+              .catch((e) => setError(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor')));
+          }}
+        />
+      )}
       {renombrando && (
         <Renombrar
-          video={renombrando}
+          inicial={renombrando.titulo}
+          etiqueta={t('titulo')}
+          maximo={200}
           cerrar={() => setRenombrando(null)}
           guardar={(titulo) => {
             void cambiarVideo(renombrando, { titulo });
@@ -339,17 +353,22 @@ export function Biblioteca() {
   );
 }
 
+/** Ventanita para cambiar un nombre (título de un video o nombre de una carpeta), en vez del cuadro del navegador. */
 function Renombrar({
-  video,
+  inicial,
+  etiqueta,
+  maximo,
   cerrar,
   guardar,
 }: {
-  video: VideoLista;
+  inicial: string;
+  etiqueta: string;
+  maximo: number;
   cerrar: () => void;
   guardar: (t: string) => void;
 }) {
   const { t } = useIdioma();
-  const [titulo, setTitulo] = useState(video.titulo);
+  const [titulo, setTitulo] = useState(inicial);
   return (
     <Modal titulo={t('renombrar')} cerrar={cerrar} ancho={460}>
       <form
@@ -359,12 +378,12 @@ function Renombrar({
         }}
       >
         <div className="campo">
-          <label htmlFor="renombrar">{t('titulo')}</label>
+          <label htmlFor="renombrar">{etiqueta}</label>
           <input
             id="renombrar"
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
-            maxLength={200}
+            maxLength={maximo}
             autoFocus
           />
         </div>

@@ -56,10 +56,24 @@ test('una persona usa Pantalay de punta a punta', async ({ page, browser }) => {
   await page.getByLabel('Folder name').fill('Clients');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.lateral-carpeta', { hasText: 'Clients' })).toBeVisible();
+  // Renombrar la carpeta con la ventanita propia (no el cuadro del navegador).
+  page.on('dialog', () => {
+    throw new Error('Se abrió un cuadro del navegador');
+  });
+  await page
+    .locator('.lateral-carpeta', { hasText: 'Clients' })
+    .getByRole('button', { name: 'More options' })
+    .click();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
+  const ventana = page.getByRole('dialog', { name: 'Rename' });
+  await expect(ventana.getByLabel('Folder name')).toHaveValue('Clients');
+  await ventana.getByLabel('Folder name').fill('Clients 2026');
+  await ventana.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.lateral-carpeta', { hasText: 'Clients 2026' })).toBeVisible();
   const tarjeta = page.locator('.biblioteca article').first();
   await tarjeta.getByRole('button', { name: 'More options' }).click();
   await page.getByRole('menuitem', { name: 'Move to folder' }).click();
-  await page.getByRole('button', { name: '📁 Clients', exact: true }).click();
+  await page.getByRole('button', { name: '📁 Clients 2026', exact: true }).click();
   await page.locator('.lateral-carpeta', { hasText: 'Clients' }).getByRole('button').first().click();
   await expect(page.locator('.biblioteca article')).toHaveCount(1);
   await page.getByRole('button', { name: 'All videos' }).click();
