@@ -356,6 +356,37 @@ describe('videos', () => {
     expect((await nuevo()).status).toBe(201);
   });
 
+  it('CANDADO C-PLANES-EDICION: en Starter la miniatura a elección y el botón de acción piden Business', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const foto = () =>
+      c(`/datos/videos/${id}/miniatura`, {
+        method: 'PUT',
+        body: new Uint8Array(10).fill(1),
+        headers: { 'content-type': 'image/jpeg' },
+      });
+    const boton = (cta_url: string) =>
+      c(`/datos/videos/${id}`, { method: 'PATCH', json: { cta_texto: 'Ver', cta_url } });
+    env.COBRO_ACTIVO = '1';
+    // La primera miniatura (la que pone sola la grabación) sale en todos los planes; cambiarla, no.
+    expect((await foto()).status).toBe(200);
+    const r = await foto();
+    expect(r.status).toBe(402);
+    expect(((await r.json()) as { error: string }).error).toBe('plan_edicion');
+    expect((await boton('https://example.com')).status).toBe(402);
+    // Quitar el botón siempre se puede.
+    expect((await boton('')).status).toBe(200);
+    // Con Business pagado, las dos cosas.
+    const yo = (await (await c('/datos/yo')).json()) as { usuario: { id: string } };
+    await env.DB.prepare('INSERT INTO suscripciones (usuario_id, plan, actualizado) VALUES (?, ?, ?)')
+      .bind(yo.usuario.id, 'business', Date.now())
+      .run();
+    expect((await foto()).status).toBe(200);
+    expect((await boton('https://example.com')).status).toBe(200);
+    // Con el cobro apagado (como hoy), nadie queda limitado.
+    env.COBRO_ACTIVO = '';
+  });
+
   it('el nombre del archivo descargado aguanta tildes y letras de otros idiomas', async () => {
     const c = await registrado();
     const { id } = await videoListo(c);

@@ -5,7 +5,14 @@ import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
 import { CuadroPrevio, Recortador } from '../componentes/Recortador';
 import { Reproductor, type ManejoReproductor } from '../componentes/Reproductor';
-import { ErrorApi, archivoVideo, pedir, type Superposicion, type Video } from '../logica/api';
+import {
+  ErrorApi,
+  archivoVideo,
+  pedir,
+  type LimitesPlan,
+  type Superposicion,
+  type Video,
+} from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import { textoError, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
@@ -58,6 +65,13 @@ export function Editar({ id }: { id: string }) {
 function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
   const { t, idioma } = useIdioma();
   const avisar = useAviso();
+  // Miniatura a elección y botón de acción: Business en adelante (con el cobro apagado, el servidor dice que sí).
+  const [edicion, setEdicion] = useState(true);
+  useEffect(() => {
+    pedir<{ limites: LimitesPlan }>('/datos/plan')
+      .then((r) => setEdicion(r.limites.edicion !== false))
+      .catch(() => undefined);
+  }, []);
   const b = useBorrador<Borrador>(llaveBorrador(`editar-${video.id}`, cuenta), {
     titulo: video.titulo,
     descripcion: video.descripcion,
@@ -159,6 +173,7 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
   }
 
   async function usarFotograma() {
+    if (!edicion) return;
     const v = reproductor.current?.elemento();
     if (!v?.videoWidth) return;
     const c = document.createElement('canvas');
@@ -167,12 +182,16 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
     c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height);
     const blob = await new Promise<Blob | null>((ok) => c.toBlob(ok, 'image/jpeg', 0.85));
     if (!blob) return;
-    await pedir(`/datos/videos/${video.id}/miniatura`, {
-      method: 'PUT',
-      body: blob,
-      headers: { 'content-type': 'image/jpeg' },
-    });
-    avisar(t('guardado'));
+    try {
+      await pedir(`/datos/videos/${video.id}/miniatura`, {
+        method: 'PUT',
+        body: blob,
+        headers: { 'content-type': 'image/jpeg' },
+      });
+      avisar(t('guardado'));
+    } catch (e) {
+      avisar(textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor'));
+    }
   }
 
   async function guardar() {
@@ -592,6 +611,7 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
                 id="cta-t"
                 value={d.cta_texto}
                 maxLength={60}
+                disabled={!edicion}
                 onChange={(e) => b.cambiar('cta_texto', e.target.value)}
               />
             </div>
@@ -603,17 +623,25 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
                 value={d.cta_url}
                 placeholder={t('ctaEjemplo')}
                 maxLength={500}
+                disabled={!edicion}
                 onChange={(e) => b.cambiar('cta_url', e.target.value)}
               />
             </div>
           </div>
+          {!edicion && <p className="ayuda">{t('parteDeBusiness')}</p>}
         </section>
 
         <section className="tarjeta">
           <h2>{t('miniatura')}</h2>
-          <button type="button" className="boton secundario chico" onClick={() => void usarFotograma()}>
+          <button
+            type="button"
+            className="boton secundario chico"
+            disabled={!edicion}
+            onClick={() => void usarFotograma()}
+          >
             📸 {t('usarFotograma')} ({formatoTiempo(ahora)})
           </button>
+          {!edicion && <p className="ayuda">{t('parteDeBusiness')}</p>}
         </section>
 
         <section className="tarjeta pronto">

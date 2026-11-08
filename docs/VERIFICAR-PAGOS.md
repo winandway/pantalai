@@ -4,6 +4,17 @@
 > comprobado (llegó firmado y se procesó). Falta la compra real de Richard. No se anuncia la página de precios ni se
 > encienden los límites hasta que esa compra salga bien.
 
+## 🔴 LO QUE FALTA PROBAR (revisado el 8 nov 2026) — NO ANUNCIAR NI ENCENDER `COBRO_ACTIVO`
+
+- 🔴 Ningún cobro real todavía: tarjeta, Apple Pay / Google Pay, prueba de 14 días con cobro al terminar, plan anual
+  y cancelar al final del periodo están SIN PROBAR con Stripe real.
+- 🔴 `PAGO_DIAS_PRUEBA` sigue en 0 (puesto para el video de la compra de Richard). Después de esa compra hay que
+  volverlo a 14; si se enciende el cobro con 0, nadie tendría prueba gratis.
+- 🔴 Modo de prueba de Stripe: NO se usa (decisión de Richard del 20 oct 2026: solo en vivo). No hay claves de prueba
+  guardadas; la única prueba sin dinero real es la automática con Stripe simulado (`pruebas/pagos.test.ts`, verde).
+- ✅ Construido: suscripción mensual y anual, prueba de 14 días configurable, aviso firmado (sin firma = 400) y canario
+  `/datos/salud` → `pago.listo: true` (comprobado en vivo el 8 nov 2026).
+
 ## Comprobado en vivo el 20 oct 2026 (sin cobrar)
 
 - Las claves funcionan; la página crea sola el producto y el precio de fundador (Business + AI mensual, 12 USD:

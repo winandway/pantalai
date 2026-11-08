@@ -13,15 +13,41 @@ export type Limites = {
   /** Título, resumen, capítulos, muletillas y documentos con IA. */
   ia: boolean;
   lapices: boolean;
+  /** Miniatura a elección y botón de acción en el video (Business en adelante). */
+  edicion: boolean;
   /** «Hecho con Pantalay» en la página del video y en el reproductor insertado. */
   marca: boolean;
 };
 
 export const LIMITES: Record<Plan, Limites> = {
-  starter: { videos: 25, minutos: 5, calidad: '720', ia: false, lapices: false, marca: true },
-  business: { videos: null, minutos: null, calidad: '2160', ia: false, lapices: true, marca: false },
-  business_ia: { videos: null, minutos: null, calidad: '2160', ia: true, lapices: true, marca: false },
-  enterprise: { videos: null, minutos: null, calidad: '2160', ia: true, lapices: true, marca: false },
+  starter: { videos: 25, minutos: 5, calidad: '720', ia: false, lapices: false, edicion: false, marca: true },
+  business: {
+    videos: null,
+    minutos: null,
+    calidad: '2160',
+    ia: false,
+    lapices: true,
+    edicion: true,
+    marca: false,
+  },
+  business_ia: {
+    videos: null,
+    minutos: null,
+    calidad: '2160',
+    ia: true,
+    lapices: true,
+    edicion: true,
+    marca: false,
+  },
+  enterprise: {
+    videos: null,
+    minutos: null,
+    calidad: '2160',
+    ia: true,
+    lapices: true,
+    edicion: true,
+    marca: false,
+  },
 };
 
 /** Precios en centavos de dólar por usuario al mes. «fundador» = 50 % de por vida. */

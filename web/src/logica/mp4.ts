@@ -13,6 +13,7 @@ import {
   canEncodeVideo,
 } from 'mediabunny';
 import { pedir } from './api';
+import { unirTramos, type Tramo } from './tiempo';
 import { Subidor, type ParteSubida } from './subida';
 
 export async function puedeConvertir(): Promise<boolean> {
@@ -33,18 +34,79 @@ export function opcionesRecorte(r?: Recorte): { start?: number; end?: number } |
   return { start: r.inicio > 0 ? r.inicio : undefined, end: r.fin > 0 ? r.fin : undefined };
 }
 
-export async function aMp4(origen: Blob, progreso?: (p: number) => void, recorte?: Recorte): Promise<Blob> {
+/**
+ * Lo que NO sale en el MP4 cuando hay cortes del medio: las puntas más los cortes, unidos y en orden.
+ * Sin cortes del medio devuelve [] (las puntas solas van por el `trim` de siempre, que ya está probado).
+ * «duracion» 0 = no se sabe: la punta del final llega hasta el infinito.
+ */
+export function tramosParaMp4(recorte: Recorte, cortes: Tramo[], duracion: number): Tramo[] {
+  const validos = cortes.filter((t) => t.fin > t.inicio);
+  if (!validos.length) return [];
+  const t: Tramo[] = [...validos];
+  if (recorte.inicio > 0) t.push({ inicio: 0, fin: recorte.inicio });
+  if (recorte.fin > 0 && (duracion <= 0 || recorte.fin < duracion))
+    t.push({ inicio: recorte.fin, fin: duracion > 0 ? duracion + 1 : Infinity });
+  return unirTramos(t);
+}
+
+/**
+ * En qué segundo del MP4 sale el instante «t» del original: corrido hacia atrás por todo lo cortado antes.
+ * null = ese instante cae en un tramo cortado y no sale.
+ */
+export function tiempoEnSalida(t: number, ocultos: Tramo[]): number | null {
+  let quitado = 0;
+  for (const o of ocultos) {
+    if (t >= o.inicio && t < o.fin) return null;
+    if (o.fin <= t) quitado += o.fin - o.inicio;
+  }
+  return Math.round((t - quitado) * 1e6) / 1e6;
+}
+
+/** Corre la muestra (cuadro o pedazo de audio) a su segundo en el MP4, o la descarta si cae en un corte. */
+function correrMuestra<
+  M extends { timestamp: number; duration: number; setTimestamp(n: number): void; close(): void },
+>(m: M, ocultos: Tramo[]): M | null {
+  // Se mira el centro de la muestra: un pedazo de audio que pisa el borde del corte sale o no según dónde cae más.
+  const nuevo = tiempoEnSalida(m.timestamp + m.duration / 2, ocultos);
+  if (nuevo === null) {
+    m.close();
+    return null;
+  }
+  m.setTimestamp(Math.max(0, nuevo - m.duration / 2));
+  return m;
+}
+
+export async function aMp4(
+  origen: Blob,
+  progreso?: (p: number) => void,
+  recorte?: Recorte,
+  cortes: Tramo[] = [],
+): Promise<Blob> {
   const input = new Input({ source: new BlobSource(origen), formats: ALL_FORMATS });
+  const duracion = cortes.length ? await input.computeDuration().catch(() => 0) : 0;
+  const ocultos = tramosParaMp4(recorte ?? { inicio: 0, fin: 0 }, cortes, duracion);
   const target = new BufferTarget();
   // fastStart «in-memory»: el índice va al principio, así el video arranca al instante y los editores lo abren sin problema.
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
   const conversion = await Conversion.init({
     input,
     output,
-    video: { codec: 'avc', bitrate: QUALITY_HIGH },
-    audio: { codec: 'aac', bitrate: 160_000 },
-    // Las puntas cortadas en el editor no salen en el MP4 (es el que se descarga).
-    trim: opcionesRecorte(recorte),
+    // Con cortes del medio cada cuadro y cada pedazo de audio pasa por «correrMuestra»: lo cortado se descarta y lo
+    // que sigue se corre hacia atrás, sin huecos. Hay que re-codificar siempre (si no, «process» no se llama).
+    video: ocultos.length
+      ? {
+          codec: 'avc',
+          bitrate: QUALITY_HIGH,
+          forceTranscode: true,
+          process: (m) => correrMuestra(m, ocultos),
+        }
+      : { codec: 'avc', bitrate: QUALITY_HIGH },
+    audio: ocultos.length
+      ? { codec: 'aac', bitrate: 160_000, forceTranscode: true, process: (m) => correrMuestra(m, ocultos) }
+      : { codec: 'aac', bitrate: 160_000 },
+    // Las puntas cortadas en el editor no salen en el MP4 (es el que se descarga). Con cortes del medio las puntas
+    // ya van dentro de «ocultos».
+    trim: ocultos.length ? undefined : opcionesRecorte(recorte),
     showWarnings: false,
   });
   if (!conversion.isValid) throw new Error('conversión no válida');
@@ -54,7 +116,13 @@ export async function aMp4(origen: Blob, progreso?: (p: number) => void, recorte
   return new Blob([target.buffer], { type: 'video/mp4' });
 }
 
-type Inicio = { ya: boolean; parte_minima?: number; recorte_inicio?: number; recorte_fin?: number };
+type Inicio = {
+  ya: boolean;
+  parte_minima?: number;
+  recorte_inicio?: number;
+  recorte_fin?: number;
+  cortes?: Tramo[];
+};
 
 /** Sube la copia MP4 por partes, con los mismos reintentos que el video original. */
 export async function subirMp4(
@@ -81,7 +149,7 @@ export async function subirMp4(
   await llamar(`/datos/videos/${id}/mp4/completar`, { method: 'POST', json: { partes } });
 }
 
-/** Pide permiso al servidor (que dice con qué recorte), descarga el original, lo convierte y sube la copia. */
+/** Pide permiso al servidor (que dice con qué recorte y qué cortes del medio), descarga el original, lo convierte y sube la copia. */
 export async function prepararMp4(
   id: string,
   progreso: (p: number) => void,
@@ -93,7 +161,7 @@ export async function prepararMp4(
     await fetch(`/media/${id}/video?formato=webm`, { credentials: 'same-origin' })
   ).blob();
   const recorte = { inicio: inicio.recorte_inicio ?? 0, fin: inicio.recorte_fin ?? 0 };
-  const mp4 = await aMp4(origen, (p) => progreso(p * 0.9), recorte);
+  const mp4 = await aMp4(origen, (p) => progreso(p * 0.9), recorte, inicio.cortes ?? []);
   await subirMp4(id, mp4, inicio, llamar);
   progreso(1);
 }

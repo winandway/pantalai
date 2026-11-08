@@ -145,5 +145,7 @@ export type LimitesPlan = {
   calidad: '720' | '1080' | '2160';
   ia: boolean;
   lapices: boolean;
+  /** Miniatura a elección y botón de acción. */
+  edicion: boolean;
   marca: boolean;
 };

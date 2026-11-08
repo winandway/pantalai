@@ -185,8 +185,7 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   cada copia (tabla `video_mp4_recorte`, `firmaRecorte` en `servidor/app.ts`); si el recorte cambia, la copia deja de
   valer, el dueño la rehace al abrir su video y la descarga sale recortada. Las copias de antes sin firma valen solo
   si el video no tiene recorte.
-- Límite: los cortes del MEDIO (quitar silencios, cortar por texto) todavía no salen en el MP4, solo en el
-  reproductor. Si el navegador no puede armar MP4, se descarga el WebM original entero.
+- Los cortes del MEDIO también salen en el MP4 desde el 8 nov 2026 (ver C-RECORTE-MEDIO). Si el navegador no puede armar MP4, se descarga el WebM original entero.
 - Pruebas: `pruebas/recorte.test.ts`, `pruebas/servidor.test.ts` (comprobada en rojo quitando la firma) y
   `e2e/recortar.spec.ts` (graba 10 s, recorta a unos 5 s, guarda y mide el MP4 descargado; comprobada en rojo
   quitando el `trim`: salía de 10,3 s).
@@ -450,3 +449,27 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   versión. Ahora también lo frena el SERVIDOR: `POST /datos/videos` exige `version` igual al commit publicado
   (`grabadorViejo`); si no, 409 `version_vieja` y la página nueva se recarga sola. La subida de respaldos
   (`respaldo: true`) no se frena. Prueba: «C-VERSION (servidor)» en `pruebas/recorte.test.ts`.
+
+## C-RECORTE-MEDIO (8 nov 2026)
+
+- Qué pasaba: los cortes del MEDIO (quitar silencios, muletillas, cortar por texto) solo se saltaban al reproducir; el
+  MP4 descargado salía entero por dentro (solo sin las puntas).
+- Causa: la firma de la copia MP4 (`firmaRecorte` en `servidor/app.ts`) solo miraba las puntas, y el navegador
+  (`aMp4` en `web/src/logica/mp4.ts`) solo sabía hacer `trim` de las puntas.
+- Arreglo: la firma incluye los cortes (`cortesDe`, redondeados a la décima; sin cortes la firma queda igual que
+  antes y las copias viejas siguen valiendo). `POST /datos/videos/:id/mp4` manda los `cortes`. Con cortes, `aMp4`
+  re-codifica siempre (`forceTranscode`) y pasa cada cuadro y cada pedazo de audio por `process`: lo que cae en un
+  tramo oculto (puntas + cortes, `tramosParaMp4`) se descarta y lo demás se corre hacia atrás (`tiempoEnSalida`).
+  Sin cortes del medio se usa el `trim` de siempre (C-RECORTE-DESCARGA), sin tocar.
+- Pruebas: `pruebas/recorte.test.ts` (firma y cuentas) y `e2e/recortar-medio.spec.ts` (graba 10 s, corta 2 s y 3 s
+  del medio y mide el MP4: debe durar 5 s menos). Comprobada en rojo apagando los cortes en `tramosParaMp4`: salía
+  de 10,6 s.
+- NO quitar `forceTranscode` cuando hay cortes: si el original ya es H.264/AAC, mediabunny copiaría los paquetes y
+  `process` no se llamaría (el MP4 saldría entero otra vez).
+
+## C-PLANES-EDICION (8 nov 2026)
+
+- Starter (solo con `COBRO_ACTIVO=1`): la primera miniatura la pone sola la grabación; elegir otra y poner un botón
+  de acción con enlace piden Business (402 `plan_edicion`). Quitar el botón siempre se puede. Límite `edicion` en
+  `servidor/planes.ts`; la pantalla de editar desactiva esos campos y dice «Parte de Business».
+- Prueba: «C-PLANES-EDICION» en `pruebas/servidor.test.ts`, comprobada en rojo quitando las dos compuertas.

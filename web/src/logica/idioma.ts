@@ -62,6 +62,8 @@ const en = {
   'error.limite_videos':
     'You reached the 25 videos of the free plan. Archive or delete one, or upgrade to Business for unlimited videos.',
   'error.plan_ia': 'AI tools are part of Business + AI.',
+  'error.plan_edicion': 'A custom thumbnail and the call-to-action button are part of Business.',
+  parteDeBusiness: 'Part of Business.',
   hechoCon: 'Made with Pantalay',
   limiteMinutos:
     'The free plan records up to 5 minutes per video. Your recording stopped and is being saved.',
@@ -566,6 +568,8 @@ const es: Record<Clave, string> = {
   'error.limite_videos':
     'Llegaste a los 25 videos del plan gratis. Archiva o borra uno, o pasa a Business para tener videos ilimitados.',
   'error.plan_ia': 'Las herramientas de IA son parte de Business + AI.',
+  'error.plan_edicion': 'La miniatura a elección y el botón de acción son parte de Business.',
+  parteDeBusiness: 'Parte de Business.',
   hechoCon: 'Hecho con Pantalay',
   limiteMinutos:
     'El plan gratis graba hasta 5 minutos por video. Tu grabación se detuvo y se está guardando.',

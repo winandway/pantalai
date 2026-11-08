@@ -7,7 +7,7 @@ import {
   segundoEn,
   segundosDeFotos,
 } from '../web/src/logica/recorte';
-import { opcionesRecorte } from '../web/src/logica/mp4';
+import { opcionesRecorte, tiempoEnSalida, tramosParaMp4 } from '../web/src/logica/mp4';
 import { firmaRecorte } from '../servidor/app';
 
 describe('recortador de puntas (C-RECORTE-DESCARGA)', () => {
@@ -49,7 +49,52 @@ describe('recortador de puntas (C-RECORTE-DESCARGA)', () => {
     expect(opcionesRecorte({ inicio: 0, fin: 0 })).toBeUndefined();
     expect(opcionesRecorte({ inicio: 2, fin: 0 })).toEqual({ start: 2, end: undefined });
     expect(opcionesRecorte({ inicio: 0, fin: 30 })).toEqual({ start: undefined, end: 30 });
-    expect(firmaRecorte({ recorte_inicio: 1.234, recorte_fin: 0 })).toBe('1.2|0');
+    expect(firmaRecorte({ recorte_inicio: 1.234, recorte_fin: 0, cortes: '[]' })).toBe('1.2|0');
+  });
+
+  it('CANDADO C-RECORTE-MEDIO: la firma de la copia cambia si cambian los cortes del medio', () => {
+    // Sin cortes del medio, la firma es la de antes (las copias viejas siguen valiendo).
+    expect(firmaRecorte({ recorte_inicio: 0, recorte_fin: 0, cortes: '[]' })).toBe('0|0');
+    expect(firmaRecorte({ recorte_inicio: 0, recorte_fin: 0, cortes: 'basura' })).toBe('0|0');
+    const con = firmaRecorte({
+      recorte_inicio: 0,
+      recorte_fin: 0,
+      cortes: JSON.stringify([
+        { inicio: 5.04, fin: 7 },
+        { inicio: 1, fin: 2 },
+      ]),
+    });
+    expect(con).toBe('0|0|1-2,5-7');
+  });
+
+  it('CANDADO C-RECORTE-MEDIO: cada cuadro sale corrido por lo cortado antes, y lo cortado no sale', () => {
+    const ocultos = [
+      { inicio: 0, fin: 1 }, // punta del principio
+      { inicio: 3, fin: 5 }, // corte del medio
+      { inicio: 9, fin: 11 }, // punta del final
+    ];
+    expect(tiempoEnSalida(0.5, ocultos)).toBeNull();
+    expect(tiempoEnSalida(1, ocultos)).toBe(0);
+    expect(tiempoEnSalida(2.5, ocultos)).toBe(1.5);
+    expect(tiempoEnSalida(4, ocultos)).toBeNull();
+    expect(tiempoEnSalida(5, ocultos)).toBe(2);
+    expect(tiempoEnSalida(8, ocultos)).toBe(5);
+    expect(tiempoEnSalida(9.5, ocultos)).toBeNull();
+    expect(tiempoEnSalida(2, [])).toBe(2);
+  });
+
+  it('CANDADO C-RECORTE-MEDIO: el MP4 junta puntas y cortes del medio solo si hay cortes', () => {
+    expect(tramosParaMp4({ inicio: 2, fin: 0 }, [], 30)).toEqual([]);
+    expect(tramosParaMp4({ inicio: 2, fin: 20 }, [{ inicio: 5, fin: 6 }], 30)).toEqual([
+      { inicio: 0, fin: 2 },
+      { inicio: 5, fin: 6 },
+      { inicio: 20, fin: 31 },
+    ]);
+    // Sin saber la duración, la punta final llega hasta el infinito.
+    expect(tramosParaMp4({ inicio: 0, fin: 20 }, [{ inicio: 5, fin: 6 }], 0)).toEqual([
+      { inicio: 5, fin: 6 },
+      { inicio: 20, fin: Infinity },
+    ]);
   });
 });
 

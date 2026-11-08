@@ -1769,6 +1769,9 @@ app.put('/datos/videos/:id/miniatura', requiereSesion, async (c) => {
   if (!/^image\/(jpeg|png|webp)$/.test(tipo)) return err(c, 400, 'tipo');
   const datos = await c.req.arrayBuffer();
   if (datos.byteLength === 0 || datos.byteLength > MINIATURA_MAX) return err(c, 413, 'miniatura');
+  // La primera miniatura la pone sola la grabación (todos los planes); elegir otra es de Business en adelante.
+  if (v.tiene_miniatura && !(await planDe(c, v.usuario_id)).limites.edicion)
+    return err(c, 402, 'plan_edicion');
   await c.env.BUCKET.put(claveMiniatura(v.id), datos, { httpMetadata: { contentType: tipo } });
   await c.env.DB.prepare('UPDATE videos SET tiene_miniatura = 1, actualizado = ? WHERE id = ?')
     .bind(Date.now(), v.id)
@@ -1869,6 +1872,8 @@ app.patch('/datos/videos/:id', requiereSesion, async (c) => {
   if (!v) return err(c, 404, 'no_existe');
   const d = await cuerpo(c, esquemaEditar);
   if (!d) return err(c, 400, 'datos');
+  // El botón de acción es de Business en adelante (con el cobro apagado, todos lo tienen). Quitarlo siempre se puede.
+  if (d.cta_url && !(await planDe(c, v.usuario_id)).limites.edicion) return err(c, 402, 'plan_edicion');
   if (d.carpeta_id) {
     const carpeta = await c.env.DB.prepare('SELECT id FROM carpetas WHERE id = ? AND usuario_id = ?')
       .bind(d.carpeta_id, v.usuario_id)
@@ -2379,21 +2384,42 @@ app.post('/datos/errores', requiereSesion, async (c) => {
 
 // ---------- copia MP4 (la arma el navegador del dueño) ----------
 
-/** Recorte con el que tiene que estar armada la copia MP4 (las puntas que el dueño cortó). */
-export function firmaRecorte(v: Pick<FilaVideo, 'recorte_inicio' | 'recorte_fin'>): string {
-  return `${Math.round(v.recorte_inicio * 10) / 10}|${Math.round(v.recorte_fin * 10) / 10}`;
+type FilaRecorte = Pick<FilaVideo, 'recorte_inicio' | 'recorte_fin' | 'cortes'>;
+
+/** Cortes del medio de un video, limpios: tramos válidos, redondeados a la décima y en orden. */
+export function cortesDe(v: { cortes?: string }): { inicio: number; fin: number }[] {
+  const lista = jsonSeguro(v.cortes ?? '[]');
+  if (!Array.isArray(lista)) return [];
+  const r = (n: number) => Math.round(n * 10) / 10;
+  return lista
+    .filter(
+      (t): t is { inicio: number; fin: number } =>
+        !!t && typeof t.inicio === 'number' && typeof t.fin === 'number' && t.fin > t.inicio,
+    )
+    .map((t) => ({ inicio: r(t.inicio), fin: r(t.fin) }))
+    .filter((t) => t.fin > t.inicio)
+    .sort((a, b) => a.inicio - b.inicio);
 }
 
-/** El original ya es MP4 (grabado directo en H.264 + AAC) y sin puntas cortadas: no hace falta ninguna copia. */
-function originalSirveDeMp4(v: Pick<FilaVideo, 'tipo' | 'recorte_inicio' | 'recorte_fin'>): boolean {
+/**
+ * Recorte con el que tiene que estar armada la copia MP4: las puntas Y los cortes del medio.
+ * Sin cortes del medio la firma queda igual que antes («inicio|fin»), así las copias viejas siguen valiendo.
+ */
+export function firmaRecorte(v: FilaRecorte): string {
+  const puntas = `${Math.round(v.recorte_inicio * 10) / 10}|${Math.round(v.recorte_fin * 10) / 10}`;
+  const cortes = cortesDe(v);
+  return cortes.length ? `${puntas}|${cortes.map((t) => `${t.inicio}-${t.fin}`).join(',')}` : puntas;
+}
+
+/** El original ya es MP4 (grabado directo en H.264 + AAC) y sin nada cortado: no hace falta ninguna copia. */
+function originalSirveDeMp4(v: Pick<FilaVideo, 'tipo'> & FilaRecorte): boolean {
   return v.tipo.startsWith('video/mp4') && firmaRecorte(v) === '0|0';
 }
 
+type FilaFuente = Pick<FilaVideo, 'id' | 'tipo'> & FilaRecorte;
+
 /** Dónde está el MP4 de este video: el original, la copia armada con el recorte de ahora, o ninguno todavía. */
-async function fuenteMp4(
-  c: C,
-  v: Pick<FilaVideo, 'id' | 'tipo' | 'recorte_inicio' | 'recorte_fin'>,
-): Promise<'original' | 'copia' | null> {
+async function fuenteMp4(c: C, v: FilaFuente): Promise<'original' | 'copia' | null> {
   if (originalSirveDeMp4(v)) return 'original';
   const f = await c.env.DB.prepare(
     `SELECT m.estado, r.firma FROM video_mp4 m LEFT JOIN video_mp4_recorte r ON r.video_id = m.video_id
@@ -2401,14 +2427,11 @@ async function fuenteMp4(
   )
     .bind(v.id)
     .first<{ estado: string; firma: string | null }>();
-  // Las copias de antes del recortador no tienen firma: valen solo si el video no tiene puntas cortadas.
+  // Las copias de antes del recortador no tienen firma: valen solo si el video no tiene nada cortado.
   return f?.estado === 'listo' && (f.firma ?? '0|0') === firmaRecorte(v) ? 'copia' : null;
 }
 
-async function tieneMp4(
-  c: C,
-  v: Pick<FilaVideo, 'id' | 'tipo' | 'recorte_inicio' | 'recorte_fin'>,
-): Promise<boolean> {
+async function tieneMp4(c: C, v: FilaFuente): Promise<boolean> {
   return (await fuenteMp4(c, v)) !== null;
 }
 
@@ -2431,7 +2454,13 @@ app.post('/datos/videos/:id/mp4', requiereSesion, async (c) => {
   ]);
   // El navegador arma la copia con ESTE recorte (el que quedó anotado), para que siempre coincidan.
   return c.json(
-    { ya: false, parte_minima: PARTE_MIN, recorte_inicio: v.recorte_inicio, recorte_fin: v.recorte_fin },
+    {
+      ya: false,
+      parte_minima: PARTE_MIN,
+      recorte_inicio: v.recorte_inicio,
+      recorte_fin: v.recorte_fin,
+      cortes: cortesDe(v),
+    },
     201,
   );
 });

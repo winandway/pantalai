@@ -302,7 +302,7 @@ export const GUIAS: Guia[] = [
       resumen: 'For YouTube, Final Cut, Premiere, iPhone or any editor.',
       cuerpo: [
         'Pantalay records straight to MP4 in Chrome, Edge and Safari, so your video is ready to download the moment you stop: nothing to convert, nothing to wait for.',
-        'If you trim the ends, Pantalay cuts the MP4 in a few seconds (without re-encoding it) so the download comes out trimmed. Older videos recorded before this change are converted once, the first time you open them.',
+        'If you trim the ends or cut parts out of the middle (silences, filler words, lines you deleted from the transcript), Pantalay rebuilds the MP4 without them, so the download matches what people see on your link. Older videos recorded before this change are converted once, the first time you open them.',
         'The button next to Share says “Download MP4”. The file opens in Final Cut, Premiere, iMovie, QuickTime and on any phone, and you can upload it to YouTube as is.',
         'The MP4 version is also what people watch, so your link plays on iPhone too.',
         'On iPhone or Android, press “Download MP4” and then “Save to Photos”: the phone’s share menu opens and “Save Video” puts it in your Photos, ready for Instagram, TikTok or YouTube. (A plain download on a phone goes to the Files app, where it is hard to find.)',
@@ -314,7 +314,7 @@ export const GUIAS: Guia[] = [
       resumen: 'Para YouTube, Final Cut, Premiere, iPhone o cualquier editor.',
       cuerpo: [
         'Pantalay graba directo en MP4 en Chrome, Edge y Safari, así que tu video está listo para descargar en cuanto terminas: nada que convertir, nada que esperar.',
-        'Si recortas las puntas, Pantalay corta el MP4 en unos segundos (sin volver a codificarlo) para que la descarga salga recortada. Los videos grabados antes de este cambio se convierten una sola vez, la primera vez que los abres.',
+        'Si recortas las puntas o quitas partes del medio (silencios, muletillas, frases que borraste del texto), Pantalay vuelve a armar el MP4 sin ellas, así la descarga sale igual que lo que se ve en tu enlace. Los videos grabados antes de este cambio se convierten una sola vez, la primera vez que los abres.',
         'El botón junto a Compartir dice «Descargar MP4». El archivo abre en Final Cut, Premiere, iMovie, QuickTime y en cualquier teléfono, y lo puedes subir a YouTube tal cual.',
         'La versión MP4 también es la que ve la gente, así que tu enlace se reproduce también en iPhone.',
         'En iPhone o Android, toca «Descargar MP4» y después «Guardar en Fotos»: se abre el menú de compartir del teléfono y «Guardar video» lo deja en tus Fotos, listo para Instagram, TikTok o YouTube. (Una descarga normal en el teléfono va a la app Archivos, donde cuesta encontrarla.)',

@@ -37,8 +37,8 @@
 
 - [x] Oído encendido en producción (19 oct 2026): token de Cloudflare «pantalai-whisper» en el sitio; prueba real
       en vivo con voz: transcripción exacta en frases y muletillas «um» y «uh» encontradas.
-- [ ] Al llegar la llave de Gemini: guardarla como secreto GEMINI_API_KEY con la llave del hosting, republicar
-      y repetir la prueba real en vivo (título, resumen, capítulos, tareas y Generar).
+- [x] Llave de Gemini: ya estaba puesta como secreto GEMINI_API_KEY (19 oct 2026); el canario dice cerebro encendido
+      (comprobado el 8 nov 2026).
 - [ ] Hay cuentas de prueba «Soporte E2E…» en producción, creadas por las pruebas en vivo. Borrarlas solo si Richard dice.
 
 - [x] Sitio en vivo (19 oct 2026): salud ok, base y almacén ok, variable `SITIO_CONECTADO=1` puesta y grabación
@@ -52,8 +52,10 @@
 - [ ] Carpetas compartidas y espacios de equipo.
 - [ ] Cobro: conectar Stripe (suscripción mensual y anual, prueba de 14 días, precio de fundador), llenar
       `suscripciones`, probar de punta a punta y recién ahí encender `COBRO_ACTIVO=1` y anunciar la página de precios
-      (`/pricing`, hoy oculta con noindex). Falta también limitar en Starter la miniatura a elección y el botón de acción.
-- [ ] Los cortes del MEDIO (silencios, cortar por texto) todavía no salen en el MP4 descargado; las puntas sí.
+      (`/pricing`, hoy oculta con noindex). Mensual y anual, prueba de 14 días, aviso firmado y canario: construidos.
+      Starter ya limita la miniatura a elección y el botón de acción (8 nov 2026, C-PLANES-EDICION). Falta SOLO la
+      compra real de Richard (ver docs/VERIFICAR-PAGOS.md).
+- [x] Los cortes del MEDIO (silencios, cortar por texto) ya salen en el MP4 descargado (8 nov 2026, C-RECORTE-MEDIO).
 - [x] Superadmin en /admin con usuarios, planes y grabaciones (20 oct 2026, C-SUPERADMIN, uso en docs/SUPERADMIN.md).
 - [x] Cobro con Stripe dentro de la página construido (20 oct 2026, C-PAGOS); falta probarlo con las claves.
 - [x] Auditoría de lanzamiento (21 oct 2026): una sola suscripción por persona y avisos de Stripe en orden
