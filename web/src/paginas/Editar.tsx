@@ -70,7 +70,8 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
   useEffect(() => {
     pedir<{ limites: LimitesPlan }>('/datos/plan')
       .then((r) => setEdicion(r.limites.edicion !== false))
-      .catch(() => undefined);
+      // Si falla, se deja editar: el servidor igual cumple el plan y responde con un mensaje claro.
+      .catch((e) => console.error('plan', e));
   }, []);
   const b = useBorrador<Borrador>(llaveBorrador(`editar-${video.id}`, cuenta), {
     titulo: video.titulo,

@@ -459,7 +459,9 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Arreglo: la firma incluye los cortes (`cortesDe`, redondeados a la décima; sin cortes la firma queda igual que
   antes y las copias viejas siguen valiendo). `POST /datos/videos/:id/mp4` manda los `cortes`. Con cortes, `aMp4`
   re-codifica siempre (`forceTranscode`) y pasa cada cuadro y cada pedazo de audio por `process`: lo que cae en un
-  tramo oculto (puntas + cortes, `tramosParaMp4`) se descarta y lo demás se corre hacia atrás (`tiempoEnSalida`).
+  tramo oculto (puntas + cortes, `tramosParaMp4`) se descarta y lo demás se corre hacia atrás. Los cuadros de video
+  se colocan por su primer instante visible y se acortan si cruzan un corte (`cuadroEnSalida`: una pantalla quieta
+  puede dar un cuadro de varios segundos); el audio, por su centro (`tiempoEnSalida`).
   Sin cortes del medio se usa el `trim` de siempre (C-RECORTE-DESCARGA), sin tocar.
 - Pruebas: `pruebas/recorte.test.ts` (firma y cuentas) y `e2e/recortar-medio.spec.ts` (graba 10 s, corta 2 s y 3 s
   del medio y mide el MP4: debe durar 5 s menos). Comprobada en rojo apagando los cortes en `tramosParaMp4`: salía

@@ -62,11 +62,50 @@ export function tiempoEnSalida(t: number, ocultos: Tramo[]): number | null {
   return Math.round((t - quitado) * 1e6) / 1e6;
 }
 
-/** Corre la muestra (cuadro o pedazo de audio) a su segundo en el MP4, o la descarta si cae en un corte. */
-function correrMuestra<
-  M extends { timestamp: number; duration: number; setTimestamp(n: number): void; close(): void },
->(m: M, ocultos: Tramo[]): M | null {
-  // Se mira el centro de la muestra: un pedazo de audio que pisa el borde del corte sale o no según dónde cae más.
+/** Segundo del MP4 para cualquier instante del original, aunque caiga en un corte (queda pegado al borde). */
+function aSalida(x: number, ocultos: Tramo[]): number {
+  let quitado = 0;
+  for (const o of ocultos) quitado += Math.max(0, Math.min(o.fin, x) - o.inicio);
+  return x - quitado;
+}
+
+/**
+ * Dónde y cuánto sale un CUADRO de video que dura de «inicio» a «fin» en el original. Un cuadro de pantalla quieta
+ * puede durar segundos y cruzar un corte: se queda con lo que se ve fuera de los cortes, empezando en el primer
+ * instante visible. null = el cuadro entero cae en cortes.
+ */
+export function cuadroEnSalida(
+  inicio: number,
+  fin: number,
+  ocultos: Tramo[],
+): { inicio: number; duracion: number } | null {
+  let p = inicio;
+  for (const o of ocultos) if (p >= o.inicio && p < o.fin) p = o.fin;
+  if (p >= fin) return null;
+  const a = aSalida(p, ocultos);
+  const r = (n: number) => Math.round(n * 1e6) / 1e6;
+  return { inicio: r(a), duracion: r(Math.max(0, aSalida(fin, ocultos) - a)) };
+}
+
+type Muestra = { timestamp: number; duration: number; setTimestamp(n: number): void; close(): void };
+
+/** Cuadro de video: se coloca por su primer instante visible y se acorta si cruza un corte. */
+function correrCuadro<M extends Muestra & { setDuration(n: number): void }>(
+  m: M,
+  ocultos: Tramo[],
+): M | null {
+  const c = cuadroEnSalida(m.timestamp, m.timestamp + Math.max(m.duration, 0), ocultos);
+  if (!c) {
+    m.close();
+    return null;
+  }
+  m.setTimestamp(c.inicio);
+  if (c.duracion > 0) m.setDuration(c.duracion);
+  return m;
+}
+
+/** Pedazo de audio (unos 20 ms): sale o no según dónde cae su centro, corrido por lo cortado antes. */
+function correrAudio<M extends Muestra>(m: M, ocultos: Tramo[]): M | null {
   const nuevo = tiempoEnSalida(m.timestamp + m.duration / 2, ocultos);
   if (nuevo === null) {
     m.close();
@@ -91,18 +130,18 @@ export async function aMp4(
   const conversion = await Conversion.init({
     input,
     output,
-    // Con cortes del medio cada cuadro y cada pedazo de audio pasa por «correrMuestra»: lo cortado se descarta y lo
+    // Con cortes del medio cada cuadro y cada pedazo de audio pasa por «correrCuadro» o «correrAudio»: lo cortado se descarta y lo
     // que sigue se corre hacia atrás, sin huecos. Hay que re-codificar siempre (si no, «process» no se llama).
     video: ocultos.length
       ? {
           codec: 'avc',
           bitrate: QUALITY_HIGH,
           forceTranscode: true,
-          process: (m) => correrMuestra(m, ocultos),
+          process: (m) => correrCuadro(m, ocultos),
         }
       : { codec: 'avc', bitrate: QUALITY_HIGH },
     audio: ocultos.length
-      ? { codec: 'aac', bitrate: 160_000, forceTranscode: true, process: (m) => correrMuestra(m, ocultos) }
+      ? { codec: 'aac', bitrate: 160_000, forceTranscode: true, process: (m) => correrAudio(m, ocultos) }
       : { codec: 'aac', bitrate: 160_000 },
     // Las puntas cortadas en el editor no salen en el MP4 (es el que se descarga). Con cortes del medio las puntas
     // ya van dentro de «ocultos».

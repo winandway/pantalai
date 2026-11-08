@@ -367,7 +367,14 @@ describe('videos', () => {
       });
     const boton = (cta_url: string) =>
       c(`/datos/videos/${id}`, { method: 'PATCH', json: { cta_texto: 'Ver', cta_url } });
+    // Un botón puesto antes de encender el cobro no impide guardar el resto del formulario.
+    expect((await boton('https://example.com/antes')).status).toBe(200);
     env.COBRO_ACTIVO = '1';
+    const otroTitulo = await c(`/datos/videos/${id}`, {
+      method: 'PATCH',
+      json: { titulo: 'Otro', cta_texto: 'Ver', cta_url: 'https://example.com/antes' },
+    });
+    expect(otroTitulo.status).toBe(200);
     // La primera miniatura (la que pone sola la grabación) sale en todos los planes; cambiarla, no.
     expect((await foto()).status).toBe(200);
     const r = await foto();

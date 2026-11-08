@@ -7,7 +7,7 @@ import {
   segundoEn,
   segundosDeFotos,
 } from '../web/src/logica/recorte';
-import { opcionesRecorte, tiempoEnSalida, tramosParaMp4 } from '../web/src/logica/mp4';
+import { cuadroEnSalida, opcionesRecorte, tiempoEnSalida, tramosParaMp4 } from '../web/src/logica/mp4';
 import { firmaRecorte } from '../servidor/app';
 
 describe('recortador de puntas (C-RECORTE-DESCARGA)', () => {
@@ -81,6 +81,20 @@ describe('recortador de puntas (C-RECORTE-DESCARGA)', () => {
     expect(tiempoEnSalida(8, ocultos)).toBe(5);
     expect(tiempoEnSalida(9.5, ocultos)).toBeNull();
     expect(tiempoEnSalida(2, [])).toBe(2);
+  });
+
+  it('CANDADO C-RECORTE-MEDIO: un cuadro largo de pantalla quieta que cruza un corte sale en su lugar', () => {
+    const corte = [{ inicio: 3, fin: 5 }];
+    // Cuadro de 2 a 8 s: sale de 2 a 6 (pierde los 2 s del corte), no en 0.
+    expect(cuadroEnSalida(2, 8, corte)).toEqual({ inicio: 2, duracion: 4 });
+    // Empieza dentro del corte y sigue después: sale justo donde termina el corte.
+    expect(cuadroEnSalida(4, 7, corte)).toEqual({ inicio: 3, duracion: 2 });
+    // Entero dentro del corte: no sale.
+    expect(cuadroEnSalida(3.2, 4.8, corte)).toBeNull();
+    // Antes del corte, igual que siempre.
+    expect(cuadroEnSalida(1, 1.04, corte)).toEqual({ inicio: 1, duracion: 0.04 });
+    // Con la punta del principio cortada, el primer cuadro arranca en 0.
+    expect(cuadroEnSalida(0, 2, [{ inicio: 0, fin: 1 }])).toEqual({ inicio: 0, duracion: 1 });
   });
 
   it('CANDADO C-RECORTE-MEDIO: el MP4 junta puntas y cortes del medio solo si hay cortes', () => {

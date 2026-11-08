@@ -1872,8 +1872,10 @@ app.patch('/datos/videos/:id', requiereSesion, async (c) => {
   if (!v) return err(c, 404, 'no_existe');
   const d = await cuerpo(c, esquemaEditar);
   if (!d) return err(c, 400, 'datos');
-  // El botón de acción es de Business en adelante (con el cobro apagado, todos lo tienen). Quitarlo siempre se puede.
-  if (d.cta_url && !(await planDe(c, v.usuario_id)).limites.edicion) return err(c, 402, 'plan_edicion');
+  // El botón de acción es de Business en adelante (con el cobro apagado, todos lo tienen). Quitarlo siempre se puede,
+  // y el que ya estaba puesto no impide guardar lo demás (la pantalla manda todo el formulario en cada guardado).
+  if (d.cta_url && d.cta_url !== v.cta_url && !(await planDe(c, v.usuario_id)).limites.edicion)
+    return err(c, 402, 'plan_edicion');
   if (d.carpeta_id) {
     const carpeta = await c.env.DB.prepare('SELECT id FROM carpetas WHERE id = ? AND usuario_id = ?')
       .bind(d.carpeta_id, v.usuario_id)
