@@ -41,6 +41,11 @@ function cliente() {
     );
     const sc = r.headers.get('set-cookie');
     if (sc) cookie = sc.split(';')[0]!;
+    // Estas pruebas son del cobro: la cuenta ya confirmó su correo (C-VERIFICAR-CORREO tiene sus propias pruebas).
+    if (ruta === '/datos/registro' && r.status === 201)
+      await (env.DB as D1Database)
+        .prepare('INSERT OR IGNORE INTO correo_verificado (usuario_id, momento) SELECT id, 0 FROM usuarios')
+        .run();
     return r;
   };
 }

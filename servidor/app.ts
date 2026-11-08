@@ -3,6 +3,7 @@
 import { Hono, type Context } from 'hono';
 import {
   correoBienvenida,
+  correoVerificar,
   correoClaveCambiada,
   correoListo,
   correoPagoFallido,
@@ -550,11 +551,12 @@ app.post('/datos/registro', async (c) => {
     .bind(id, d.idioma ?? 'en')
     .run();
   await abrirSesion(c, id);
+  const enlace = await nuevaVerificacion(c, id);
   despues(
     c,
-    escribir(c, id, (i, n) => correoBienvenida(i, n)),
+    escribir(c, id, (i, n) => correoBienvenida(i, n, enlace)),
   );
-  return c.json({ usuario: { id, correo: d.correo, nombre: d.nombre } }, 201);
+  return c.json({ usuario: { id, correo: d.correo, nombre: d.nombre, correo_verificado: false } }, 201);
 });
 
 app.post('/datos/entrar', async (c) => {
@@ -574,6 +576,65 @@ app.post('/datos/entrar', async (c) => {
   // Al superadmin se le dice adónde ir: directo a su panel secreto.
   const panel = rutaPanel(c.env) && correoSuperadmin(c.env, u.correo) ? rutaPanel(c.env) : null;
   return c.json({ usuario: { id: u.id, correo: u.correo, nombre: u.nombre }, panel });
+});
+
+// ---------- verificar el correo (CANDADO C-VERIFICAR-CORREO) ----------
+// Como Loom: la cuenta se usa desde el primer segundo y llega un correo con «Confirmar mi correo». Sin confirmar:
+// no se puede pagar, y pasados DIAS_SIN_VERIFICAR días no se graban videos nuevos (los que ya hay siguen igual).
+/** Las cuentas creadas antes de este momento (8 nov 2026) cuentan como verificadas. */
+export const CORTE_VERIFICACION = 1794136931000;
+export const DIAS_SIN_VERIFICAR = 7;
+const VENCE_VERIFICACION = 7 * 24 * 3600 * 1000;
+
+async function nuevaVerificacion(c: C, usuarioId: string): Promise<string> {
+  const token = aleatorio(32);
+  await c.env.DB.prepare('INSERT INTO verificaciones (token_hash, usuario_id, vence) VALUES (?, ?, ?)')
+    .bind(await sha256(token), usuarioId, Date.now() + VENCE_VERIFICACION)
+    .run();
+  return `${DOMINIO}/verify-email?token=${token}`;
+}
+
+/** null = verificado; si no, desde cuándo existe la cuenta sin verificar. */
+async function sinVerificarDesde(c: C, usuarioId: string): Promise<number | null> {
+  const f = await c.env.DB.prepare(
+    `SELECT u.creado, v.momento FROM usuarios u LEFT JOIN correo_verificado v ON v.usuario_id = u.id WHERE u.id = ?`,
+  )
+    .bind(usuarioId)
+    .first<{ creado: number; momento: number | null }>();
+  if (!f || f.momento !== null || f.creado < CORTE_VERIFICACION) return null;
+  return f.creado;
+}
+
+app.post('/datos/verificar', async (c) => {
+  if (!(await dentroDelLimite(c.env.DB, 'verificar', ip(c), 20, 15 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const d = await cuerpo(c, z.object({ token: z.string().min(20).max(200) }));
+  if (!d) return err(c, 400, 'datos');
+  const f = await c.env.DB.prepare('SELECT usuario_id, vence FROM verificaciones WHERE token_hash = ?')
+    .bind(await sha256(d.token))
+    .first<{ usuario_id: string; vence: number }>();
+  if (!f || f.vence < Date.now()) return err(c, 400, 'enlace_vencido');
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT OR IGNORE INTO correo_verificado (usuario_id, momento) VALUES (?, ?)').bind(
+      f.usuario_id,
+      Date.now(),
+    ),
+    c.env.DB.prepare('DELETE FROM verificaciones WHERE usuario_id = ?').bind(f.usuario_id),
+  ]);
+  return c.json({ ok: true });
+});
+
+app.post('/datos/verificar/reenviar', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  if ((await sinVerificarDesde(c, u.id)) === null) return c.json({ ok: true, ya: true });
+  if (!(await dentroDelLimite(c.env.DB, 'reenviar_verificacion', u.id, 3, 60 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const enlace = await nuevaVerificacion(c, u.id);
+  despues(
+    c,
+    escribir(c, u.id, (i, n) => correoVerificar(i, n, enlace)),
+  );
+  return c.json({ ok: true });
 });
 
 // ---------- recuperar la contraseña ----------
@@ -879,8 +940,9 @@ const esquemaSuscribir = z.object({
 });
 
 app.post('/datos/pago/suscripcion', requiereSesion, async (c) => {
-  if (!pagoListo(c.env)) return err(c, 503, 'pago_apagado');
   const u = c.get('usuario')!;
+  if ((await sinVerificarDesde(c, u.id)) !== null) return err(c, 403, 'correo_sin_verificar');
+  if (!pagoListo(c.env)) return err(c, 503, 'pago_apagado');
   if (!(await dentroDelLimite(c.env.DB, 'pago', u.id, 10, 60 * 60_000))) return err(c, 429, 'demasiados');
   const d = await cuerpo(c, esquemaSuscribir);
   if (!d) return err(c, 400, 'datos');
@@ -1072,17 +1134,18 @@ async function exigirIA(c: C): Promise<Response | null> {
   return (await planDe(c, c.get('usuario')!.id)).limites.ia ? null : err(c, 402, 'plan_ia');
 }
 
-app.get('/datos/yo', (c) =>
-  c.json(
+app.get('/datos/yo', async (c) => {
+  const u = c.get('usuario');
+  return c.json(
     {
-      usuario: c.get('usuario'),
+      usuario: u ? { ...u, correo_verificado: (await sinVerificarDesde(c, u.id)) === null } : null,
       superadmin: esSuperadmin(c),
       panel: esSuperadmin(c) ? rutaPanel(c.env) : null,
     },
     200,
     { 'Cache-Control': 'no-store' },
-  ),
-);
+  );
+});
 
 app.get('/datos/admin/resumen', requiereSuperadmin, async (c) => {
   const db = c.env.DB;
@@ -1661,6 +1724,9 @@ app.post('/datos/videos', requiereSesion, async (c) => {
   // marca de agua. No se le deja empezar; la página nueva se recarga sola con este error (candado C-VERSION).
   if (!d.respaldo && grabadorViejo(COMMIT, d.version)) return err(c, 409, 'version_vieja');
   if (await sinCupoDeVideos(c)) return err(c, 402, 'limite_videos');
+  const sinVerificar = await sinVerificarDesde(c, c.get('usuario')!.id);
+  if (sinVerificar !== null && Date.now() - sinVerificar > DIAS_SIN_VERIFICAR * 24 * 3600 * 1000)
+    return err(c, 403, 'correo_sin_verificar');
   const id = nuevoId(20);
   const tipo = d.tipo.split(';')[0]!;
   const subida = await c.env.BUCKET.createMultipartUpload(claveVideo(id), {

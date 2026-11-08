@@ -14,6 +14,8 @@ test('grabar, subir y ver un video', async ({ page }) => {
   await page.getByLabel('Password', { exact: true }).fill(`Prueba-${Date.now()}`);
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page).toHaveURL(/\/library/);
+  // CANDADO C-VERIFICAR-CORREO: cuenta nueva = franja discreta para confirmar el correo (y se puede grabar igual).
+  await expect(page.locator('.franja-correo')).toContainText(correo);
 
   await page.goto('/record');
   await page.getByText('Screen + Cam').click();

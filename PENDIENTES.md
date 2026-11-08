@@ -65,7 +65,7 @@
       C-LEGAL, C-CUENTA, C-SEO-IA).
 - [x] Subir un archivo de video desde la computadora (8 nov 2026, C-SUBIR-VIDEO).
 - [x] Renombrar carpeta con una ventanita propia (8 nov 2026, C-RENOMBRAR-CARPETA).
-- [ ] Verificar el correo al registrarse (hoy no se pide). Siguiente en la fila (sesión nueva).
+- [x] Verificar el correo al registrarse (8 nov 2026, C-VERIFICAR-CORREO): franja, sin pagar sin confirmar y tope de 7 días.
 - [ ] Borrar cuenta y volver a registrarse con el mismo correo da otra prueba gratis: decidir si se guarda una huella.
 - [x] Recortador acelerado: 20 s de cada punta al instante y tira de fotos que ya no sale negra (23 oct 2026, C-RECORTE-ACELERADO).
 - [x] Raíz para quien MIRA: el MP4 grabado (y el subido) queda con el índice al principio, reemplazando el original

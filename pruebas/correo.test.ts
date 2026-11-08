@@ -84,7 +84,7 @@ describe('CANDADO C-CORREO: correos de Pantalay', () => {
     expect(enviados[0]).toMatchObject({
       from: { address: 'noreply@pantalay.com' },
       to: [{ address: 'ana@example.com' }],
-      subject: 'Tu cuenta de Pantalay está lista',
+      subject: 'Confirma tu correo de Pantalay',
     });
   });
 

@@ -38,6 +38,8 @@ export type Usuario = {
   nombre: string;
   superadmin?: boolean;
   panel?: string | null;
+  /** false = todavía no confirmó su correo (C-VERIFICAR-CORREO). */
+  correo_verificado?: boolean;
 };
 
 export type Superposicion = {

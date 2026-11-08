@@ -514,3 +514,18 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   acepta copia buena y rechaza sin índice u otra duración), comprobada en rojo quitando la comprobación de cajas.
   E2E: `e2e/grabar.spec.ts` espera que el original quede `ftyp,moov,mdat`.
 - No tocar: que el servidor compruebe antes de reemplazar; reordenar nunca re-codifica.
+
+## C-VERIFICAR-CORREO (8 nov 2026)
+
+- Como Loom: la cuenta se usa desde el primer segundo. Al registrarse el correo de bienvenida trae «Confirmar mi
+  correo» (`/verify-email?token=…`, vence en 7 días; tabla `verificaciones`, guardado como hash). Confirmado queda en
+  `correo_verificado`. Las cuentas creadas antes de `CORTE_VERIFICACION` (servidor/app.ts) cuentan como verificadas
+  sin fila (no se escribe nada en la base para ellas).
+- Sin confirmar: franja discreta arriba con el correo y «Enviarlo otra vez» (`/datos/verificar/reenviar`, 3 por
+  hora), nunca una ventana; no se puede pagar (`/datos/pago/suscripcion` → 403 `correo_sin_verificar`, ANTES de
+  mirar si el cobro está encendido) y pasados `DIAS_SIN_VERIFICAR` (7) días no se crean videos nuevos (403). Los
+  videos que ya hay siguen igual. `/datos/yo` dice `correo_verificado`.
+- Pruebas: `pruebas/verificar-correo.test.ts` (enlace en el correo, una sola vez, tope a los 7 días, pago, cuentas
+  viejas), comprobada en rojo quitando el tope de videos. E2E: `e2e/grabar.spec.ts` exige la franja tras registrarse.
+- Guía pública: Docs → «Crea tu cuenta» (párrafo de confirmar el correo, en los dos idiomas).
+- No tocar: el corte (mover hacia adelante dejaría sin verificar cuentas viejas) y el orden de la compuerta de pago.

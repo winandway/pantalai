@@ -257,3 +257,15 @@ CREATE TABLE IF NOT EXISTS ajustes_cuenta (
 CREATE TABLE IF NOT EXISTS video_marca (
   video_id TEXT PRIMARY KEY
 );
+
+-- Verificar el correo al registrarse (8 nov 2026, CANDADO C-VERIFICAR-CORREO). Las cuentas creadas antes del corte
+-- (CORTE_VERIFICACION en servidor/app.ts) cuentan como verificadas sin fila aquí.
+CREATE TABLE IF NOT EXISTS correo_verificado (
+  usuario_id TEXT PRIMARY KEY,
+  momento INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS verificaciones (
+  token_hash TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  vence INTEGER NOT NULL
+);

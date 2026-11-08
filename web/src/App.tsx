@@ -16,6 +16,7 @@ import { Biblioteca } from './paginas/Biblioteca';
 import { Docs } from './paginas/Docs';
 import { Editar } from './paginas/Editar';
 import { Entrar, Recuperar, Restablecer } from './paginas/Entrar';
+import { FranjaCorreo, VerificarCorreo } from './componentes/VerificarCorreo';
 import { Grabar } from './paginas/Grabar';
 import { Inicio } from './paginas/Inicio';
 import { PaginaVideo } from './paginas/Video';
@@ -76,6 +77,7 @@ export function App() {
   else if (ruta === '/login' || ruta === '/signup') pagina = <Entrar registro={ruta === '/signup'} />;
   else if (ruta === '/forgot-password') pagina = <Recuperar />;
   else if (ruta === '/reset-password') pagina = <Restablecer />;
+  else if (ruta === '/verify-email') pagina = <VerificarCorreo />;
   else if (ruta === '/library') pagina = <Biblioteca />;
   else if (ruta === '/record') pagina = <Grabar />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
@@ -98,6 +100,7 @@ export function App() {
           ) : (
             <div className="marco">
               <Encabezado />
+              {ruta !== '/verify-email' && <FranjaCorreo />}
               <main id="contenido">{pagina}</main>
               <Pie />
             </div>

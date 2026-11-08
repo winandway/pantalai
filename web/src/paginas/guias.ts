@@ -89,6 +89,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Press Sign up at the top right. Write your name, your email and a password of at least 8 characters. Use the eye icon to check what you typed.',
         'If you close the page by accident, your name and email will be there when you come back. Your password is never saved on the page.',
+        'We send you an email with a “Confirm my email” button. You can record right away; confirm within 7 days to keep recording and to choose a plan. If it does not arrive, press “Send it again” in the strip at the top of the page and check your spam folder.',
         'To leave, open your name at the top right and choose Log out. Your session closes on our side too, so the computer is safe for the next person.',
       ],
     },
@@ -98,6 +99,7 @@ export const GUIAS: Guia[] = [
       cuerpo: [
         'Toca Crear cuenta arriba a la derecha. Escribe tu nombre, tu correo y una contraseña de al menos 8 caracteres. Con el ojito compruebas lo que escribiste.',
         'Si cierras la página sin querer, al volver tu nombre y tu correo siguen ahí. La contraseña nunca se guarda en la página.',
+        'Te enviamos un correo con el botón «Confirmar mi correo». Puedes grabar desde el primer momento; confírmalo en los próximos 7 días para seguir grabando y poder elegir un plan. Si no te llega, toca «Enviarlo otra vez» en la franja de arriba de la página y revisa el correo no deseado.',
         'Para salir, abre tu nombre arriba a la derecha y elige Cerrar sesión. La sesión también se cierra de nuestro lado, así la computadora queda segura para el siguiente.',
       ],
     },

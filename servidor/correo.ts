@@ -136,7 +136,7 @@ export async function enviar(env: EnvCorreo, m: Mensaje): Promise<boolean> {
 
 // ---------- los correos ----------
 
-export function correoBienvenida(idioma: Idioma, nombre: string): Omit<Mensaje, 'para'> {
+export function correoBienvenida(idioma: Idioma, nombre: string, verificar?: string): Omit<Mensaje, 'para'> {
   const es = idioma === 'es';
   const p = plantilla(idioma, {
     icono: '🎬',
@@ -151,12 +151,46 @@ export function correoBienvenida(idioma: Idioma, nombre: string): Omit<Mensaje, 
           'Your account is ready. Record your screen and camera, and share the link in seconds.',
           'You can draw while you record, trim the ends, and let AI write the title and summary.',
         ],
-    boton: { texto: es ? 'Grabar mi primer video' : 'Record my first video', url: `${DOMINIO}/record` },
-    nota: es
-      ? `¿Dudas? Todo está explicado en ${DOMINIO}/docs`
-      : `Questions? Everything is explained at ${DOMINIO}/docs`,
+    // Con enlace de verificación, el botón confirma el correo (C-VERIFICAR-CORREO); sin él, lleva a grabar.
+    boton: verificar
+      ? { texto: es ? 'Confirmar mi correo' : 'Confirm my email', url: verificar }
+      : { texto: es ? 'Grabar mi primer video' : 'Record my first video', url: `${DOMINIO}/record` },
+    nota: verificar
+      ? es
+        ? 'Confirma tu correo en los próximos 7 días para seguir grabando y poder elegir un plan. El enlace vence en 7 días.'
+        : 'Confirm your email within 7 days to keep recording and to choose a plan. The link expires in 7 days.'
+      : es
+        ? `¿Dudas? Todo está explicado en ${DOMINIO}/docs`
+        : `Questions? Everything is explained at ${DOMINIO}/docs`,
   });
-  return { nombre, asunto: es ? 'Tu cuenta de Pantalay está lista' : 'Your Pantalay account is ready', ...p };
+  return {
+    nombre,
+    asunto: verificar
+      ? es
+        ? 'Confirma tu correo de Pantalay'
+        : 'Confirm your Pantalay email'
+      : es
+        ? 'Tu cuenta de Pantalay está lista'
+        : 'Your Pantalay account is ready',
+    ...p,
+  };
+}
+
+export function correoVerificar(idioma: Idioma, nombre: string, enlace: string): Omit<Mensaje, 'para'> {
+  const es = idioma === 'es';
+  const p = plantilla(idioma, {
+    icono: '✉️',
+    etiqueta: es ? 'CONFIRMA TU CORREO' : 'CONFIRM YOUR EMAIL',
+    titulo: es ? `Confirma tu correo, ${nombre}` : `Confirm your email, ${nombre}`,
+    parrafos: es
+      ? ['Toca el botón para confirmar que este correo es tuyo. Así protegemos tu cuenta y tus videos.']
+      : ['Press the button to confirm this email is yours. It keeps your account and your videos safe.'],
+    boton: { texto: es ? 'Confirmar mi correo' : 'Confirm my email', url: enlace },
+    nota: es
+      ? 'El enlace vence en 7 días. Si no creaste una cuenta en Pantalay, ignora este correo.'
+      : 'The link expires in 7 days. If you did not create a Pantalay account, ignore this email.',
+  });
+  return { nombre, asunto: es ? 'Confirma tu correo de Pantalay' : 'Confirm your Pantalay email', ...p };
 }
 
 export function correoRecuperar(idioma: Idioma, nombre: string, enlace: string): Omit<Mensaje, 'para'> {

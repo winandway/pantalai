@@ -4111,3 +4111,29 @@ main {
 .es-short .grabar-previa {
   box-shadow: 0 0 0 1px var(--borde);
 }
+
+/* Franja «Confirma tu correo» (C-VERIFICAR-CORREO): discreta, nunca tapa nada. */
+.franja-correo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--tinta-suave);
+  background: var(--fondo-suave);
+  border-bottom: 1px solid var(--borde);
+  text-align: center;
+}
+.franja-correo strong {
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+.franja-correo-ok {
+  color: var(--exito);
+  font-weight: 600;
+}
+.franja-correo-error {
+  color: var(--rojo);
+}
