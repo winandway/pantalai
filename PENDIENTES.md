@@ -7,6 +7,12 @@
 
 - 👤 (Opcional) Claves de Cloudflare Turnstile para el escudo anti-robots en entrar y registrarse.
 
+- 👤 Publicar la extensión en la Chrome Web Store: hace falta la cuenta de desarrollador de Chrome de Richard (pago
+  único de 5 USD a Google, a su nombre). Con la cuenta: subir `web/public/pantalay-extension.zip` (sale de
+  `npm run extension`), capturas de `docs/capturas/extension-*.png` y `reporte-*.png`, y la política de privacidad de
+  pantalay.com. Destraba: instalar con un clic, sin modo desarrollador. Mientras tanto, Docs explica cómo cargarla
+  descomprimida.
+
 ## 👤 Claves de Stripe
 
 - ✅ Claves reales de Stripe recibidas y conectadas (20 oct 2026).
@@ -46,9 +52,12 @@
 - [x] La portada «/» ya pasa por el programa y lleva las cabeceras de seguridad (comprobado el 21 oct 2026).
 - [x] Lápices para dibujar mientras se graba (20 oct 2026, candado C-LAPICES).
 - [x] Sonido de la computadora encendido por defecto, sin filtros, con medidores y aviso (20 oct 2026, C-SONIDO-COMPUTADORA).
-- [ ] Dibujar ENCIMA de otros programas sin volver a Pantalay, y énfasis del cursor (necesita extensión de Chrome o app de escritorio).
+- [x] Dibujar ENCIMA de cualquier página web sin volver a Pantalay, y énfasis del cursor: extensión de Chrome
+      (8 nov 2026, C-EXTENSION).
+- [ ] Dibujar encima de programas de escritorio FUERA de Chrome (Excel, Figma de escritorio, la terminal…): necesita
+      una app de escritorio (por ejemplo, ventana transparente siempre encima). La extensión no puede.
 - [x] Mapa del sitio con todas las guías de Docs y pantalay.com como dirección principal (20 oct 2026, C-DOMINIO).
-- [ ] Extensión de Chrome con modo «reporte de error» (consola y red).
+- [x] Extensión de Chrome con modo «reporte de error» (consola y red) (8 nov 2026, C-REPORTE-ERROR).
 - [ ] Carpetas compartidas y espacios de equipo.
 - [ ] Cobro: conectar Stripe (suscripción mensual y anual, prueba de 14 días, precio de fundador), llenar
       `suscripciones`, probar de punta a punta y recién ahí encender `COBRO_ACTIVO=1` y anunciar la página de precios

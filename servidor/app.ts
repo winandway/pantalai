@@ -26,6 +26,7 @@ import {
   sitemap,
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
+import { REGISTROS_MAX_BYTES, esquemaRegistros, limpiarEnServidor } from './registros';
 import {
   bytesMaximos,
   cobroActivo,
@@ -1270,6 +1271,7 @@ async function borrarVideo(c: C, v: FilaVideo) {
       'revisiones WHERE video_id',
       'video_youtube WHERE video_id',
       'video_marca WHERE video_id',
+      'registros_video WHERE video_id',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} = ?`).bind(v.id)),
   );
 }
@@ -2464,6 +2466,59 @@ app.post('/datos/errores', requiereSesion, async (c) => {
     )
     .run();
   return c.json({ ok: true });
+});
+
+// ---------- reporte de error: consola y red de la extensión (CANDADO C-REPORTE-ERROR) ----------
+
+// Solo el dueño sube (una vez por video; si vuelve a subir, reemplaza). Validado con zod y con tope de tamaño.
+app.put('/datos/videos/:id/registros', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  if (Number(c.req.header('content-length') ?? 0) > REGISTROS_MAX_BYTES) return err(c, 413, 'muy_grande');
+  const texto = await c.req.text();
+  if (new TextEncoder().encode(texto).length > REGISTROS_MAX_BYTES) return err(c, 413, 'muy_grande');
+  if (!(await dentroDelLimite(c.env.DB, 'registros', c.get('usuario')!.id, 30, 60 * 60_000)))
+    return err(c, 429, 'demasiados');
+  const r = esquemaRegistros.safeParse(jsonSeguro(texto));
+  if (!r.success) return err(c, 400, 'datos');
+  const d = limpiarEnServidor(r.data);
+  await c.env.DB.prepare(
+    'INSERT OR REPLACE INTO registros_video (video_id, consola, red, pagina, navegador, creado) VALUES (?, ?, ?, ?, ?, ?)',
+  )
+    .bind(
+      v.id,
+      JSON.stringify(d.consola),
+      JSON.stringify(d.red),
+      JSON.stringify(d.pagina),
+      d.navegador,
+      Date.now(),
+    )
+    .run();
+  return c.json({ ok: true, consola: d.consola.length, red: d.red.length });
+});
+
+// Los ve quien puede ver el video; a los demás, 404 (igual que el video).
+app.get('/datos/videos/:id/registros', async (c) => {
+  const v = await buscarVideo(c, c.req.param('id'));
+  if (!v || !puedeVer(v, c.get('usuario'))) return err(c, 404, 'no_existe');
+  const f = await c.env.DB.prepare(
+    'SELECT consola, red, pagina, navegador, creado FROM registros_video WHERE video_id = ?',
+  )
+    .bind(v.id)
+    .first<{ consola: string; red: string; pagina: string; navegador: string; creado: number }>();
+  if (!f) return err(c, 404, 'sin_registros');
+  const pagina = jsonSeguro(f.pagina);
+  return c.json(
+    {
+      consola: jsonSeguro(f.consola),
+      red: jsonSeguro(f.red),
+      pagina: pagina && !Array.isArray(pagina) ? pagina : { url: '', titulo: '' },
+      navegador: f.navegador,
+      creado: f.creado,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
 });
 
 // ---------- copia MP4 (la arma el navegador del dueño) ----------

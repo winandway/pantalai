@@ -170,10 +170,91 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   tiene el foco se guarda una foto de la pantalla cada medio segundo; con «Congelar» encendido (viene así) y los
   lápices abiertos, se graba esa foto con los dibujos encima.
 - Límite honesto: dibujar ENCIMA de otros programas (sin volver a Pantalay) necesita una app de escritorio o una
-  extensión de Chrome. Anotado en `PENDIENTES.md`.
+  extensión de Chrome. Para páginas web lo resuelve la extensión (C-EXTENSION, 8 nov 2026); para programas de
+  escritorio sigue pendiente una app de escritorio (`PENDIENTES.md`).
 - Pruebas: `pruebas/dibujo.test.ts` (comprobada en rojo cambiando el color) y `e2e/lapices.spec.ts` (graba de verdad,
   dibuja una raya roja y mide los píxeles rojos en lo que se graba; comprobada en rojo quitando `pintar` del compositor).
 - Capturas: `scripts/capturas-lapices.mjs` → `docs/capturas/lapices-{en,es}.png`.
+
+## C-EXTENSION (8 nov 2026)
+
+- Qué faltaba: los lápices (C-LAPICES) solo dibujaban dentro de la página de Pantalay; para señalar algo en otra
+  página había que volver a Pantalay (y congelar la pantalla). No había énfasis del cursor.
+- Cómo funciona: extensión de Chrome Manifest V3 en `extension/` (fuente en `extension/src`, TypeScript). La arma
+  `scripts/extension.mjs` (`npm run extension`, y también corre en `npm run build`): esbuild → `.dist-extension` y
+  un ZIP determinista en `web/public/pantalay-extension.zip` (ignorado por git; se descarga desde
+  `https://pantalay.com/pantalay-extension.zip`). El script falla si faltan textos en un idioma, si el nombre o la
+  descripción no caben, o si aparecen permisos de más.
+  - `capa.ts` (content script, se inyecta con `chrome.scripting` solo cuando se pide): capa transparente con shadow
+    DOM abierto (`#pantalay-capa`), lienzo a pantalla completa y barrita con Lápiz, Resaltador, Flecha, Cuadro,
+    Círculo, seis colores, Deshacer, Borrar todo y ✕. Usa la MISMA lógica pura de `web/src/logica/dibujo.ts`
+    (`Pizarra`, `pintar`, `aCoordenadas`). Esc o ✕ dejan de dibujar: los trazos se quedan y la página vuelve a recibir
+    los clics. Énfasis del cursor: círculo amarillo que sigue al puntero y un anillo rojo al hacer clic.
+  - Atajos (`chrome.commands`): Alt+Shift+A dibujar, Alt+Shift+C cursor. NO se usa Alt+Shift+D porque Pantalay ya lo
+    usa para sus lápices y el atajo de la extensión se lo comería en la página de grabar.
+  - `fondo.ts` (service worker) y `ventanita.html` + `ventanita.ts` (la ventanita, en inglés y español con
+    `chrome.i18n`, `_locales/en` y `_locales/es`).
+- Permisos mínimos: `activeTab` (la pestaña donde la persona tocó la ventanita o el atajo, nada más), `scripting`
+  (poner la capa y el anotador) y `storage` (recordar el reporte en curso en `storage.session`). Sin
+  `host_permissions`, sin `content_scripts` fijos, sin `tabs`, sin `debugger`. La prueba de componentes falla si el
+  manifiesto pide algo más.
+- Límite honesto (también en Docs): funciona sobre páginas web en Chrome. Chrome no deja ninguna extensión en
+  `chrome://` ni en la tienda de Chrome (la ventanita lo dice). NO dibuja encima de programas de escritorio fuera de
+  Chrome: eso necesita una app de escritorio (pendiente aparte en `PENDIENTES.md`). Si se recarga la página, hay que
+  volver a encender el dibujo.
+- Publicación en la Chrome Web Store: necesita la cuenta de desarrollador de Richard (👤 en `PENDIENTES.md`). Mientras
+  tanto, Docs explica cómo instalarla en modo desarrollador («Cargar descomprimida»).
+- Guía pública: Docs → «Draw on any web page and highlight your cursor» (`chrome-extension`), en los dos idiomas,
+  con botón de descarga. Botón «Get the Chrome extension» también en Grabar.
+- Pruebas: `pruebas/extension.test.tsx` (orígenes permitidos y manifiesto) y `e2e/extension.spec.ts`, que carga la
+  extensión DE VERDAD en el Chromium de Playwright (el Chrome de marca ya no acepta `--load-extension`), enciende la
+  capa, dibuja una raya roja y mide los píxeles rojos del lienzo; Esc la apaga y el dibujo se queda; el cursor sigue
+  al puntero. Comprobada en ROJO quitando `pintar` de la capa (0 píxeles rojos). La e2e usa la versión de pruebas
+  (`node scripts/extension.mjs --pruebas` → `.dist-extension-pruebas`), idéntica salvo un permiso fijo sobre
+  127.0.0.1 y localhost, porque Playwright no puede tocar la ventanita ni los atajos de Chrome (que son los que dan
+  `activeTab`); llama a las mismas funciones del fondo (`globalThis.pantalay.capa` y `.empezarReporte`). Lo único sin
+  automatizar: el clic real en la ventanita y el atajo de teclado del navegador.
+- Capturas: `scripts/capturas-extension.mjs` → `docs/capturas/extension-*.png` y `web/public/capturas/*.webp`.
+- No tocar: la lista de permisos; que la capa use `dibujo.ts` (un solo dibujo para la página y la extensión).
+
+## C-REPORTE-ERROR (8 nov 2026)
+
+- Qué es: como el modo de Jam o Loom. En la ventanita, «Record a bug report» / «Grabar un reporte de error» pone el
+  anotador en la pestaña del fallo y abre `https://pantalay.com/record?reporte=1&ext=<id de la extensión>`. Grabar
+  muestra una franja con la página del reporte. Al terminar, la página le pide a la extensión lo recogido
+  (`externally_connectable`, solo pantalay.com, www, pantalai.sitios.dev, 127.0.0.1 y localhost; el fondo lo vuelve a
+  comprobar con `origenPermitido`), lo alinea con el segundo del video y lo sube. Nunca frena el video: si falla, el
+  video queda igual y sale un aviso.
+- Cómo se recoge (`extension/src/espia.ts`, mundo principal de la página): envuelve `console.log/info/warn/error`,
+  escucha errores sin capturar y promesas rechazadas, envuelve `fetch` y `XMLHttpRequest` (método, dirección,
+  estado, duración, tipo) y suma imágenes, scripts y hojas de estilo de Resource Timing que traen estado. NUNCA lee
+  cuerpos, cookies ni cabeceras. Se eligió esto en vez de `chrome.debugger` porque el depurador muestra la barra
+  amarilla «está depurando este navegador» en todas las pestañas y pide un permiso que asusta; la contra es que solo
+  se ve desde que se toca el botón (lo de antes no, salvo los recursos) y que se pierde si se recarga la pestaña
+  (Docs lo dice).
+- Limpieza (`web/src/logica/registros.ts`, la usan la extensión, la página y el servidor): sin usuario ni contraseña
+  ni «#» en las direcciones, con el VALOR tapado (`[hidden]`) en parámetros que suenan a secreto (token, key, pass,
+  auth, session, code, signature, email, phone…), tokens Bearer, JWT y claves de Stripe tapados en los textos;
+  500 mensajes y 500 peticiones (los más recientes), 1000 caracteres por mensaje, 500 por dirección y 256 KB en total
+  (`ajustarATamano` quita lo más viejo). Alineación: `RelojReporte` anota los tramos de grabación (las pausas no
+  cuentan) y `aSegundo` pasa cada momento al segundo del video; lo de antes de grabar queda en 0 con «antes».
+- Servidor: tabla `registros_video` (solo `CREATE TABLE IF NOT EXISTS`). `PUT /datos/videos/:id/registros`: solo el
+  dueño (404 a los demás, 401 sin sesión), tope de 272 KB (413), 30 por hora, zod (`servidor/registros.ts`) y una
+  segunda limpieza; reemplaza si se vuelve a subir. `GET`: quien puede ver el video (`puedeVer`), 404 a los demás.
+  Se borra con el video (`borrarVideo`).
+- Página del video: pestaña «Console & network» / «Consola y red» (solo si hay registros) con filtros Todo, Consola,
+  Red y Errores; cada fila tiene su minuto y al tocarla el video salta ahí; la fila del momento se resalta y la lista
+  se mueve sola (sin mover la página, como C-VIDEO-A-LA-VISTA).
+- Guía pública: Docs → «Record a bug report with console and network logs» (`bug-report`), en los dos idiomas, con
+  qué se guarda, qué nunca y quién lo ve.
+- Pruebas: `pruebas/registros.test.ts` (limpieza, tope, alineación con pausas, endpoints: dueño sube, otro no,
+  privacidad, borrado con el video, 413 y 400), comprobada en ROJO dos veces: quitando `puedeVer` del GET (falla la
+  de privacidad) y quitando el tapado de parámetros sensibles (fallan 4). `pruebas/extension.test.tsx` (modo
+  reporte, reloj, subida, franja y panel). E2E `e2e/extension.spec.ts`: pestaña de una «tienda» con un botón que da
+  un error de consola, una excepción y un fetch con `token=secreto123`; se graba en modo reporte, se toca el botón
+  mientras se graba y se comprueba en el servidor (nivel, segundo, `[hidden]`, sin `secreto123`) y en la pestaña
+  «Console & network» (tocar la fila lleva el video a ese segundo).
+- No tocar: que el servidor vuelva a limpiar; que el GET respete `puedeVer`; que nada lea cuerpos ni cabeceras.
 
 ## C-RECORTE-DESCARGA (20 oct 2026)
 

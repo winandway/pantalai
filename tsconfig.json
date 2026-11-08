@@ -15,5 +15,5 @@
     "noEmit": true,
     "types": ["@cloudflare/workers-types", "vite/client", "node", "@testing-library/jest-dom/vitest"]
   },
-  "include": ["servidor", "web/src", "pruebas", "vite.config.ts", "vitest.config.ts"]
+  "include": ["servidor", "web/src", "pruebas", "extension/src", "vite.config.ts", "vitest.config.ts"]
 }

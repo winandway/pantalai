@@ -82,6 +82,13 @@ export function Docs({ slug }: { slug: string }) {
             </p>
             <h1>{guia[idioma].titulo}</h1>
             <p className="docs-resumen">{guia[idioma].resumen}</p>
+            {guia.descarga && (
+              <p>
+                <a className="boton" href={guia.descarga.href} download>
+                  ⬇ {guia.descarga[idioma]}
+                </a>
+              </p>
+            )}
             {guia.imagen && (
               <figure className="docs-captura">
                 <img

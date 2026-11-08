@@ -40,6 +40,10 @@ import {
 } from '../logica/subida';
 import { formatoTiempo, tituloAutomatico, type Segmento } from '../logica/tiempo';
 import { copiar } from './Biblioteca';
+// Reporte de error con la extensión de Chrome (C-REPORTE-ERROR).
+import { AvisoReporte, BotonExtension } from '../componentes/Extension';
+import { RelojReporte, enviarRegistros, leerModoReporte } from '../logica/reporte';
+import { TEXTOS_EXTENSION } from '../logica/textosExtension';
 
 type Estado = 'ajustes' | 'preparando' | 'cuenta' | 'grabando' | 'pausa' | 'subiendo' | 'fallo';
 
@@ -99,10 +103,13 @@ export function Grabar() {
   const pararNiveles = useRef<() => void>(() => undefined);
   const pausarRef = useRef<() => void>(() => undefined);
   const { l: lapices, cambiar: cambiarLapices } = useLapices(grabadora, estado);
+  const [reporte] = useState(() => leerModoReporte(location.search));
+  const relojReporte = useRef(new RelojReporte());
   const continuarRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
-    if (!cargando && !usuario) navegar('/login?volver=/record', true);
+    if (!cargando && !usuario)
+      navegar(`/login?volver=${encodeURIComponent(`/record${location.search}`)}`, true);
   }, [cargando, usuario]);
 
   useEffect(() => {
@@ -346,6 +353,7 @@ export function Grabar() {
       if (!grabadora.current) return; // se descartó durante la cuenta
     }
     g.empezar(flujo.current);
+    relojReporte.current.empezar();
     // La miniatura sale de los primeros segundos (lo que se ve al empezar), no del final.
     miniaturaInicio.current = null;
     window.setTimeout(() => {
@@ -388,6 +396,14 @@ export function Grabar() {
           headers: { 'content-type': 'image/jpeg' },
         }).catch((e) => console.error('miniatura', e));
       await borrarRespaldo(id);
+      // Modo reporte: la consola y la red de la pestaña del fallo se suben junto al video (nunca frena el video).
+      if (reporte?.ext) {
+        const r = await enviarRegistros(reporte.ext, id, relojReporte.current.tramos);
+        if (!r.ok) {
+          console.error('registros', r.motivo);
+          avisar(TEXTOS_EXTENSION[idioma].reporteFallo);
+        }
+      }
       // El MP4 que graba Chrome viene sin índice: se reordena de fondo (C-INDICE-MP4). El enlace ya funciona.
       const grabado = s.archivo(g.tipo.split(';')[0]!);
       void import('../logica/indice').then((m) => m.ponerIndiceDeFondo(id, grabado));
@@ -399,13 +415,15 @@ export function Grabar() {
       console.error('subida', e);
       setEstado('fallo');
     }
-  }, [a.idiomaVoz, avisar, limpiar, t]);
+  }, [a.idiomaVoz, avisar, limpiar, t, reporte, idioma]);
   terminarRef.current = terminar;
   pausarRef.current = () => {
     grabadora.current?.pausar();
+    relojReporte.current.pausar();
     setEstado('pausa');
   };
   continuarRef.current = () => {
+    relojReporte.current.continuar(grabadora.current?.tiempo() ?? 0);
     grabadora.current?.continuar();
     setEstado('grabando');
   };
@@ -505,6 +523,7 @@ export function Grabar() {
           }
         />
       )}
+      {estado === 'ajustes' && reporte && <AvisoReporte ext={reporte.ext} />}
       {estado === 'ajustes' && (
         <div className="grabar-ajustes">
           <section className="tarjeta">
@@ -667,6 +686,7 @@ export function Grabar() {
             <p className="ayuda centro">
               {a.modo !== 'camara' ? t('permisoPantalla') : ''} {t('limiteSinLimite')}
             </p>
+            <BotonExtension />
           </section>
 
           <section className="tarjeta grabar-previa-ajustes">
