@@ -4,6 +4,7 @@ import { Hono, type Context } from 'hono';
 import {
   correoBienvenida,
   correoVerificar,
+  correoInvitacionEquipo,
   correoClaveCambiada,
   correoListo,
   correoPagoFallido,
@@ -242,10 +243,23 @@ async function buscarVideo(c: C, id: string): Promise<FilaVideo | null> {
   return c.env.DB.prepare('SELECT * FROM videos WHERE id = ?').bind(id).first<FilaVideo>();
 }
 
-/** El dueño ve todo; los demás solo videos listos con privacidad «enlace». */
-function puedeVer(v: FilaVideo, u: Usuario | null): boolean {
+/**
+ * El dueño ve todo; los demás, videos listos con privacidad «enlace». Un video listo compartido con un equipo lo ven
+ * sus miembros aunque sea privado (CANDADO C-EQUIPOS). Solo lee: nunca escribe en la base por mirar.
+ */
+async function puedeVer(c: C, v: FilaVideo, u: Usuario | null): Promise<boolean> {
   if (u && u.id === v.usuario_id) return true;
-  return v.estado === 'listo' && v.privacidad === 'enlace';
+  if (v.estado !== 'listo') return false;
+  if (v.privacidad === 'enlace') return true;
+  if (!u) return false;
+  return Boolean(
+    await c.env.DB.prepare(
+      `SELECT 1 FROM videos_equipo ve JOIN miembros_equipo m ON m.equipo_id = ve.equipo_id AND m.usuario_id = ?
+       WHERE ve.video_id = ? LIMIT 1`,
+    )
+      .bind(u.id, v.id)
+      .first(),
+  );
 }
 
 // ---------- dirección principal: pantalay.com ----------
@@ -497,7 +511,12 @@ async function escribir(
     .bind(usuarioId)
     .first<{ correo: string; nombre: string }>();
   if (!u) return false;
-  const ok = await enviar(c.env, { para: u.correo, ...hacer(await idiomaDe(c, usuarioId), u.nombre) });
+  return escribirA(c, { para: u.correo, ...hacer(await idiomaDe(c, usuarioId), u.nombre) });
+}
+
+/** Manda un correo a una dirección (tenga cuenta o no) y lo suma a la cuenta del día. */
+async function escribirA(c: C, m: Mensaje): Promise<boolean> {
+  const ok = await enviar(c.env, m);
   await c.env.DB.prepare(
     `INSERT INTO correo_dia (dia, enviados, fallidos) VALUES (?, ?, ?)
      ON CONFLICT (dia) DO UPDATE SET enviados = enviados + excluded.enviados, fallidos = fallidos + excluded.fallidos`,
@@ -841,7 +860,13 @@ app.post('/datos/cuenta/borrar', requiereSesion, async (c) => {
         .catch(() => undefined);
     await borrarVideo(c, v);
   }
+  // Sus equipos se borran con todo (los videos de los demás miembros quedan intactos en sus bibliotecas).
+  const { results: suyos } = await c.env.DB.prepare('SELECT id FROM equipos WHERE dueno_id = ?')
+    .bind(u.id)
+    .all<{ id: string }>();
+  for (const e of suyos) await borrarEquipo(c, e.id);
   await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM miembros_equipo WHERE usuario_id = ?').bind(u.id),
     ...[
       'carpetas',
       'sesiones',
@@ -1270,6 +1295,7 @@ async function borrarVideo(c: C, v: FilaVideo) {
       'revisiones WHERE video_id',
       'video_youtube WHERE video_id',
       'video_marca WHERE video_id',
+      'videos_equipo WHERE video_id',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} = ?`).bind(v.id)),
   );
 }
@@ -1646,6 +1672,279 @@ app.delete('/datos/carpetas/:id', requiereSesion, async (c) => {
   return c.json({ ok: true });
 });
 
+// ---------- espacios de equipo (CANDADO C-EQUIPOS) ----------
+// Como los «Workspaces» de Loom, acotado: un equipo con dueño, admins y miembros; se invita por correo (enlace de 7
+// días, guardado como hash) y cada autor comparte sus videos con sus equipos. Un miembro ve los videos compartidos
+// aunque sean privados (ver puedeVer). Solo el autor edita o borra su video. Quien no es miembro recibe 404.
+// Los planes no limitan equipos todavía (pendiente: decidir en qué plan van).
+
+type Rol = 'admin' | 'miembro';
+type FilaEquipo = { id: string; nombre: string; dueno_id: string; rol: Rol };
+type FilaInvitacion = { correo: string; vence: number; creado: number };
+const VENCE_INVITACION = 7 * 24 * 3600 * 1000;
+const esquemaEquipo = z.object({ nombre: z.string().trim().min(1).max(80) });
+
+/** El equipo con el rol de la cuenta, o null si no es miembro (para la pantalla: «no existe»). */
+async function equipoDe(c: C, equipoId: string): Promise<FilaEquipo | null> {
+  return c.env.DB.prepare(
+    `SELECT e.id, e.nombre, e.dueno_id, m.rol FROM equipos e
+     JOIN miembros_equipo m ON m.equipo_id = e.id AND m.usuario_id = ? WHERE e.id = ?`,
+  )
+    .bind(c.get('usuario')!.id, equipoId)
+    .first<FilaEquipo>();
+}
+
+/** Borra todo lo del equipo. Los videos NUNCA se tocan: solo dejan de estar compartidos. */
+async function borrarEquipo(c: C, equipoId: string) {
+  await c.env.DB.batch([
+    ...['videos_equipo', 'invitaciones_equipo', 'miembros_equipo'].map((t) =>
+      c.env.DB.prepare(`DELETE FROM ${t} WHERE equipo_id = ?`).bind(equipoId),
+    ),
+    c.env.DB.prepare('DELETE FROM equipos WHERE id = ?').bind(equipoId),
+  ]);
+}
+
+app.get('/datos/equipos', requiereSesion, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT e.id, e.nombre, m.rol, e.dueno_id = m.usuario_id AS es_dueno FROM miembros_equipo m
+     JOIN equipos e ON e.id = m.equipo_id WHERE m.usuario_id = ? ORDER BY e.nombre`,
+  )
+    .bind(c.get('usuario')!.id)
+    .all<{ id: string; nombre: string; rol: Rol; es_dueno: number }>();
+  return c.json({ equipos: results.map((e) => ({ ...e, es_dueno: e.es_dueno === 1 })) });
+});
+
+app.post('/datos/equipos', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  const d = await cuerpo(c, esquemaEquipo);
+  if (!d) return err(c, 400, 'datos');
+  if (!(await dentroDelLimite(c.env.DB, 'crear_equipo', u.id, 20, 60 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const id = nuevoId(12);
+  const ahora = Date.now();
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO equipos (id, nombre, dueno_id, creado) VALUES (?, ?, ?, ?)').bind(
+      id,
+      d.nombre,
+      u.id,
+      ahora,
+    ),
+    c.env.DB.prepare(
+      "INSERT INTO miembros_equipo (equipo_id, usuario_id, rol, creado) VALUES (?, ?, 'admin', ?)",
+    ).bind(id, u.id, ahora),
+  ]);
+  return c.json({ equipo: { id, nombre: d.nombre, rol: 'admin', es_dueno: true } }, 201);
+});
+
+app.patch('/datos/equipos/:id', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  if (e.rol !== 'admin') return err(c, 403, 'solo_admin');
+  const d = await cuerpo(c, esquemaEquipo);
+  if (!d) return err(c, 400, 'datos');
+  await c.env.DB.prepare('UPDATE equipos SET nombre = ? WHERE id = ?').bind(d.nombre, e.id).run();
+  return c.json({ ok: true });
+});
+
+app.delete('/datos/equipos/:id', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  if (e.dueno_id !== c.get('usuario')!.id) return err(c, 403, 'solo_dueno');
+  await borrarEquipo(c, e.id);
+  return c.json({ ok: true });
+});
+
+app.get('/datos/equipos/:id', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  const u = c.get('usuario')!;
+  const [miembros, videos, invitaciones] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT u.id, u.nombre, u.correo, m.rol, m.creado FROM miembros_equipo m JOIN usuarios u ON u.id = m.usuario_id
+       WHERE m.equipo_id = ? ORDER BY m.creado`,
+    )
+      .bind(e.id)
+      .all<{ id: string; nombre: string; correo: string; rol: Rol; creado: number }>(),
+    c.env.DB.prepare(
+      `SELECT v.id, v.titulo, v.duracion, v.creado, v.tiene_miniatura, v.privacidad, v.usuario_id,
+         u.nombre AS autor, ve.creado AS compartido
+       FROM videos_equipo ve JOIN videos v ON v.id = ve.video_id JOIN usuarios u ON u.id = v.usuario_id
+       WHERE ve.equipo_id = ? AND v.estado = 'listo' ORDER BY ve.creado DESC LIMIT 500`,
+    )
+      .bind(e.id)
+      .all(),
+    e.rol === 'admin'
+      ? c.env.DB.prepare(
+          'SELECT correo, vence, creado FROM invitaciones_equipo WHERE equipo_id = ? AND vence > ? ORDER BY creado DESC',
+        )
+          .bind(e.id, Date.now())
+          .all<FilaInvitacion>()
+      : Promise.resolve({ results: [] as FilaInvitacion[] }),
+  ]);
+  return c.json(
+    {
+      equipo: { id: e.id, nombre: e.nombre, rol: e.rol, es_dueno: e.dueno_id === u.id },
+      miembros: miembros.results.map((m) => ({ ...m, es_dueno: m.id === e.dueno_id })),
+      invitaciones: invitaciones.results,
+      videos: videos.results,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.post('/datos/equipos/:id/invitar', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  if (e.rol !== 'admin') return err(c, 403, 'solo_admin');
+  const u = c.get('usuario')!;
+  const d = await cuerpo(c, z.object({ correo: z.string().trim().toLowerCase().email().max(200) }));
+  if (!d) return err(c, 400, 'datos');
+  const yaEsta = await c.env.DB.prepare(
+    'SELECT 1 FROM miembros_equipo m JOIN usuarios u ON u.id = m.usuario_id WHERE m.equipo_id = ? AND u.correo = ?',
+  )
+    .bind(e.id, d.correo)
+    .first();
+  if (yaEsta) return err(c, 409, 'ya_es_miembro');
+  if (!(await dentroDelLimite(c.env.DB, 'invitar_equipo', u.id, 30, 60 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const token = aleatorio(32);
+  const ahora = Date.now();
+  // Una invitación viva por correo: la nueva reemplaza a la anterior.
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM invitaciones_equipo WHERE equipo_id = ? AND correo = ?').bind(
+      e.id,
+      d.correo,
+    ),
+    c.env.DB.prepare(
+      'INSERT INTO invitaciones_equipo (token_hash, equipo_id, correo, vence, creado_por, creado) VALUES (?, ?, ?, ?, ?, ?)',
+    ).bind(await sha256(token), e.id, d.correo, ahora + VENCE_INVITACION, u.id, ahora),
+  ]);
+  const enlace = `${DOMINIO}/join?token=${token}`;
+  const idioma = await idiomaDe(c, u.id);
+  despues(c, escribirA(c, { para: d.correo, ...correoInvitacionEquipo(idioma, u.nombre, e.nombre, enlace) }));
+  return c.json({ enlace, correo: d.correo, vence: ahora + VENCE_INVITACION }, 201);
+});
+
+app.delete('/datos/equipos/:id/invitaciones', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  if (e.rol !== 'admin') return err(c, 403, 'solo_admin');
+  const d = await cuerpo(c, z.object({ correo: z.string().trim().toLowerCase().max(200) }));
+  if (!d) return err(c, 400, 'datos');
+  await c.env.DB.prepare('DELETE FROM invitaciones_equipo WHERE equipo_id = ? AND correo = ?')
+    .bind(e.id, d.correo)
+    .run();
+  return c.json({ ok: true });
+});
+
+app.post('/datos/equipos/unirse', requiereSesion, async (c) => {
+  if (!(await dentroDelLimite(c.env.DB, 'unirse_equipo', ip(c), 20, 15 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const d = await cuerpo(c, z.object({ token: z.string().min(20).max(200) }));
+  if (!d) return err(c, 400, 'datos');
+  const u = c.get('usuario')!;
+  const hash = await sha256(d.token);
+  const inv = await c.env.DB.prepare(
+    `SELECT i.equipo_id, i.correo, i.vence FROM invitaciones_equipo i JOIN equipos e ON e.id = i.equipo_id
+     WHERE i.token_hash = ?`,
+  )
+    .bind(hash)
+    .first<{ equipo_id: string; correo: string; vence: number }>();
+  if (!inv || inv.vence < Date.now()) return err(c, 400, 'enlace_vencido');
+  if (inv.correo !== u.correo.toLowerCase()) return err(c, 403, 'invitacion_otro_correo');
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "INSERT OR IGNORE INTO miembros_equipo (equipo_id, usuario_id, rol, creado) VALUES (?, ?, 'miembro', ?)",
+    ).bind(inv.equipo_id, u.id, Date.now()),
+    c.env.DB.prepare('DELETE FROM invitaciones_equipo WHERE token_hash = ?').bind(hash),
+  ]);
+  return c.json({ equipo_id: inv.equipo_id });
+});
+
+/** Quitar a alguien (admin) o salirse uno mismo. Al dueño no se le quita ni se sale: si quiere, borra el equipo. */
+app.delete('/datos/equipos/:id/miembros/:usuario', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  const yo = c.get('usuario')!.id;
+  const otro = c.req.param('usuario') ?? '';
+  if (otro !== yo && e.rol !== 'admin') return err(c, 403, 'solo_admin');
+  if (otro === e.dueno_id) return err(c, 403, 'es_dueno');
+  const r = await c.env.DB.prepare('DELETE FROM miembros_equipo WHERE equipo_id = ? AND usuario_id = ?')
+    .bind(e.id, otro)
+    .run();
+  if (!r.meta.changes) return err(c, 404, 'no_existe');
+  // Lo que compartió deja de verse en el equipo (sus videos siguen intactos en su biblioteca).
+  await c.env.DB.prepare('DELETE FROM videos_equipo WHERE equipo_id = ? AND compartido_por = ?')
+    .bind(e.id, otro)
+    .run();
+  return c.json({ ok: true });
+});
+
+/** El dueño cambia el rol de un miembro (admin / miembro). */
+app.patch('/datos/equipos/:id/miembros/:usuario', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  if (e.dueno_id !== c.get('usuario')!.id) return err(c, 403, 'solo_dueno');
+  const otro = c.req.param('usuario') ?? '';
+  if (otro === e.dueno_id) return err(c, 403, 'es_dueno');
+  const d = await cuerpo(c, z.object({ rol: z.enum(['admin', 'miembro']) }));
+  if (!d) return err(c, 400, 'datos');
+  const r = await c.env.DB.prepare(
+    'UPDATE miembros_equipo SET rol = ? WHERE equipo_id = ? AND usuario_id = ?',
+  )
+    .bind(d.rol, e.id, otro)
+    .run();
+  if (!r.meta.changes) return err(c, 404, 'no_existe');
+  return c.json({ ok: true });
+});
+
+/** Con qué equipos está compartido un video propio (para la ventanita «Compartir con un equipo»). */
+app.get('/datos/videos/:id/equipos', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const { results } = await c.env.DB.prepare(
+    `SELECT e.id, e.nombre, (SELECT 1 FROM videos_equipo ve WHERE ve.video_id = ? AND ve.equipo_id = e.id) AS compartido
+     FROM miembros_equipo m JOIN equipos e ON e.id = m.equipo_id WHERE m.usuario_id = ? ORDER BY e.nombre`,
+  )
+    .bind(v.id, c.get('usuario')!.id)
+    .all<{ id: string; nombre: string; compartido: number | null }>();
+  return c.json({
+    equipos: results.map((e) => ({ id: e.id, nombre: e.nombre, compartido: e.compartido === 1 })),
+  });
+});
+
+app.post('/datos/equipos/:id/videos', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  const d = await cuerpo(c, z.object({ video_id: z.string().min(1).max(40) }));
+  if (!d) return err(c, 400, 'datos');
+  const u = c.get('usuario')!;
+  const v = await buscarVideo(c, d.video_id);
+  // Solo el autor comparte su video.
+  if (!v || v.usuario_id !== u.id || v.estado === 'cancelado') return err(c, 404, 'no_existe');
+  await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO videos_equipo (video_id, equipo_id, compartido_por, creado) VALUES (?, ?, ?, ?)',
+  )
+    .bind(v.id, e.id, u.id, Date.now())
+    .run();
+  return c.json({ ok: true }, 201);
+});
+
+/** Deja de compartir: el autor, o un admin del equipo (lo saca del equipo; el video sigue siendo del autor). */
+app.delete('/datos/equipos/:id/videos/:video', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  const u = c.get('usuario')!;
+  const r = await c.env.DB.prepare(
+    'DELETE FROM videos_equipo WHERE equipo_id = ? AND video_id = ? AND (compartido_por = ? OR ? = 1)',
+  )
+    .bind(e.id, c.req.param('video') ?? '', u.id, e.rol === 'admin' ? 1 : 0)
+    .run();
+  if (!r.meta.changes) return err(c, 404, 'no_existe');
+  return c.json({ ok: true });
+});
+
 // ---------- videos: biblioteca ----------
 
 app.get('/datos/videos', requiereSesion, async (c) => {
@@ -1885,7 +2184,7 @@ async function marcaObligatoria(c: C, usuarioId: string, correo: string): Promis
 app.get('/datos/videos/:id', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
   const u = c.get('usuario');
-  if (!v || !puedeVer(v, u)) return err(c, 404, 'no_existe');
+  if (!v || !(await puedeVer(c, v, u))) return err(c, 404, 'no_existe');
   const autor = await c.env.DB.prepare('SELECT nombre, correo FROM usuarios WHERE id = ?')
     .bind(v.usuario_id)
     .first<{ nombre: string; correo: string }>();
@@ -2025,7 +2324,7 @@ app.delete('/datos/videos/:id', requiereSesion, async (c) => {
 
 app.get('/datos/videos/:id/actividad', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
-  if (!v || !puedeVer(v, c.get('usuario'))) return err(c, 404, 'no_existe');
+  if (!v || !(await puedeVer(c, v, c.get('usuario')))) return err(c, 404, 'no_existe');
   const [comentarios, reacciones] = await Promise.all([
     c.env.DB.prepare(
       'SELECT id, nombre, texto, segundo, creado, usuario_id FROM comentarios WHERE video_id = ? ORDER BY creado',
@@ -2050,7 +2349,7 @@ const esquemaComentario = z.object({
 app.post('/datos/videos/:id/comentarios', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
   const u = c.get('usuario');
-  if (!v || !puedeVer(v, u)) return err(c, 404, 'no_existe');
+  if (!v || !(await puedeVer(c, v, u))) return err(c, 404, 'no_existe');
   if (!v.permitir_comentarios && u?.id !== v.usuario_id) return err(c, 403, 'comentarios_cerrados');
   if (!(await dentroDelLimite(c.env.DB, 'comentar', ip(c), 30, 10 * 60 * 1000)))
     return err(c, 429, 'demasiados');
@@ -2096,7 +2395,7 @@ const esquemaReaccion = z.object({
 
 app.post('/datos/videos/:id/reacciones', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
-  if (!v || !puedeVer(v, c.get('usuario'))) return err(c, 404, 'no_existe');
+  if (!v || !(await puedeVer(c, v, c.get('usuario')))) return err(c, 404, 'no_existe');
   if (!(await dentroDelLimite(c.env.DB, 'reaccion', ip(c), 60, 10 * 60 * 1000)))
     return err(c, 429, 'demasiados');
   const d = await cuerpo(c, esquemaReaccion);
@@ -2122,7 +2421,7 @@ const esquemaVista = z.object({
 app.post('/datos/videos/:id/vista', async (c) => {
   const v = await buscarVideo(c, c.req.param('id'));
   const u = c.get('usuario');
-  if (!v || !puedeVer(v, u)) return err(c, 404, 'no_existe');
+  if (!v || !(await puedeVer(c, v, u))) return err(c, 404, 'no_existe');
   if (u?.id === v.usuario_id) return c.json({ ok: true, contada: false }); // el dueño no suma vistas
   const d = await cuerpo(c, esquemaVista);
   if (!d) return err(c, 400, 'datos');
@@ -2676,7 +2975,10 @@ app.get('/media/:id/video', async (c) => {
   if (
     !v ||
     v.estado !== 'listo' ||
-    !(puedeVer(v, u) || (esSuperadmin(c) && (await firmaPanelValida(c.env, v.id, c.req.query('panel')))))
+    !(
+      (await puedeVer(c, v, u)) ||
+      (esSuperadmin(c) && (await firmaPanelValida(c.env, v.id, c.req.query('panel'))))
+    )
   )
     return c.notFound();
   const descargar = c.req.query('descargar') === '1';
@@ -2734,7 +3036,7 @@ app.get('/media/:id/miniatura', async (c) => {
     !v ||
     !v.tiene_miniatura ||
     !(
-      puedeVer(v, c.get('usuario')) ||
+      (await puedeVer(c, v, c.get('usuario'))) ||
       (esSuperadmin(c) && (await firmaPanelValida(c.env, v.id, c.req.query('panel'))))
     )
   )

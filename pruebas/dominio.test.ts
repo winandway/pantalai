@@ -114,6 +114,9 @@ describe('CANDADO C-SEO-IA: Google y los buscadores de IA leen el texto sin Java
     expect(prepararCabecera(base, '/', [])).toContain('Frequently asked questions');
     expect(prepararCabecera(base, '/library', [])).toContain('<div id="raiz"></div>');
     expect(prepararCabecera(base, '/account', [])).toContain('noindex');
+    // Espacios de equipo (C-EQUIPOS): ni la página del equipo ni la invitación se indexan.
+    expect(prepararCabecera(base, '/team/abc123', [])).toContain('noindex');
+    expect(prepararCabecera(base, '/join', [])).toContain('noindex');
   });
 
   it('el mapa del sitio trae los textos legales y robots invita a las IAs por su nombre', async () => {

@@ -170,7 +170,8 @@ export function Entrar({ registro }: { registro: boolean }) {
         )}
         <p className="ayuda centro">
           {registro ? t('yaTengo') : t('noTengo')}{' '}
-          <a href={registro ? '/login' : '/signup'} onClick={alClicEnlace}>
+          {/* Se conserva «volver» (por ejemplo, la invitación a un equipo) al pasar de entrar a crear cuenta. */}
+          <a href={`${registro ? '/login' : '/signup'}${location.search}`} onClick={alClicEnlace}>
             {registro ? t('entrar') : t('registrarse')}
           </a>
         </p>

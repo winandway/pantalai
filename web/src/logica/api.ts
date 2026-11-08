@@ -151,3 +151,33 @@ export type LimitesPlan = {
   edicion: boolean;
   marca: boolean;
 };
+
+// ---------- espacios de equipo (C-EQUIPOS) ----------
+
+export type RolEquipo = 'admin' | 'miembro';
+export type EquipoLista = { id: string; nombre: string; rol: RolEquipo; es_dueno: boolean };
+export type MiembroEquipo = {
+  id: string;
+  nombre: string;
+  correo: string;
+  rol: RolEquipo;
+  es_dueno: boolean;
+  creado: number;
+};
+export type VideoEquipo = {
+  id: string;
+  titulo: string;
+  duracion: number;
+  creado: number;
+  tiene_miniatura: number;
+  privacidad: string;
+  usuario_id: string;
+  autor: string;
+  compartido: number;
+};
+export type DatosEquipo = {
+  equipo: EquipoLista;
+  miembros: MiembroEquipo[];
+  invitaciones: { correo: string; vence: number; creado: number }[];
+  videos: VideoEquipo[];
+};

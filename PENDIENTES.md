@@ -49,7 +49,10 @@
 - [ ] Dibujar ENCIMA de otros programas sin volver a Pantalay, y énfasis del cursor (necesita extensión de Chrome o app de escritorio).
 - [x] Mapa del sitio con todas las guías de Docs y pantalay.com como dirección principal (20 oct 2026, C-DOMINIO).
 - [ ] Extensión de Chrome con modo «reporte de error» (consola y red).
-- [ ] Carpetas compartidas y espacios de equipo.
+- [x] Espacios de equipo: crear, invitar por correo o enlace, unirse, compartir videos (también privados) y salir
+      (8 nov 2026, C-EQUIPOS).
+- [ ] 👤 Decidir en qué plan van los equipos (hoy, con el cobro apagado, cualquier cuenta crea equipos sin tope).
+- [ ] Carpetas compartidas dentro de un equipo (hoy se comparte video por video).
 - [ ] Cobro: conectar Stripe (suscripción mensual y anual, prueba de 14 días, precio de fundador), llenar
       `suscripciones`, probar de punta a punta y recién ahí encender `COBRO_ACTIVO=1` y anunciar la página de precios
       (`/pricing`, hoy oculta con noindex). Mensual y anual, prueba de 14 días, aviso firmado y canario: construidos.

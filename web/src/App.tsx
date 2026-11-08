@@ -17,6 +17,7 @@ import { Docs } from './paginas/Docs';
 import { Editar } from './paginas/Editar';
 import { Entrar, Recuperar, Restablecer } from './paginas/Entrar';
 import { FranjaCorreo, VerificarCorreo } from './componentes/VerificarCorreo';
+import { PaginaEquipo, UnirseEquipo } from './paginas/Equipo';
 import { Grabar } from './paginas/Grabar';
 import { Inicio } from './paginas/Inicio';
 import { PaginaVideo } from './paginas/Video';
@@ -79,6 +80,8 @@ export function App() {
   else if (ruta === '/reset-password') pagina = <Restablecer />;
   else if (ruta === '/verify-email') pagina = <VerificarCorreo />;
   else if (ruta === '/library') pagina = <Biblioteca />;
+  else if (partes[0] === 'team' && partes[1] && partes.length === 2) pagina = <PaginaEquipo id={partes[1]} />;
+  else if (ruta === '/join') pagina = <UnirseEquipo />;
   else if (ruta === '/record') pagina = <Grabar />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
   else if (ruta === '/pricing') pagina = <Precios />;

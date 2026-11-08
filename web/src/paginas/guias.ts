@@ -683,6 +683,39 @@ export const GUIAS: Guia[] = [
     },
   },
   {
+    slug: 'team-spaces',
+    seccion: 'compartir',
+    icono: '👥',
+    en: {
+      titulo: 'Team spaces: share videos with your team',
+      resumen:
+        'Create a team, invite people by email and give everyone one place to watch the videos you share.',
+      cuerpo: [
+        'A team is a shared space inside Pantalay. Everyone in the team sees the videos its members share with it, even videos marked “Only me”. Nobody outside the team can see them.',
+        'Create a team. In your library, find Teams in the left menu and press the + button. Give it a name, like “Sales” or “Product”, and press Create. You become its owner and an admin.',
+        'Invite people. Open the team, write the email of the person you want to invite and press Send invitation. They get an email with a Join the team button. You also get the invitation link right away: press Copy link and send it by WhatsApp or chat. The invitation works for 7 days and only with that email.',
+        'Join a team. Open the invitation and log in (or sign up) with the same email it was sent to. You land on the team page. If you open it with another account, Pantalay tells you to switch accounts.',
+        'Share a video. In your library, open the ⋮ menu of one of your videos and choose Share with a team. Check the teams that should see it. Uncheck a team to stop sharing. The video is still yours: only you can edit it or delete it.',
+        'Watch the team’s videos. The team page shows its members and every shared video, with its author and length. Press a video to watch it, comment and react as usual.',
+        'Leave or manage the team. From the ⋮ menu of the team you can leave it. Admins can remove members and the owner can rename or delete the team. Deleting a team never deletes anyone’s videos: they stay in each person’s library.',
+      ],
+    },
+    es: {
+      titulo: 'Espacios de equipo: comparte videos con tu equipo',
+      resumen:
+        'Crea un equipo, invita por correo y dale a todos un solo lugar para ver los videos que compartes.',
+      cuerpo: [
+        'Un equipo es un espacio compartido dentro de Pantalay. Todos en el equipo ven los videos que sus miembros comparten con él, incluso los que están en «Solo yo». Nadie de fuera del equipo puede verlos.',
+        'Crea un equipo. En tu biblioteca, busca Equipos en el menú de la izquierda y toca el botón +. Ponle un nombre, como «Ventas» o «Producto», y toca Crear. Quedas como dueño y administrador.',
+        'Invita a tu gente. Abre el equipo, escribe el correo de la persona que quieres invitar y toca Enviar invitación. Le llega un correo con el botón Unirme al equipo. Tú también recibes el enlace de la invitación al instante: toca Copiar enlace y mándalo por WhatsApp o por chat. La invitación sirve 7 días y solo con ese correo.',
+        'Únete a un equipo. Abre la invitación y entra (o crea tu cuenta) con el mismo correo al que llegó. Llegas a la página del equipo. Si la abres con otra cuenta, Pantalay te avisa que cambies de cuenta.',
+        'Comparte un video. En tu biblioteca, abre el menú ⋮ de uno de tus videos y elige Compartir con un equipo. Marca los equipos que lo deben ver. Desmarca un equipo para dejar de compartirlo. El video sigue siendo tuyo: solo tú lo puedes editar o borrar.',
+        'Mira los videos del equipo. La página del equipo muestra a sus miembros y todos los videos compartidos, con su autor y su duración. Toca un video para verlo, comentar y reaccionar como siempre.',
+        'Sal del equipo o adminístralo. Desde el menú ⋮ del equipo puedes salirte. Los administradores pueden quitar miembros y el dueño puede cambiarle el nombre o borrarlo. Borrar un equipo nunca borra los videos de nadie: se quedan en la biblioteca de cada persona.',
+      ],
+    },
+  },
+  {
     slug: 'library-and-folders',
     seccion: 'cuenta',
     icono: '📁',

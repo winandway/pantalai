@@ -529,3 +529,33 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   viejas), comprobada en rojo quitando el tope de videos. E2E: `e2e/grabar.spec.ts` exige la franja tras registrarse.
 - Guía pública: Docs → «Crea tu cuenta» (párrafo de confirmar el correo, en los dos idiomas).
 - No tocar: el corte (mover hacia adelante dejaría sin verificar cuentas viejas) y el orden de la compuerta de pago.
+
+## C-EQUIPOS (8 nov 2026)
+
+- Qué es: espacios de equipo al estilo de los «Workspaces» de Loom, acotados. Tablas nuevas (`schema.sql`, solo
+  `CREATE ... IF NOT EXISTS`): `equipos`, `miembros_equipo` (rol `admin`/`miembro`), `invitaciones_equipo` (token
+  guardado como hash, vence en 7 días) y `videos_equipo` (llave `(video_id, equipo_id)`: un video puede estar en varios
+  equipos de su autor). Índices solo los que usa una consulta: miembros por usuario, invitaciones y videos por equipo.
+- Permisos: `puedeVer` (servidor/app.ts) ahora es asíncrona y, para un video LISTO y privado, mira si la cuenta es
+  miembro de un equipo con el que está compartido. La usan `GET /datos/videos/:id`, actividad, comentarios, reacciones,
+  vista, `/media/:id/video` y `/media/:id/miniatura`. Solo el autor edita, borra o comparte (`videoDelDueno`). Quien
+  no es miembro recibe 404 en el equipo y en sus videos. Mirar no escribe en la base.
+- Rutas: `/datos/equipos` (listar, crear), `/datos/equipos/:id` (ver, renombrar admin, borrar solo dueño),
+  `/invitar` (admin, tope 30 por hora, manda el correo `correoInvitacionEquipo` en el idioma de quien invita y
+  DEVUELVE el enlace `/join?token=…`), `/invitaciones` (cancelar), `/datos/equipos/unirse` (exige sesión y el mismo
+  correo: si no, 403 `invitacion_otro_correo`; vencido o usado, 400 `enlace_vencido`), `/miembros/:usuario` (quitar,
+  salir, cambiar rol; al dueño no se le quita ni se sale: 403 `es_dueno`), `/videos` y `/videos/:video` (compartir y
+  dejar de compartir) y `GET /datos/videos/:id/equipos` (la ventanita). Borrar un equipo borra membresías,
+  invitaciones y lo compartido, NUNCA videos. Borrar la cuenta borra sus equipos y sus membresías.
+- Pantalla: «Teams/Equipos» en la barra lateral de la Biblioteca con «+» (ventanita propia), página `/team/<id>`
+  (`web/src/paginas/Equipo.tsx`), invitar con `useBorrador` y botón para copiar el enlace, «Share with a team» en el
+  menú ⋮ de cada video, `/join?token=…` (sin sesión manda a crear cuenta con `volver` y regresa). Quitar, salir y
+  borrar viven solo en el menú ⋮ con confirmación. `/team` y `/join` llevan noindex (`metaDeRuta`).
+- Planes: no limitan equipos todavía (pendiente en PENDIENTES.md).
+- Guía pública: Docs → «Team spaces / Espacios de equipo» (`team-spaces`).
+- Pruebas: `pruebas/equipos.test.ts` (crear, invitar con enlace en correo y respuesta, unirse con el correo correcto y
+  rechazo con otro, vencido, video privado compartido visible para el miembro y 404 para los de fuera, quitar, salir,
+  dueño que no sale, borrar sin borrar videos, mirar sin escribir). Comprobada en ROJO dos veces: con `puedeVer`
+  dejando ver todo privado (fallan 3) y sin mirar el equipo (fallan 2). E2E: `e2e/equipos.spec.ts` (dos cuentas reales:
+  crear, invitar, copiar enlace, unirse creando la cuenta, compartir un video privado y verlo).
+- No tocar: que `puedeVer` exija estado `listo` antes de mirar equipos, y que unirse compare el correo de la sesión.

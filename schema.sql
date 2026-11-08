@@ -269,3 +269,39 @@ CREATE TABLE IF NOT EXISTS verificaciones (
   usuario_id TEXT NOT NULL,
   vence INTEGER NOT NULL
 );
+
+-- Espacios de equipo (8 nov 2026, CANDADO C-EQUIPOS). Tablas nuevas: no se toca ninguna columna existente.
+-- Solo los índices que usa una consulta real: mis equipos (miembros por usuario), invitaciones de un equipo y videos
+-- de un equipo. «¿Este video está compartido con un equipo mío?» usa las llaves primarias.
+CREATE TABLE IF NOT EXISTS equipos (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  dueno_id TEXT NOT NULL,
+  creado INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS miembros_equipo (
+  equipo_id TEXT NOT NULL,
+  usuario_id TEXT NOT NULL,
+  rol TEXT NOT NULL DEFAULT 'miembro',
+  creado INTEGER NOT NULL,
+  PRIMARY KEY (equipo_id, usuario_id)
+);
+CREATE INDEX IF NOT EXISTS miembros_equipo_usuario ON miembros_equipo (usuario_id);
+CREATE TABLE IF NOT EXISTS invitaciones_equipo (
+  token_hash TEXT PRIMARY KEY,
+  equipo_id TEXT NOT NULL,
+  correo TEXT NOT NULL,
+  vence INTEGER NOT NULL,
+  creado_por TEXT NOT NULL,
+  creado INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS invitaciones_equipo_equipo ON invitaciones_equipo (equipo_id);
+-- Un video puede estar en varios equipos del autor: la llave es (video, equipo).
+CREATE TABLE IF NOT EXISTS videos_equipo (
+  video_id TEXT NOT NULL,
+  equipo_id TEXT NOT NULL,
+  compartido_por TEXT NOT NULL,
+  creado INTEGER NOT NULL,
+  PRIMARY KEY (video_id, equipo_id)
+);
+CREATE INDEX IF NOT EXISTS videos_equipo_equipo ON videos_equipo (equipo_id);

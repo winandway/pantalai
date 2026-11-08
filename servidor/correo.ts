@@ -32,12 +32,16 @@ export function plantilla(
     etiqueta?: string;
     /** Filas tipo recibo: [concepto, valor]. */
     detalle?: [string, string][];
+    /** Pie propio (por ejemplo, para quien todavía no tiene cuenta). */
+    pie?: string;
   },
 ): { html: string; text: string } {
   const es = idioma === 'es';
-  const pie = es
-    ? `Recibes este correo porque tienes una cuenta en Pantalay.`
-    : `You get this email because you have a Pantalay account.`;
+  const pie =
+    datos.pie ??
+    (es
+      ? `Recibes este correo porque tienes una cuenta en Pantalay.`
+      : `You get this email because you have a Pantalay account.`);
   const firma = `© ${new Date().getFullYear()} pantalay.com · ${es ? 'Desarrollado por' : 'Developed by'} Windoce LLC`;
   const boton = datos.boton
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:30px 0 8px"><tr><td bgcolor="#e5484d" style="border-radius:12px;background:#e5484d;background-image:linear-gradient(135deg,#ff4f6d,#e5484d)">
@@ -191,6 +195,40 @@ export function correoVerificar(idioma: Idioma, nombre: string, enlace: string):
       : 'The link expires in 7 days. If you did not create a Pantalay account, ignore this email.',
   });
   return { nombre, asunto: es ? 'Confirma tu correo de Pantalay' : 'Confirm your Pantalay email', ...p };
+}
+
+export function correoInvitacionEquipo(
+  idioma: Idioma,
+  quien: string,
+  equipo: string,
+  enlace: string,
+): Omit<Mensaje, 'para'> {
+  const es = idioma === 'es';
+  const p = plantilla(idioma, {
+    icono: '👥',
+    etiqueta: es ? 'INVITACIÓN A UN EQUIPO' : 'TEAM INVITATION',
+    titulo: es ? `${quien} te invitó a «${equipo}»` : `${quien} invited you to “${equipo}”`,
+    parrafos: es
+      ? [
+          `${quien} quiere que veas y compartas videos con su equipo «${equipo}» en Pantalay.`,
+          'Si todavía no tienes cuenta, créala con este mismo correo y toca el botón otra vez.',
+        ]
+      : [
+          `${quien} wants you to watch and share videos with the team “${equipo}” on Pantalay.`,
+          'If you don’t have an account yet, sign up with this same email and press the button again.',
+        ],
+    boton: { texto: es ? 'Unirme al equipo' : 'Join the team', url: enlace },
+    nota: es
+      ? 'La invitación vence en 7 días y solo sirve con este correo. Si no esperabas este correo, ignóralo.'
+      : 'The invitation expires in 7 days and only works with this email. If you weren’t expecting it, ignore it.',
+    pie: es
+      ? 'Recibes este correo porque alguien te invitó a un equipo en Pantalay.'
+      : 'You get this email because someone invited you to a team on Pantalay.',
+  });
+  return {
+    asunto: es ? `${quien} te invitó a su equipo en Pantalay` : `${quien} invited you to a team on Pantalay`,
+    ...p,
+  };
 }
 
 export function correoRecuperar(idioma: Idioma, nombre: string, enlace: string): Omit<Mensaje, 'para'> {

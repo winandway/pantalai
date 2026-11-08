@@ -10,6 +10,7 @@ import {
   miniaturaVideo,
   pedir,
   type Carpeta,
+  type EquipoLista,
   type VideoLista,
 } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
@@ -17,6 +18,7 @@ import { haceCuanto, textoError, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { formatoTiempo } from '../logica/tiempo';
+import { CompartirConEquipo, NuevoEquipo } from './Equipo';
 import { Respaldos } from './Grabar';
 
 type Vista = { tipo: 'todos' } | { tipo: 'carpeta'; id: string } | { tipo: 'archivo' };
@@ -49,6 +51,9 @@ export function Biblioteca() {
   const [nuevaCarpeta, setNuevaCarpeta] = useState(false);
   const [borrandoCarpeta, setBorrandoCarpeta] = useState<Carpeta | null>(null);
   const [renombrandoCarpeta, setRenombrandoCarpeta] = useState<Carpeta | null>(null);
+  const [equipos, setEquipos] = useState<EquipoLista[]>([]);
+  const [nuevoEquipo, setNuevoEquipo] = useState(false);
+  const [compartiendo, setCompartiendo] = useState<VideoLista | null>(null);
 
   useEffect(() => {
     if (!cargando && !usuario) navegar('/login?volver=/library', true);
@@ -69,6 +74,9 @@ export function Biblioteca() {
       setVideos(v.videos);
       setCarpetas(c.carpetas);
       setResumen(r.resumen);
+      pedir<{ equipos: EquipoLista[] }>('/datos/equipos')
+        .then((x) => setEquipos(x.equipos))
+        .catch(() => setEquipos([]));
       pedir<{ oido: boolean; cerebro: boolean; usd_mes: number; tope_usd_mes: number }>('/datos/ia')
         .then((x) => setGastoIA(x.oido || x.cerebro ? { usd: x.usd_mes, tope: x.tope_usd_mes } : null))
         .catch(() => setGastoIA(null));
@@ -158,6 +166,24 @@ export function Biblioteca() {
           >
             🗄 {t('archivo')}
           </button>
+          <p className="lateral-titulo">
+            {t('equipos')}
+            <button
+              type="button"
+              className="boton-icono"
+              aria-label={t('nuevoEquipo')}
+              onClick={() => setNuevoEquipo(true)}
+            >
+              +
+            </button>
+          </p>
+          {equipos.map((e) => (
+            <div key={e.id} className="lateral-carpeta">
+              <a href={`/team/${e.id}`} onClick={alClicEnlace}>
+                👥 {e.nombre}
+              </a>
+            </div>
+          ))}
         </nav>
       </aside>
 
@@ -235,6 +261,9 @@ export function Biblioteca() {
                       accion: () => setRenombrando(v),
                     },
                     { etiqueta: t('moverA'), accion: () => setMoviendo(v) },
+                    ...(v.estado === 'listo'
+                      ? [{ etiqueta: t('compartirConEquipo'), accion: () => setCompartiendo(v) }]
+                      : []),
                     {
                       etiqueta: v.archivado ? t('desarchivar') : t('archivar'),
                       accion: () => void cambiarVideo(v, { archivado: !v.archivado }),
@@ -312,6 +341,8 @@ export function Biblioteca() {
           </div>
         </Modal>
       )}
+      {nuevoEquipo && <NuevoEquipo cuenta={usuario.id} cerrar={() => setNuevoEquipo(false)} />}
+      {compartiendo && <CompartirConEquipo video={compartiendo.id} cerrar={() => setCompartiendo(null)} />}
       {nuevaCarpeta && (
         <NuevaCarpeta
           cuenta={usuario.id}
