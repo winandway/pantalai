@@ -5,7 +5,7 @@ import hooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['dist', 'salida', '.dist-worker', 'coverage', 'node_modules', '.wrangler'] },
+  { ignores: ['dist', 'salida', '.dist-worker', 'coverage', 'node_modules', '.wrangler', '.claude'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   security.configs.recommended,
