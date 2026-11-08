@@ -25,7 +25,16 @@ import {
   sitemap,
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
-import { cobroActivo, esPlan, LIMITES, limitesDe, PRECIOS, type Limites, type Plan } from './planes';
+import {
+  bytesMaximos,
+  cobroActivo,
+  esPlan,
+  LIMITES,
+  limitesDe,
+  PRECIOS,
+  type Limites,
+  type Plan,
+} from './planes';
 import {
   cancelarAlFinal,
   crearCliente,
@@ -1720,7 +1729,8 @@ app.post('/datos/videos/:id/completar', requiereSesion, async (c) => {
   if (!d) return err(c, 400, 'datos');
   // El tope de minutos del plan también se cumple aquí (la grabadora para sola; esto cubre a quien la salte).
   const { limites } = await planDe(c, c.get('usuario')!.id);
-  if (limites.minutos !== null && d.duracion > limites.minutos * 60 + 15) {
+  // La duración la dice el navegador: con tope de minutos, 0 (no se pudo leer) no deja pasar un video sin medir.
+  if (limites.minutos !== null && (d.duracion <= 0 || d.duracion > limites.minutos * 60 + 15)) {
     await c.env.BUCKET.resumeMultipartUpload(claveVideo(v.id), v.subida_id)
       .abort()
       .catch(() => undefined);
@@ -1735,6 +1745,11 @@ app.post('/datos/videos/:id/completar', requiereSesion, async (c) => {
   } catch (e) {
     console.error('no se pudo cerrar la subida', v.id, partes.length, e);
     return err(c, 409, 'partes');
+  }
+  // Con tope de minutos, el peso también delata un video más largo que lo declarado (o un archivo subido de otro lado).
+  if (limites.minutos !== null && obj.size > bytesMaximos(limites.minutos)) {
+    await borrarVideo(c, v);
+    return err(c, 402, 'limite_minutos');
   }
   const ahora = Date.now();
   await c.env.DB.prepare(

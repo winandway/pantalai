@@ -481,7 +481,9 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - «Subir un video» en la Biblioteca (`web/src/componentes/SubirVideo.tsx`, cuentas en `web/src/logica/archivoVideo.ts`):
   MP4 o WebM de hasta 5 GB, título del nombre del archivo, duración leída con mediabunny, misma subida por partes y
   con reintentos que «Subir otra vez» (`subirGrabacion` con `titulo`). El servidor cumple el plan igual que con una
-  grabación (tope de videos y de minutos). Límite honesto: un archivo subido no lleva la marca grabada dentro (la
+  grabación (tope de videos y de minutos). Con tope de minutos, el servidor rechaza duración 0 y un archivo que pese
+  más que `bytesMaximos` (2,5 MB por segundo del tope, `servidor/planes.ts`): la duración la declara el navegador.
+  El tope de 5 GB es solo de la pantalla. Límite honesto: un archivo subido no lleva la marca grabada dentro (la
   marca del reproductor sí sale para el plan gratis).
 - Guía pública: Docs → «Sube un video desde tu computadora» (`upload-a-video`).
 - Pruebas: `pruebas/archivo-video.test.ts` y `e2e/subir-video.spec.ts` (sube `e2e/datos/fragmentado.mp4`), comprobada

@@ -925,6 +925,27 @@ describe('CANDADO C-LIMITES-SERVIDOR: el servidor cumple el plan aunque alguien 
     expect((await c(`/datos/videos/${id}`)).status).toBe(404);
   });
 
+  it('CANDADO C-SUBIR-VIDEO: con tope de minutos, un video sin duración (0) no se guarda', async () => {
+    const c = await registrado();
+    env.COBRO_ACTIVO = '1';
+    const { id } = (await (
+      await c('/datos/videos', { method: 'POST', json: { tipo: 'video/mp4', respaldo: true } })
+    ).json()) as { id: string };
+    const p = (await (
+      await c(`/datos/videos/${id}/partes/1`, { method: 'PUT', body: new Uint8Array(1000) })
+    ).json()) as { parte: object };
+    const r = await c(`/datos/videos/${id}/completar`, {
+      method: 'POST',
+      json: { partes: [p.parte], duracion: 0 },
+    });
+    expect(r.status).toBe(402);
+    expect(((await r.json()) as { error: string }).error).toBe('limite_minutos');
+    // El peso máximo de 5 minutos queda entre 700 y 800 MB (de sobra para 720p, no para una hora).
+    const { bytesMaximos } = await import('../servidor/planes');
+    expect(bytesMaximos(5)).toBeGreaterThan(700 * 1024 * 1024);
+    expect(bytesMaximos(5)).toBeLessThan(800 * 1024 * 1024);
+  });
+
   it('cerrar dos veces la misma subida (reintento) responde lo mismo, y cancelar no borra un video terminado', async () => {
     const c = await registrado();
     const { id } = await videoListo(c);

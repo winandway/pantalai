@@ -68,3 +68,11 @@ export function limitesDe(plan: Plan, activo: boolean): Limites {
 export function esPlan(p: unknown): p is Plan {
   return typeof p === 'string' && p in LIMITES;
 }
+
+/**
+ * Lo más que puede pesar un video de un plan con tope de minutos: 2,5 MB por segundo (unos 20 Mbps, de sobra para
+ * 720p con sonido) más 20 MB de margen. Un archivo más pesado es un video más largo que lo que dice ser.
+ */
+export function bytesMaximos(minutos: number): number {
+  return minutos * 60 * 2.5 * 1024 * 1024 + 20 * 1024 * 1024;
+}
