@@ -68,12 +68,10 @@
 - [ ] Verificar el correo al registrarse (hoy no se pide). Siguiente en la fila (sesión nueva).
 - [ ] Borrar cuenta y volver a registrarse con el mismo correo da otra prueba gratis: decidir si se guarda una huella.
 - [x] Recortador acelerado: 20 s de cada punta al instante y tira de fotos que ya no sale negra (23 oct 2026, C-RECORTE-ACELERADO).
-- [ ] Raíz para quien MIRA: el MP4 que graba Chrome viene sin índice y saltar a un minuto lejano tarda. Al terminar de grabar, reacomodar el archivo (sin re-codificar) con el índice al principio.
-      Propuesta (8 nov 2026): al terminar, el navegador ya tiene la grabación entera; la reacomoda con mediabunny
-      (fastStart, sin re-codificar) y la sube como copia. Dos caminos: (a) guardar la copia al lado del original
-      (duplica el almacenamiento de cada grabación MP4) o (b) reemplazar el original con la copia verificada (sin
-      costo extra, pero si la copia saliera mal se perdería el original). Recomendación: (b) con verificación de
-      duración y pistas antes de reemplazar. Necesita el sí de Richard por el tema del almacenamiento.
+- [ ] Raíz para quien MIRA: el MP4 que graba Chrome viene sin índice y saltar a un minuto lejano tarda.
+      DECIDIDO por Gerencia el 8 nov 2026: se REEMPLAZA el original con un remux «faststart» (mediabunny, sin volver
+      a codificar y sin pérdida). Orden obligatorio: armar la copia, comprobar que dura lo mismo y se reproduce, y
+      recién entonces reemplazar y borrar la vieja. Sin segunda copia guardada. Pendiente de construir.
 - [x] «Para YouTube»: tres títulos, descripción, palabras clave y hashtags con botones de copiar (23 oct 2026, C-YOUTUBE).
 - [ ] Miniatura para YouTube generada desde el video (Richard la hace aparte por ahora).
 - [x] Marca de agua gris «Pantalay» en el reproductor para el plan gratis, aunque el cobro siga apagado (23 oct 2026, C-MARCA-AGUA).
