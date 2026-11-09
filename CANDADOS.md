@@ -801,3 +801,20 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Ojo: la lista de páginas privadas compara la palabra completa («/record-screen-and-camera» es pública aunque
   empiece como «/record»; antes se ocultaba de Google).
 - Prueba: `pruebas/seo-idiomas.test.ts` y `e2e/seo.spec.ts`. Comprobadas en ROJO el 9 nov 2026 (sin «/es» = español).
+
+## C-RED-VIDEOS (9 nov 2026)
+
+- Qué es (pedido de Richard): «Publicar en Pantalay» pone un video listo en la red de videos: «/videos» (cuadrícula),
+  «/videos/<id>» (reproductor grande, título, autor, vistas, me gusta, compartir, denunciar y «Más videos» a la
+  derecha) y un carrusel en la portada. Estructura estándar de plataforma de video con la marca de Pantalay (no copia
+  de YouTube).
+- Base: tablas nuevas `red_publicaciones`, `red_me_gusta`, `red_denuncias` (no se tocan columnas de `videos`).
+  Solo aparece un video publicado, NO oculto, listo, con enlace público y sin archivar (`SQL_RED`): si el dueño lo
+  vuelve privado o lo archiva, sale solo. Publicar exige `acepto` (reglas) y deja el video con enlace público.
+  El superadmin ve las denuncias (`/datos/red-denuncias`) y oculta (`/datos/red/<id>/ocultar`); un video oculto el
+  dueño no lo puede volver a publicar solo. Mirar NO escribe en la base; me gusta, publicar y denunciar sí.
+- Google: «/videos» y «/es/videos» indexables; cada «/videos/<id>» lleva tarjeta para redes y `VideoObject`; los
+  publicados van al mapa del sitio.
+- Prueba: `pruebas/servidor.test.ts` › C-RED-VIDEOS y `e2e/red.spec.ts` (publicar con reglas, Videos, me gusta,
+  denunciar, VideoObject, mapa del sitio, carrusel de la portada sin sesión, quitar). Comprobadas en ROJO el 9 nov 2026.
+- Ojo en las pruebas: el carrusel se mueve; se pasa el mouse por la ventana para detenerlo antes de tocar una tarjeta.

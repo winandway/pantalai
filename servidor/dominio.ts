@@ -13,6 +13,7 @@ function rutasBase(): string[] {
   return [
     '/',
     ...LANDINGS.map((l) => `/${l.slug}`),
+    '/videos',
     '/docs',
     ...GUIAS.map((g) => `/docs/${g.slug}`),
     ...LEGALES.map((l) => `/${l.slug}`),
@@ -23,7 +24,7 @@ function rutasBase(): string[] {
 function traducible(ruta: string): boolean {
   const base = sinPrefijo(ruta);
   return (
-    esPublicaTraducible(base, [...SLUGS_LANDING, ...LEGALES.map((l) => l.slug)]) &&
+    esPublicaTraducible(base, [...SLUGS_LANDING, ...LEGALES.map((l) => l.slug), 'videos']) &&
     rutasBase().includes(base.replace(/\/+$/, '') || '/')
   );
 }
@@ -57,8 +58,8 @@ export function rutasPublicas(): string[] {
   return [...base, ...base.map((r) => conIdioma(r, 'es'))];
 }
 
-/** Mapa del sitio con las dos versiones de cada página enlazadas (hreflang), como pide Google. */
-export function sitemap(): string {
+/** Mapa del sitio con las dos versiones de cada página enlazadas (hreflang), como pide Google; más los videos de la red. */
+export function sitemap(videosRed: { id: string; publicado_en: number }[] = []): string {
   const urls = rutasPublicas()
     .map((r) => {
       const alternas = alternasIdioma(r)
@@ -66,6 +67,12 @@ export function sitemap(): string {
         .join('');
       return `  <url><loc>${DOMINIO}${r}</loc>${alternas}</url>`;
     })
+    .concat(
+      videosRed.map(
+        (v) =>
+          `  <url><loc>${DOMINIO}/videos/${v.id}</loc><lastmod>${new Date(v.publicado_en).toISOString().slice(0, 10)}</lastmod></url>`,
+      ),
+    )
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`;
 }
@@ -176,6 +183,20 @@ export function metaDeRuta(ruta: string): { titulo: string; descripcion: string;
         : 'Guides for Pantalay: record your screen and camera, trim, draw while you record, share, download MP4 and use AI.',
       indexar: true,
     };
+  if (r === '/videos')
+    return es
+      ? {
+          titulo: 'Videos hechos con Pantalay: reacciones, tutoriales y más',
+          descripcion:
+            'Mira videos de reacción, tutoriales e historias grabados con Pantalay, el grabador de pantalla gratis.',
+          indexar: true,
+        }
+      : {
+          titulo: 'Videos made with Pantalay: reactions, tutorials and more',
+          descripcion:
+            'Watch reaction videos, tutorials and stories recorded with Pantalay, the free screen recorder.',
+          indexar: true,
+        };
   const landing = landingPorSlug(r.slice(1));
   if (landing)
     return { titulo: landing[idioma].titulo, descripcion: landing[idioma].descripcion, indexar: true };

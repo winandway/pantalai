@@ -22,11 +22,12 @@ import { Grabar } from './paginas/Grabar';
 import { Estudio } from './paginas/Estudio';
 import { Inicio } from './paginas/Inicio';
 import { PaginaLanding } from './paginas/Landing';
+import { PaginaRed, VerVideoRed } from './paginas/Red';
 import { SLUGS_LANDING, landingPorSlug } from './paginas/landings';
 import { LEGALES } from './paginas/legales';
 import { conIdioma, esPublicaTraducible, idiomaDeRuta, sinPrefijo } from './logica/rutasIdioma';
 
-const SLUGS_TRADUCIBLES = [...SLUGS_LANDING, ...LEGALES.map((l) => l.slug)];
+const SLUGS_TRADUCIBLES = [...SLUGS_LANDING, ...LEGALES.map((l) => l.slug), 'videos'];
 import { PaginaVideo } from './paginas/Video';
 
 export function App() {
@@ -111,6 +112,9 @@ export function App() {
   else if (ruta === '/record') pagina = <Grabar />;
   else if (ruta === '/studio') pagina = <Estudio />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
+  else if (partes[0] === 'videos' && partes.length === 1) pagina = <PaginaRed />;
+  else if (partes[0] === 'videos' && partes[1] && partes.length === 2)
+    pagina = <VerVideoRed id={partes[1]} />;
   else if (partes.length === 1 && landingPorSlug(partes[0]!))
     pagina = <PaginaLanding landing={landingPorSlug(partes[0]!)!} />;
   else if (ruta === '/pricing') pagina = <Precios />;

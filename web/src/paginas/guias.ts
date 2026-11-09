@@ -1002,4 +1002,31 @@ export const GUIAS: Guia[] = [
       ],
     },
   },
+  {
+    slug: 'publish-to-videos',
+    seccion: 'compartir',
+    icono: '📣',
+    en: {
+      titulo: 'Publish your video in Pantalay Videos',
+      resumen:
+        'Put a finished video in Videos and on the Pantalay home page for everyone, with likes and more videos next to it. Remove it anytime.',
+      cuerpo: [
+        'Open your video and press “Publish on Pantalay”. Read the rules, check the box and press Publish. Your video becomes public and appears in Videos and in the carousel on the Pantalay home page.',
+        'In Videos, people see your video big, with its title, your name, views and likes, and more videos on the right. Anyone can watch; to like a video you need a Pantalay account.',
+        'The rules: publish only videos you made or have permission to use. If it is a reaction, add your own commentary and credit the creator. Anyone can report a video (for example, for copyright), and our team can hide it.',
+        'To take it down, open your video, press the three dots and choose “Remove from Videos”. If you make the video private or archive it, it also leaves Videos on its own.',
+      ],
+    },
+    es: {
+      titulo: 'Publica tu video en Videos de Pantalay',
+      resumen:
+        'Pon un video terminado en Videos y en la portada de Pantalay para todo el mundo, con me gusta y más videos al lado. Quítalo cuando quieras.',
+      cuerpo: [
+        'Abre tu video y toca «Publicar en Pantalay». Lee las reglas, marca la casilla y toca Publicar. Tu video queda público y aparece en Videos y en el carrusel de la portada de Pantalay.',
+        'En Videos, la gente ve tu video en grande, con su título, tu nombre, las vistas y los me gusta, y más videos a la derecha. Cualquiera lo puede ver; para dar me gusta hace falta una cuenta de Pantalay.',
+        'Las reglas: publica solo videos que hiciste o que tienes permiso de usar. Si es una reacción, ponle tu propio comentario y dale el crédito al creador. Cualquiera puede denunciar un video (por ejemplo, por derechos de autor) y nuestro equipo lo puede ocultar.',
+        'Para quitarlo, abre tu video, toca los tres puntos y elige «Quitar de Videos». Si vuelves el video privado o lo archivas, también sale solo de Videos.',
+      ],
+    },
+  },
 ];

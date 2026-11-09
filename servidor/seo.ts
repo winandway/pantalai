@@ -56,6 +56,10 @@ export function contenidoDeRuta(ruta: string): string | null {
   const g = m ? GUIAS.find((x) => x.slug === m[1]) : undefined;
   if (g)
     return `<main><p><a href="${a('/docs')}">← Docs</a></p><article><h1>${esc(g[idioma].titulo)}</h1><p>${esc(g[idioma].resumen)}</p>${g[idioma].cuerpo.map((p) => `<p>${esc(p)}</p>`).join('')}</article></main>${pie}`;
+  if (r === '/videos')
+    return es
+      ? `<main><h1>Videos en Pantalay</h1><p>Reacciones, tutoriales e historias hechas con Pantalay, el grabador de pantalla gratis.</p></main>${pie}`
+      : `<main><h1>Videos on Pantalay</h1><p>Reactions, tutorials and stories made with Pantalay, the free screen recorder.</p></main>${pie}`;
   const landing = landingPorSlug(r.slice(1));
   if (landing) {
     const t = landing[idioma];

@@ -30,6 +30,7 @@ import { DOMINIO, origenPublico } from '../logica/sitio';
 import { BotonDescargar } from '../componentes/Descargar';
 import type { EstadoIA } from '../logica/ia';
 import { PanelRegistros, PestanaRegistros, useRegistros } from '../componentes/Extension';
+import { TEXTOS_RED } from '../logica/textosRed';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '👏', '🔥', '🙌'];
 type Pestana = 'actividad' | 'transcripcion' | 'estadisticas' | 'registros';
@@ -38,6 +39,14 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
   const { t, idioma } = useIdioma();
   const { usuario } = useSesion();
   const avisar = useAviso();
+  // ¿Está publicado en la red de videos de Pantalay? (solo lo pregunta el dueño)
+  const [publicacion, setPublicacion] = useState<{ publicado: boolean; oculto: boolean } | null>(null);
+  useEffect(() => {
+    if (!usuario) return;
+    void pedir<{ publicado: boolean; oculto: boolean }>(`/datos/videos/${id}/publicar`)
+      .then(setPublicacion)
+      .catch(() => setPublicacion(null));
+  }, [id, usuario]);
   const [video, setVideo] = useState<Video | null>(null);
   const [error, setError] = useState('');
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
@@ -218,6 +227,9 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
             {(video.permitir_descarga || video.es_dueno) && (
               <BotonDescargar id={video.id} titulo={video.titulo} tieneMp4={Boolean(video.tiene_mp4)} />
             )}
+            {video.es_dueno && video.estado === 'listo' && (
+              <BotonPublicar id={video.id} estado={publicacion} cambiar={setPublicacion} />
+            )}
             {video.es_dueno && (
               <MenuPuntos
                 opciones={[
@@ -225,6 +237,21 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
                     etiqueta: t('descargarOriginal'),
                     accion: () => (location.href = `${archivoVideo(video.id)}?descargar=1&formato=webm`),
                   },
+                  ...(publicacion?.publicado
+                    ? [
+                        {
+                          etiqueta: TEXTOS_RED[idioma].quitar,
+                          accion: () =>
+                            void pedir<{ publicado: boolean }>(`/datos/videos/${video.id}/publicar`, {
+                              method: 'POST',
+                              json: { publicar: false },
+                            }).then(() => {
+                              setPublicacion({ publicado: false, oculto: false });
+                              avisar(TEXTOS_RED[idioma].quitado);
+                            }),
+                        },
+                      ]
+                    : []),
                   {
                     etiqueta: video.archivado ? t('desarchivar') : t('archivar'),
                     accion: () =>
@@ -838,5 +865,72 @@ function Compartir({
         </label>
       </div>
     </Modal>
+  );
+}
+
+/** «Publicar en Pantalay»: pone el video en la red de videos (con las reglas aceptadas). Candado C-RED-VIDEOS. */
+function BotonPublicar({
+  id,
+  estado,
+  cambiar,
+}: {
+  id: string;
+  estado: { publicado: boolean; oculto: boolean } | null;
+  cambiar: (e: { publicado: boolean; oculto: boolean }) => void;
+}) {
+  const { idioma } = useIdioma();
+  const tx = TEXTOS_RED[idioma];
+  const avisar = useAviso();
+  const [abierto, setAbierto] = useState(false);
+  const [acepto, setAcepto] = useState(false);
+  const [error, setError] = useState('');
+  if (!estado) return null;
+  if (estado.oculto)
+    return (
+      <span className="etiqueta-privado en-linea" title={tx.oculto}>
+        {tx.oculto}
+      </span>
+    );
+  if (estado.publicado)
+    return (
+      <a className="boton secundario boton-publicado" href={`/videos/${id}`} onClick={alClicEnlace}>
+        ✓ {tx.publicado} · {tx.verEnVideos}
+      </a>
+    );
+  async function publicar() {
+    setError('');
+    try {
+      await pedir(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true, acepto } });
+      cambiar({ publicado: true, oculto: false });
+      setAbierto(false);
+      avisar(tx.publicado);
+    } catch (e) {
+      setError(e instanceof ErrorApi && e.codigo === 'oculto' ? tx.oculto : String((e as Error).message));
+    }
+  }
+  return (
+    <>
+      <button type="button" className="boton boton-publicar" onClick={() => setAbierto(true)}>
+        📣 {tx.publicar}
+      </button>
+      {abierto && (
+        <Modal titulo={tx.publicarTitulo} cerrar={() => setAbierto(false)}>
+          <p>{tx.publicarTexto}</p>
+          <label className="red-regla">
+            <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} />{' '}
+            {tx.regla}
+          </label>
+          {error && <p className="error">{error}</p>}
+          <div className="fila-botones">
+            <button type="button" className="boton secundario" onClick={() => setAbierto(false)}>
+              {tx.cancelar}
+            </button>
+            <button type="button" className="boton" disabled={!acepto} onClick={() => void publicar()}>
+              {tx.publicarBoton}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

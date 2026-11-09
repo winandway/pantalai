@@ -272,7 +272,17 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-app.get('/sitemap.xml', (c) => c.body(sitemap(), 200, { 'content-type': 'application/xml; charset=utf-8' }));
+app.get('/sitemap.xml', async (c) => {
+  // Los videos publicados en la red también van al mapa (solo lee; hasta 5000).
+  const filas = await c.env.DB.prepare(
+    `SELECT r.video_id AS id, r.publicado_en FROM red_publicaciones r JOIN videos v ON v.id = r.video_id
+     WHERE r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace' AND v.archivado = 0
+     ORDER BY r.publicado_en DESC LIMIT 5000`,
+  )
+    .all<{ id: string; publicado_en: number }>()
+    .catch(() => ({ results: [] as { id: string; publicado_en: number }[] }));
+  return c.body(sitemap(filas.results ?? []), 200, { 'content-type': 'application/xml; charset=utf-8' });
+});
 app.get('/robots.txt', (c) => c.text(robots()));
 app.get('/llms.txt', (c) =>
   c.text(llmsTxt(), 200, {
@@ -1410,6 +1420,8 @@ async function borrarVideo(c: C, v: FilaVideo) {
       'video_youtube WHERE video_id',
       'video_marca WHERE video_id',
       'videos_equipo WHERE video_id',
+      'red_publicaciones WHERE video_id',
+      'red_me_gusta WHERE video_id',
       'registros_video WHERE video_id',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} = ?`).bind(v.id)),
   );
@@ -2435,6 +2447,218 @@ app.delete('/datos/videos/:id', requiereSesion, async (c) => {
   return c.json({ ok: true });
 });
 
+// ---------- red de videos de Pantalay (9 nov 2026, candado C-RED-VIDEOS) ----------
+// El dueño publica un video listo en «Videos»: se ve para todos, con me gusta y videos relacionados. Solo aparecen
+// videos listos, con enlace público y sin archivar (si el dueño lo vuelve privado, sale solo de la red). Mirar la red
+// NO escribe en la base (regla de presupuesto): solo publicar, dar me gusta y denunciar escriben.
+
+type FilaRed = {
+  id: string;
+  titulo: string;
+  duracion: number;
+  creado: number;
+  tiene_miniatura: number;
+  ancho: number;
+  alto: number;
+  autor: string;
+  me_gusta: number;
+  publicado_en: number;
+  vistas: number;
+};
+
+const SQL_RED = `SELECT v.id, v.titulo, v.duracion, v.creado, v.tiene_miniatura, v.ancho, v.alto, u.nombre AS autor,
+    r.me_gusta, r.publicado_en,
+    (SELECT COUNT(*) FROM vistas x WHERE x.video_id = v.id) AS vistas
+  FROM red_publicaciones r
+  JOIN videos v ON v.id = r.video_id
+  JOIN usuarios u ON u.id = v.usuario_id
+  WHERE r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace' AND v.archivado = 0`;
+
+const tarjetaRed = (f: FilaRed) => ({
+  id: f.id,
+  titulo: f.titulo,
+  autor: f.autor,
+  duracion: f.duracion,
+  vertical: f.alto > f.ancho,
+  miniatura: f.tiene_miniatura === 1 ? `/media/${f.id}/miniatura` : null,
+  me_gusta: f.me_gusta,
+  vistas: f.vistas,
+  publicado_en: f.publicado_en,
+});
+
+/** Lista pública de la red: lo más nuevo primero (o los más gustados), con paginación por fecha. */
+app.get('/datos/red', async (c) => {
+  const limite = Math.min(48, Math.max(1, Number(c.req.query('limite')) || 24));
+  const antes = Number(c.req.query('antes')) || Number.MAX_SAFE_INTEGER;
+  const excepto = (c.req.query('excepto') ?? '').slice(0, 40);
+  const orden =
+    c.req.query('orden') === 'gustados' ? 'r.me_gusta DESC, r.publicado_en DESC' : 'r.publicado_en DESC';
+  const filas = await c.env.DB.prepare(
+    `${SQL_RED} AND r.publicado_en < ? AND v.id != ? ORDER BY ${orden} LIMIT ?`,
+  )
+    .bind(antes, excepto, limite)
+    .all<FilaRed>();
+  return c.json({ videos: (filas.results ?? []).map(tarjetaRed) }, 200, {
+    'Cache-Control': 'public, max-age=60',
+  });
+});
+
+/** Un video de la red (para su página pública), con si la persona ya le dio me gusta. */
+app.get('/datos/red/:id', async (c) => {
+  const f = await c.env.DB.prepare(`${SQL_RED} AND v.id = ?`).bind(c.req.param('id')).first<FilaRed>();
+  if (!f) return err(c, 404, 'no_existe');
+  const u = c.get('usuario');
+  const v = await c.env.DB.prepare('SELECT descripcion, usuario_id FROM videos WHERE id = ?')
+    .bind(f.id)
+    .first<{ descripcion: string; usuario_id: string }>();
+  const gusta = u
+    ? Boolean(
+        await c.env.DB.prepare('SELECT 1 FROM red_me_gusta WHERE video_id = ? AND usuario_id = ?')
+          .bind(f.id, u.id)
+          .first(),
+      )
+    : false;
+  return c.json(
+    {
+      video: {
+        ...tarjetaRed(f),
+        descripcion: v?.descripcion ?? '',
+        me_gusta_mio: gusta,
+        es_dueno: u?.id === v?.usuario_id,
+      },
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+const esquemaPublicar = z.object({ publicar: z.boolean(), acepto: z.boolean().optional() });
+
+/** El dueño publica (o quita) su video de la red. Publicar deja el video con enlace público. */
+app.post('/datos/videos/:id/publicar', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const d = await cuerpo(c, esquemaPublicar);
+  if (!d) return err(c, 400, 'datos');
+  const actual = await c.env.DB.prepare('SELECT oculto FROM red_publicaciones WHERE video_id = ?')
+    .bind(v.id)
+    .first<{ oculto: number }>();
+  if (!d.publicar) {
+    if (actual)
+      await c.env.DB.prepare('UPDATE red_publicaciones SET publicado = 0 WHERE video_id = ?')
+        .bind(v.id)
+        .run();
+    return c.json({ publicado: false });
+  }
+  // Publicar exige aceptar las reglas (contenido propio o con permiso; reacciones con comentario propio).
+  if (!d.acepto) return err(c, 400, 'acepto');
+  if (v.estado !== 'listo') return err(c, 409, 'no_listo');
+  if (actual?.oculto) return err(c, 403, 'oculto');
+  const ahora = Date.now();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO red_publicaciones (video_id, usuario_id, publicado, oculto, me_gusta, publicado_en)
+       VALUES (?, ?, 1, 0, 0, ?)
+       ON CONFLICT(video_id) DO UPDATE SET publicado = 1`,
+    ).bind(v.id, v.usuario_id, ahora),
+    c.env.DB.prepare(
+      "UPDATE videos SET privacidad = 'enlace', archivado = 0, actualizado = ? WHERE id = ?",
+    ).bind(ahora, v.id),
+  ]);
+  return c.json({ publicado: true });
+});
+
+/** Estado de publicación del video (para el dueño). */
+app.get('/datos/videos/:id/publicar', requiereSesion, async (c) => {
+  const v = await videoDelDueno(c);
+  if (!v) return err(c, 404, 'no_existe');
+  const r = await c.env.DB.prepare('SELECT publicado, oculto FROM red_publicaciones WHERE video_id = ?')
+    .bind(v.id)
+    .first<{ publicado: number; oculto: number }>();
+  return c.json({ publicado: r?.publicado === 1 && r.oculto === 0, oculto: r?.oculto === 1 });
+});
+
+/** Me gusta (con sesión): una vez por persona; volver a tocar lo quita. */
+app.post('/datos/red/:id/me-gusta', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  const f = await c.env.DB.prepare(`${SQL_RED} AND v.id = ?`).bind(c.req.param('id')).first<FilaRed>();
+  if (!f) return err(c, 404, 'no_existe');
+  const ya = await c.env.DB.prepare('SELECT 1 FROM red_me_gusta WHERE video_id = ? AND usuario_id = ?')
+    .bind(f.id, u.id)
+    .first();
+  await c.env.DB.batch(
+    ya
+      ? [
+          c.env.DB.prepare('DELETE FROM red_me_gusta WHERE video_id = ? AND usuario_id = ?').bind(f.id, u.id),
+          c.env.DB.prepare(
+            'UPDATE red_publicaciones SET me_gusta = MAX(0, me_gusta - 1) WHERE video_id = ?',
+          ).bind(f.id),
+        ]
+      : [
+          c.env.DB.prepare('INSERT INTO red_me_gusta (video_id, usuario_id, creado) VALUES (?, ?, ?)').bind(
+            f.id,
+            u.id,
+            Date.now(),
+          ),
+          c.env.DB.prepare('UPDATE red_publicaciones SET me_gusta = me_gusta + 1 WHERE video_id = ?').bind(
+            f.id,
+          ),
+        ],
+  );
+  const n = await c.env.DB.prepare('SELECT me_gusta FROM red_publicaciones WHERE video_id = ?')
+    .bind(f.id)
+    .first<{ me_gusta: number }>();
+  return c.json({ me_gusta: n?.me_gusta ?? 0, me_gusta_mio: !ya });
+});
+
+const esquemaDenuncia = z.object({
+  motivo: z.enum(['derechos', 'sexual', 'violencia', 'odio', 'spam', 'otro']),
+  detalle: z.string().max(2000).default(''),
+  correo: z.string().max(200).default(''),
+});
+
+/** Denunciar un video de la red (derechos de autor, contenido sexual, etc.). Llega al equipo de Pantalay. */
+app.post('/datos/red/:id/denunciar', async (c) => {
+  if (!(await dentroDelLimite(c.env.DB, 'denuncia', ip(c), 10, 60 * 60 * 1000)))
+    return err(c, 429, 'demasiados');
+  const f = await c.env.DB.prepare('SELECT video_id FROM red_publicaciones WHERE video_id = ?')
+    .bind(c.req.param('id'))
+    .first<{ video_id: string }>();
+  if (!f) return err(c, 404, 'no_existe');
+  const d = await cuerpo(c, esquemaDenuncia);
+  if (!d) return err(c, 400, 'datos');
+  await c.env.DB.prepare(
+    'INSERT INTO red_denuncias (id, video_id, motivo, detalle, correo, creado) VALUES (?, ?, ?, ?, ?, ?)',
+  )
+    .bind(nuevoId(16), f.video_id, d.motivo, d.detalle, d.correo, Date.now())
+    .run();
+  return c.json({ ok: true });
+});
+
+/** El equipo de Pantalay oculta (o vuelve a mostrar) un video de la red. Solo superadmin. */
+app.post('/datos/red/:id/ocultar', requiereSesion, async (c) => {
+  if (!esSuperadmin(c)) return err(c, 404, 'ruta');
+  const d = await cuerpo(c, z.object({ oculto: z.boolean() }));
+  if (!d) return err(c, 400, 'datos');
+  const r = await c.env.DB.prepare('UPDATE red_publicaciones SET oculto = ? WHERE video_id = ?')
+    .bind(d.oculto ? 1 : 0, c.req.param('id'))
+    .run();
+  if (!r.meta.changes) return err(c, 404, 'no_existe');
+  await anotarAdmin(c, d.oculto ? 'red_ocultar' : 'red_mostrar', c.req.param('id'));
+  return c.json({ ok: true });
+});
+
+/** Denuncias recibidas (superadmin), lo más nuevo primero. */
+app.get('/datos/red-denuncias', requiereSesion, async (c) => {
+  if (!esSuperadmin(c)) return err(c, 404, 'ruta');
+  const filas = await c.env.DB.prepare(
+    `SELECT d.id, d.video_id, d.motivo, d.detalle, d.correo, d.creado, v.titulo, r.oculto
+     FROM red_denuncias d LEFT JOIN videos v ON v.id = d.video_id LEFT JOIN red_publicaciones r ON r.video_id = d.video_id
+     ORDER BY d.creado DESC LIMIT 200`,
+  ).all();
+  return c.json({ denuncias: filas.results ?? [] });
+});
+
 // ---------- actividad: comentarios, reacciones, vistas ----------
 
 app.get('/datos/videos/:id/actividad', async (c) => {
@@ -3249,6 +3473,66 @@ async function paginaApp(c: C): Promise<Response> {
   );
   return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
+
+// La página de un video en la red: su tarjeta para redes y sus datos de video para Google (VideoObject).
+app.get('/videos/:id', async (c) => {
+  const pagina = await paginaApp(c);
+  const f = await c.env.DB.prepare(`${SQL_RED} AND v.id = ?`).bind(c.req.param('id')).first<FilaRed>();
+  const html = await pagina.text();
+  const cabeceras = { headers: pagina.headers, status: pagina.status };
+  if (!f)
+    return new Response(
+      html.replace('</head>', '<meta name="robots" content="noindex" />\n  </head>'),
+      cabeceras,
+    );
+  const v = await c.env.DB.prepare('SELECT descripcion FROM videos WHERE id = ?')
+    .bind(f.id)
+    .first<{ descripcion: string }>();
+  const titulo = escaparAtributo(`${f.titulo} · Pantalay`);
+  const desc = escaparAtributo((v?.descripcion || `${f.autor} · Pantalay`).slice(0, 200));
+  const imagen = f.tiene_miniatura ? `${DOMINIO}/media/${f.id}/miniatura` : `${DOMINIO}/og.png`;
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: f.titulo,
+    description: (v?.descripcion || f.titulo).slice(0, 500),
+    thumbnailUrl: imagen,
+    uploadDate: new Date(f.publicado_en).toISOString(),
+    duration: `PT${Math.max(1, Math.round(f.duracion))}S`,
+    contentUrl: `${DOMINIO}/media/${f.id}/video`,
+    embedUrl: `${DOMINIO}/embed/${f.id}`,
+    url: `${DOMINIO}/videos/${f.id}`,
+    author: { '@type': 'Person', name: f.autor },
+    interactionStatistic: [
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/WatchAction',
+        userInteractionCount: f.vistas,
+      },
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/LikeAction',
+        userInteractionCount: f.me_gusta,
+      },
+    ],
+  };
+  const salida = html
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${titulo}</title>`)
+    .replace(/<meta name="description"[^>]*>/, () => `<meta name="description" content="${desc}" />`)
+    .replace(/<meta property="og:title"[^>]*>/, () => `<meta property="og:title" content="${titulo}">`)
+    .replace(
+      /<meta property="og:description"[^>]*>/,
+      () => `<meta property="og:description" content="${desc}">`,
+    )
+    .replace(/<meta property="og:image"[^>]*>/, () => `<meta property="og:image" content="${imagen}">`)
+    .replace(/<meta property="og:type"[^>]*>/, () => '<meta property="og:type" content="video.other">')
+    .replace(
+      '</head>',
+      () =>
+        `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>\n  </head>`,
+    );
+  return new Response(salida, cabeceras);
+});
 
 // La página pública del video lleva su propia tarjeta para WhatsApp y redes.
 app.get('/v/:id', async (c) => {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useIdioma } from '../logica/idioma';
 import { LANDINGS } from '../paginas/landings';
 import { sinPrefijo } from '../logica/rutasIdioma';
+import { TEXTOS_RED } from '../logica/textosRed';
 import { alClicEnlace, useRuta } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { useEstadoGrabacion } from '../logica/estadoGrabacion';
@@ -61,6 +62,13 @@ export function Encabezado() {
             <span aria-hidden="true">🎙️</span> {t('estudioCorto')}
           </a>
         )}
+        <a
+          href={enlace('/videos')}
+          onClick={alClicEnlace}
+          className={ruta.startsWith('/videos') ? 'activo' : ''}
+        >
+          {TEXTOS_RED[idioma].videos}
+        </a>
         <a href={enlace('/docs')} onClick={alClicEnlace} className={ruta.startsWith('/docs') ? 'activo' : ''}>
           {t('docs')}
         </a>

@@ -5311,3 +5311,240 @@ html.estudio-sin-scroll {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- red de videos de Pantalay («Videos») ---------- */
+.red {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+.red-cabeza h1 {
+  margin: 0 0 4px;
+}
+.red-cabeza p {
+  margin: 0 0 20px;
+  color: var(--tinta-suave);
+}
+.red-cuadricula {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 28px 16px;
+}
+.red-tarjeta {
+  display: grid;
+  gap: 10px;
+  color: var(--tinta);
+  text-decoration: none;
+}
+.red-tarjeta.cargando {
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: var(--fondo-suave);
+}
+.red-miniatura {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0b0a1a;
+}
+.red-miniatura img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s;
+}
+.red-miniatura img.vertical {
+  object-fit: contain;
+}
+.red-tarjeta:hover .red-miniatura img {
+  transform: scale(1.04);
+}
+.red-sin-miniatura {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 2rem;
+}
+.red-duracion {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.red-datos {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.red-titulo {
+  font-weight: 700;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.red-autor,
+.red-meta {
+  font-size: 0.86rem;
+  color: var(--tinta-suave);
+}
+.red-mas {
+  display: block;
+  margin: 28px auto 0;
+}
+/* Ver un video: reproductor grande a la izquierda, más videos a la derecha. */
+.red-ver {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 24px;
+  align-items: start;
+}
+.red-ver-reproductor {
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+}
+.red-cargando {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #0b0a1a;
+}
+.red-ver-titulo {
+  font-size: 1.35rem;
+  margin: 14px 0 10px;
+}
+.red-ver-barra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.red-ver-autor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.red-ver-autor span:last-child {
+  display: grid;
+}
+.red-ver-autor small {
+  color: var(--tinta-suave);
+}
+.red-ver-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.red-gusta.activo {
+  background: #fde8f3;
+  border-color: #ff3ea5;
+  color: #b0105f;
+}
+.red-ver-descripcion {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--fondo-suave);
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.red-ver-lado {
+  display: grid;
+  gap: 12px;
+}
+.red-ver-lado h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.red-tarjeta.chica {
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: start;
+}
+.red-tarjeta.chica .red-titulo {
+  font-size: 0.92rem;
+}
+.red-motivos {
+  border: 0;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 8px;
+}
+.red-regla {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0;
+  font-weight: 600;
+}
+.boton-publicar {
+  background: linear-gradient(135deg, #ff3ea5, #a78bfa);
+  border-color: transparent;
+}
+.boton-publicado {
+  color: var(--exito);
+  border-color: var(--exito);
+}
+/* Carrusel de la portada: la cinta pasa sola y se detiene al pasar el mouse. */
+.red-carrusel {
+  max-width: 1400px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+.red-carrusel-cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.red-carrusel-ventana {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.red-carrusel-cinta {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  animation: red-cinta 60s linear infinite;
+}
+.red-carrusel-cinta:hover {
+  animation-play-state: paused;
+}
+.red-carrusel-cinta > span {
+  width: 260px;
+}
+.red-carrusel .red-tarjeta.chica {
+  grid-template-columns: 1fr;
+}
+@keyframes red-cinta {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .red-carrusel-cinta {
+    animation: none;
+  }
+  .red-carrusel-ventana {
+    overflow-x: auto;
+  }
+}
+@media (max-width: 1000px) {
+  .red-ver {
+    grid-template-columns: 1fr;
+  }
+}

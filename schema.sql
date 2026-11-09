@@ -315,3 +315,33 @@ CREATE TABLE IF NOT EXISTS registros_video (
   navegador TEXT NOT NULL DEFAULT '',
   creado INTEGER NOT NULL
 );
+
+-- Red de videos de Pantalay (9 nov 2026): el dueño publica un video listo en «Videos» (público para todos).
+-- Tablas nuevas: no se tocan columnas de «videos». Candado C-RED-VIDEOS.
+CREATE TABLE IF NOT EXISTS red_publicaciones (
+  video_id TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  -- 1 = se ve en la red; 0 = el dueño lo quitó
+  publicado INTEGER NOT NULL DEFAULT 1,
+  -- 1 = lo ocultó el equipo de Pantalay (denuncia o reglas): el dueño no puede volver a publicarlo solo
+  oculto INTEGER NOT NULL DEFAULT 0,
+  me_gusta INTEGER NOT NULL DEFAULT 0,
+  publicado_en INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS red_publicaciones_lista ON red_publicaciones (publicado, oculto, publicado_en);
+
+CREATE TABLE IF NOT EXISTS red_me_gusta (
+  video_id TEXT NOT NULL,
+  usuario_id TEXT NOT NULL,
+  creado INTEGER NOT NULL,
+  PRIMARY KEY (video_id, usuario_id)
+);
+
+CREATE TABLE IF NOT EXISTS red_denuncias (
+  id TEXT PRIMARY KEY,
+  video_id TEXT NOT NULL,
+  motivo TEXT NOT NULL,
+  detalle TEXT NOT NULL DEFAULT '',
+  correo TEXT NOT NULL DEFAULT '',
+  creado INTEGER NOT NULL
+);

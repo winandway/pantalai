@@ -1203,3 +1203,105 @@ describe('estudio de reacciones: oEmbed de YouTube', () => {
     expect(robots).toContain('Disallow: /studio');
   });
 });
+
+describe('CANDADO C-RED-VIDEOS: la red de videos de Pantalay', () => {
+  it('solo el dueño publica, pide aceptar las reglas y el video aparece en la red', async () => {
+    const ana = await registrado('Ana', 'ana.red@example.com', '7.7.7.1');
+    const { id } = await videoListo(ana);
+    const beto = await registrado('Beto', 'beto.red@example.com', '7.7.7.2');
+    expect(
+      (await beto(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } }))
+        .status,
+    ).toBe(404);
+    expect(
+      (await ana(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true } })).status,
+    ).toBe(400);
+    const r = await ana(`/datos/videos/${id}/publicar`, {
+      method: 'POST',
+      json: { publicar: true, acepto: true },
+    });
+    expect(await r.json()).toEqual({ publicado: true });
+    const anon = cliente('7.7.7.3');
+    const lista = (await (await anon('/datos/red')).json()) as { videos: { id: string; autor: string }[] };
+    expect(lista.videos.map((v) => v.id)).toEqual([id]);
+    expect(lista.videos[0]!.autor).toBe('Ana');
+    expect(
+      ((await (await anon(`/datos/red/${id}`)).json()) as { video: { me_gusta: number } }).video.me_gusta,
+    ).toBe(0);
+    // Relacionados: excluye el que se está viendo.
+    expect(((await (await anon(`/datos/red?excepto=${id}`)).json()) as { videos: unknown[] }).videos).toEqual(
+      [],
+    );
+  });
+
+  it('me gusta una vez por persona; volver a tocar lo quita; sin sesión no se puede', async () => {
+    const ana = await registrado('Ana', 'ana.gusta@example.com', '7.7.8.1');
+    const { id } = await videoListo(ana);
+    await ana(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    const beto = await registrado('Beto', 'beto.gusta@example.com', '7.7.8.2');
+    expect(await (await beto(`/datos/red/${id}/me-gusta`, { method: 'POST' })).json()).toEqual({
+      me_gusta: 1,
+      me_gusta_mio: true,
+    });
+    expect(
+      ((await (await beto(`/datos/red/${id}`)).json()) as { video: { me_gusta_mio: boolean } }).video
+        .me_gusta_mio,
+    ).toBe(true);
+    expect(await (await beto(`/datos/red/${id}/me-gusta`, { method: 'POST' })).json()).toEqual({
+      me_gusta: 0,
+      me_gusta_mio: false,
+    });
+    expect((await cliente('7.7.8.3')(`/datos/red/${id}/me-gusta`, { method: 'POST' })).status).toBe(401);
+  });
+
+  it('un video privado, archivado o quitado sale solo de la red', async () => {
+    const ana = await registrado('Ana', 'ana.sale@example.com', '7.7.9.1');
+    const { id } = await videoListo(ana);
+    await ana(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    const anon = cliente('7.7.9.2');
+    const cuantos = async () =>
+      ((await (await anon('/datos/red')).json()) as { videos: unknown[] }).videos.length;
+    expect(await cuantos()).toBe(1);
+    await ana(`/datos/videos/${id}`, { method: 'PATCH', json: { privacidad: 'privado' } });
+    expect(await cuantos()).toBe(0);
+    expect((await anon(`/datos/red/${id}`)).status).toBe(404);
+    await ana(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    expect(await cuantos()).toBe(1); // publicar lo vuelve público
+    await ana(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: false } });
+    expect(await cuantos()).toBe(0);
+  });
+
+  it('denunciar llega al equipo; el superadmin oculta y el dueño no puede volver a publicarlo solo', async () => {
+    env = {
+      ...env,
+      SUPERADMIN_CORREOS: 'soporte.red@example.com',
+      SUPERADMIN_RUTA: '/panel/secreto-red',
+    } as typeof env;
+    const ana = await registrado('Ana', 'ana.den@example.com', '7.7.10.1');
+    const { id } = await videoListo(ana);
+    await ana(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    const anon = cliente('7.7.10.2');
+    expect(
+      (
+        await anon(`/datos/red/${id}/denunciar`, {
+          method: 'POST',
+          json: { motivo: 'derechos', detalle: 'Es mi video' },
+        })
+      ).status,
+    ).toBe(200);
+    const admin = await registrado('Soporte', 'soporte.red@example.com', '7.7.10.3');
+    const den = (await (await admin('/datos/red-denuncias')).json()) as {
+      denuncias: { video_id: string; motivo: string }[];
+    };
+    expect(den.denuncias[0]).toMatchObject({ video_id: id, motivo: 'derechos' });
+    expect((await ana('/datos/red-denuncias')).status).toBe(404);
+    expect((await admin(`/datos/red/${id}/ocultar`, { method: 'POST', json: { oculto: true } })).status).toBe(
+      200,
+    );
+    expect(((await (await anon('/datos/red')).json()) as { videos: unknown[] }).videos).toEqual([]);
+    expect(
+      (await ana(`/datos/videos/${id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } }))
+        .status,
+    ).toBe(403);
+  });
+});

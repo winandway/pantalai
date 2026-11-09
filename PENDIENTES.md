@@ -2,6 +2,10 @@
 
 ## 👤 Depende de Richard
 
+- 👤 Registrar el agente de derechos de autor (DMCA) de Pantalay en la Oficina de Derechos de Autor de EE. UU.
+  (designated agent, 6 USD, en línea, a nombre de Windoce LLC). Destraba: la protección legal de la red de videos
+  («Publicar en Pantalay») cuando alguien suba contenido de terceros. Mientras tanto ya existen «Denunciar» y ocultar.
+
 - 👤 Recuperar sus 2 grabaciones de 5 min del 19 oct: abrir la Biblioteca en la MISMA computadora y navegador y
   tocar «Subir otra vez» en «Grabaciones guardadas en esta computadora».
 

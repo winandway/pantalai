@@ -23,6 +23,7 @@ import { Demo } from '../componentes/Demo';
 import { useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
+import { CarruselRed } from './Red';
 import { FUNCIONES, PREGUNTAS } from './funciones';
 
 export { FUNCIONES };
@@ -307,6 +308,9 @@ export function Inicio() {
           </li>
         </ol>
       </section>
+
+      {/* Los videos publicados en la red de Pantalay, pasando solos (al tocar uno se abre en «Videos»). */}
+      <CarruselRed />
 
       {/* El Estudio de reacciones, en grande: es la función que más se vende (pedido de Richard, 9 nov 2026). */}
       <section className="portada-estudio" id="estudio-de-reacciones">
