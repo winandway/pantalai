@@ -17,6 +17,8 @@ import {
   accionDeTecla,
   armarMascara,
   disenoPara,
+  esVertical,
+  temaDeArchivo,
   volumenDelVideo,
   enlaceOriginal,
   pideToque,
@@ -121,6 +123,9 @@ export function Estudio() {
   }, [fijo]);
 
   const marco = useRef<HTMLIFrameElement>(null);
+  // Video de la computadora: se reproduce aquí mismo (no se sube a ningún lado).
+  const videoLocal = useRef<HTMLVideoElement>(null);
+  const elegirArchivo = useRef<HTMLInputElement>(null);
   const escenario = useRef<HTMLDivElement>(null);
   const cajaCamara = useRef<HTMLDivElement>(null);
   const videoCamara = useRef<HTMLVideoElement>(null);
@@ -286,6 +291,14 @@ export function Estudio() {
   const plataforma = video?.plataforma;
   const ordenar = useCallback(
     (accionVideo: 'play' | 'pause' | 'seekTo', segundo?: number) => {
+      const local = videoLocal.current;
+      if (plataforma === 'archivo') {
+        if (!local) return;
+        if (accionVideo === 'play') void local.play().catch(() => undefined);
+        else if (accionVideo === 'pause') local.pause();
+        else local.currentTime = segundo ?? 0;
+        return;
+      }
       const w = marco.current?.contentWindow;
       if (!w) return;
       if (plataforma === 'tiktok') w.postMessage(ordenTiktok(accionVideo, segundo), ORIGEN_TT);
@@ -300,6 +313,7 @@ export function Estudio() {
   useEffect(() => {
     if (!video) return;
     const { ordenes, enGrabacion } = volumenDelVideo(video.plataforma, volVideo);
+    if (video.plataforma === 'archivo' && videoLocal.current) videoLocal.current.volume = volVideo / 100;
     const w = marco.current?.contentWindow;
     if (w && listo)
       for (const o of ordenes) {
@@ -312,6 +326,42 @@ export function Estudio() {
   useEffect(() => {
     grabadora.current?.ajustarVolumen('micro', volMicro / 100);
   }, [volMicro]);
+
+  // Cargar un video de la computadora (dos caminos: el enlace o el archivo).
+  const urlLocal = useRef<string | null>(null);
+  const cargarArchivo = useCallback(
+    (archivo: File | undefined) => {
+      if (!archivo) return;
+      setError(null);
+      if (!archivo.type.startsWith('video/') && !/\.(mp4|mov|m4v|webm)$/i.test(archivo.name))
+        return setError({ texto: tx.archivoMalo });
+      if (urlLocal.current) URL.revokeObjectURL(urlLocal.current);
+      const url = URL.createObjectURL(archivo);
+      urlLocal.current = url;
+      setVideo({
+        plataforma: 'archivo',
+        id: url,
+        vertical: false,
+        inicio: 0,
+        creador: '',
+        nombre: archivo.name,
+      });
+      setReproduciendo(false);
+      setListo(false);
+      setAvisoVideo(null);
+      tiempo.current = 0;
+      duracion.current = 0;
+      b.setValor((x) => ({ ...x, enlace: '', creador: '', tema: temaDeArchivo(archivo.name) }));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tx],
+  );
+  useEffect(
+    () => () => {
+      if (urlLocal.current) URL.revokeObjectURL(urlLocal.current);
+    },
+    [],
+  );
 
   const alCargarMarco = useCallback(() => {
     // TikTok avisa solo; a YouTube hay que pedirle que avise su estado.
@@ -585,7 +635,33 @@ export function Estudio() {
           <button type="submit" className="boton" disabled={enCurso || !b.valor.enlace.trim()}>
             {tx.cargar}
           </button>
+          <span className="estudio-o">{tx.o}</span>
+          <button
+            type="button"
+            className="boton secundario"
+            disabled={enCurso}
+            onClick={() => elegirArchivo.current?.click()}
+          >
+            📁 {tx.subirArchivo}
+          </button>
+          <input
+            ref={elegirArchivo}
+            type="file"
+            accept="video/*,.mp4,.mov,.m4v,.webm"
+            hidden
+            aria-label={tx.subirArchivo}
+            data-archivo-estudio
+            onChange={(e) => {
+              cargarArchivo(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
         </div>
+        {video?.plataforma === 'archivo' && (
+          <p className="estudio-ayuda estudio-archivo">
+            📁 <b>{video.nombre}</b> · {tx.archivoAyuda}
+          </p>
+        )}
         <p className="estudio-ayuda">
           {tx.ayudaPlataformas}{' '}
           <a href={ENTRAR_TIKTOK} target="_blank" rel="noopener noreferrer">
@@ -741,7 +817,41 @@ export function Estudio() {
             </figure>
             <figure className="escenario-tarjeta escenario-video">
               <div className="escenario-caja">
-                {video ? (
+                {video?.plataforma === 'archivo' ? (
+                  <video
+                    key={video.id}
+                    ref={videoLocal}
+                    className="video-local"
+                    src={video.id}
+                    playsInline
+                    preload="auto"
+                    onLoadedMetadata={(e) => {
+                      const v = e.currentTarget;
+                      v.volume = volVideo / 100;
+                      duracion.current = v.duration || 0;
+                      setListo(true);
+                      const vertical = esVertical(v.videoWidth, v.videoHeight);
+                      setVideo((x) => (x && x.plataforma === 'archivo' ? { ...x, vertical } : x));
+                      b.setValor((x) => ({
+                        ...x,
+                        diseno: disenoPara(vertical),
+                        disenoV: disenoVerticalPara(vertical),
+                      }));
+                    }}
+                    onPlay={() => {
+                      setReproduciendo(true);
+                      confirmado.current = true;
+                      setAvisoVideo(null);
+                    }}
+                    onPause={() => setReproduciendo(false)}
+                    onEnded={() => setReproduciendo(false)}
+                    onTimeUpdate={(e) => (tiempo.current = e.currentTarget.currentTime)}
+                    onError={() => {
+                      setVideo(null);
+                      setError({ texto: tx.archivoMalo });
+                    }}
+                  />
+                ) : video ? (
                   <iframe
                     key={`${video.plataforma}-${video.id}`}
                     ref={marco}
@@ -911,9 +1021,11 @@ export function Estudio() {
             : video.plataforma === 'tiktok'
               ? tx.noArrancoTiktok
               : tx.noArranco}{' '}
-          <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
-            {video.plataforma === 'tiktok' ? tx.abrirTiktok : tx.abrirYoutube}
-          </a>
+          {video.plataforma !== 'archivo' && (
+            <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
+              {video.plataforma === 'tiktok' ? tx.abrirTiktok : tx.abrirYoutube}
+            </a>
+          )}
           {video.plataforma === 'tiktok' && (
             <>
               {' · '}

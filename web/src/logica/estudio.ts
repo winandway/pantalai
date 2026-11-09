@@ -213,10 +213,27 @@ export function leerMensajeTiktok(dato: unknown): MensajeYoutube | null {
 
 // ---------- Las dos plataformas juntas ----------
 
-export type Plataforma = 'youtube' | 'tiktok';
+/** «archivo»: un video de la computadora de la persona (no se sube a ningún lado: se reproduce desde ella). */
+export type Plataforma = 'youtube' | 'tiktok' | 'archivo';
 export type VideoPegado =
   | { plataforma: 'youtube'; id: string; vertical: boolean; inicio: number; creador: string }
-  | { plataforma: 'tiktok'; id: string; vertical: true; inicio: 0; creador: string; corto?: string };
+  | { plataforma: 'tiktok'; id: string; vertical: true; inicio: 0; creador: string; corto?: string }
+  | { plataforma: 'archivo'; id: string; vertical: boolean; inicio: 0; creador: string; nombre: string };
+
+/** El tema que se propone para un archivo: su nombre sin extensión ni guiones bajos. */
+export function temaDeArchivo(nombre: string): string {
+  return nombre
+    .replace(/\.[a-z0-9]{2,5}$/i, '')
+    .replace(/[_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
+/** Un archivo de video es vertical si es más alto que ancho. */
+export function esVertical(ancho: number, alto: number): boolean {
+  return alto > ancho && ancho > 0;
+}
 
 /** Reconoce un enlace de YouTube o de TikTok. */
 export function videoDeEnlace(texto: string): VideoPegado | null {
@@ -286,6 +303,7 @@ export function errorDeVideo(
 
 /** La página original del video, para abrirla cuando no se deja reproducir aquí (plan B). */
 export function enlaceOriginal(v: { plataforma: Plataforma; id: string; creador?: string }): string {
+  if (v.plataforma === 'archivo') return '';
   if (v.plataforma === 'youtube') return `https://www.youtube.com/watch?v=${v.id}`;
   return v.creador?.startsWith('@')
     ? `https://www.tiktok.com/${v.creador}/video/${v.id}`
@@ -312,6 +330,8 @@ export function volumenDelVideo(
   const v = Math.round(Math.min(100, Math.max(0, Number.isFinite(volumen) ? volumen : 100)));
   if (plataforma === 'youtube')
     return { ordenes: v === 0 ? ['mute'] : ['unMute', { setVolume: v }], enGrabacion: 1 };
+  // Archivo: la página le baja el volumen al propio reproductor (se oye y se graba así).
+  if (plataforma === 'archivo') return { ordenes: [], enGrabacion: 1 };
   return { ordenes: [v === 0 ? 'mute' : 'unMute'], enGrabacion: v / 100 };
 }
 

@@ -5213,3 +5213,18 @@ main {
 html.estudio-sin-scroll {
   overflow: hidden;
 }
+
+/* Video de la computadora dentro del escenario: sin espejo (eso es solo para la cámara) y entero. */
+.escenario-caja video.video-local {
+  transform: none;
+  object-fit: contain;
+  background: #000;
+}
+.estudio-o {
+  align-self: center;
+  color: var(--gris);
+  font-weight: 600;
+}
+.estudio-fila {
+  flex-wrap: wrap;
+}

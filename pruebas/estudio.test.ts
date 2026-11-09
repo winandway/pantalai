@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISENOS,
+  esVertical,
+  temaDeArchivo,
   medidaGrabacionEstudio,
   disenoVerticalPara,
   volumenDelVideo,
@@ -334,5 +336,19 @@ describe('estudio: medida fija del video', () => {
     expect(medidaGrabacionEstudio(0, 0)).toEqual({ ancho: 1920, alto: 1080 });
     const m = medidaGrabacionEstudio(1001, 577);
     expect((m.ancho % 2) + (m.alto % 2)).toBe(0);
+  });
+});
+
+describe('estudio: video de la computadora', () => {
+  it('propone el tema con el nombre del archivo y sabe si es vertical', () => {
+    expect(temaDeArchivo('mi_reaccion_favorita.mp4')).toBe('mi reaccion favorita');
+    expect(temaDeArchivo('Video de prueba.MOV')).toBe('Video de prueba');
+    expect(esVertical(720, 1280)).toBe(true);
+    expect(esVertical(1920, 1080)).toBe(false);
+    expect(esVertical(0, 0)).toBe(false);
+  });
+  it('el volumen lo pone el propio reproductor y no hay página que abrir', () => {
+    expect(volumenDelVideo('archivo', 30)).toEqual({ ordenes: [], enGrabacion: 1 });
+    expect(enlaceOriginal({ plataforma: 'archivo', id: 'blob:x' })).toBe('');
   });
 });

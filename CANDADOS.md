@@ -763,3 +763,9 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   esquinas oscuras y el verde del video. En CI se instala ffmpeg (verify.yml). Comprobada en ROJO el 9 nov 2026
   (sin el freno: medidas mezcladas y «cabac decode … failed», el mismo error que rompía la Mac).
 - El video que Richard grabó así (`b70a1nd4h8y4x43ub836`) se reparó aparte con FFmpeg (1920×1080) y se le entregó.
+- Video de la computadora (9 nov 2026, Richard: TikTok «a veces arranca y otras no»): botón «Subir un video de mi
+  computadora» al lado de «Cargar video». El archivo se reproduce con un `<video>` local (`URL.createObjectURL`,
+  plataforma `archivo`), NO se sube a ningún lado; nuestros botones, atajos y volumen lo manejan directo; si es
+  vertical elige solo la posición grande. Sin espejo (`.video-local`; el espejo es solo para la cámara).
+  Prueba: `e2e/estudio-vertical.spec.ts` › «video de la computadora» (graba y examina el MP4 con FFmpeg: verde en la
+  tarjeta del video, 1920×1080). Comprobada en ROJO el 9 nov 2026.

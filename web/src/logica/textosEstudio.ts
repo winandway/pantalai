@@ -21,6 +21,11 @@ const en = {
     'YouTube plays without an account. TikTok asks you to be signed in to TikTok in this same browser.',
   entrarTiktok: 'Sign in to TikTok',
   volumenVideo: 'Video volume',
+  o: 'or',
+  subirArchivo: 'Upload a video from my computer',
+  archivoAyuda:
+    'It plays from your computer: it is not uploaded anywhere. Write the creator’s @ in “Creator” so the credit shows.',
+  archivoMalo: 'That file cannot be played here. Try an MP4.',
   elegirMicrofono: 'Microphone',
   elegirCamara: 'Camera',
   predeterminado: 'Browser default',
@@ -102,6 +107,11 @@ const es: typeof en = {
     'YouTube se reproduce sin cuenta. TikTok pide que tengas tu sesión de TikTok iniciada en este mismo navegador.',
   entrarTiktok: 'Iniciar sesión en TikTok',
   volumenVideo: 'Volumen del video',
+  o: 'o',
+  subirArchivo: 'Subir un video de mi computadora',
+  archivoAyuda:
+    'Se reproduce desde tu computadora: no se sube a ningún lado. Escribe el @ del creador en «Creador» para que el crédito quede a la vista.',
+  archivoMalo: 'Ese archivo no se puede reproducir aquí. Prueba con un MP4.',
   elegirMicrofono: 'Micrófono',
   elegirCamara: 'Cámara',
   predeterminado: 'El predeterminado del navegador',
