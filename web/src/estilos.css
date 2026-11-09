@@ -5175,3 +5175,41 @@ main {
   font-weight: 600;
   color: var(--tinta);
 }
+
+/* ---------- Estudio mientras se graba: solo el escenario y la barra de botones fija abajo ---------- */
+/* Lo que no se ve no se graba (9 nov 2026): mientras se graba no hay nada que bajar ni subir. */
+.estudio.grabando > :not(.escenario-marco):not(.estudio-controles) {
+  display: none;
+}
+.estudio.grabando {
+  padding-bottom: 170px;
+}
+.estudio.grabando .escenario {
+  width: min(100%, calc((100vh - 260px) * 16 / 9));
+}
+.estudio.grabando .escenario.formato-vertical {
+  width: min(100%, calc((100vh - 260px) * 9 / 16));
+}
+.estudio.grabando .estudio-controles {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  padding: 10px 16px;
+  background: var(--fondo);
+  border-top: 1px solid var(--borde);
+  box-shadow: 0 -8px 24px rgba(16, 24, 40, 0.12);
+}
+.estudio.grabando .estudio-controles .probador-micro {
+  flex-basis: 100%;
+  margin: 0;
+}
+.estudio-controles .estudio-volumenes {
+  flex-basis: 100%;
+}
+/* Mientras se graba la página no se puede bajar (ver Estudio.tsx): el escenario no se mueve. NO usar
+   position: fixed en el escenario: con él, el navegador a veces graba en negro (9 nov 2026). */
+html.estudio-sin-scroll {
+  overflow: hidden;
+}

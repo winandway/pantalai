@@ -315,6 +315,17 @@ export function volumenDelVideo(
   return { ordenes: [v === 0 ? 'mute' : 'unMute'], enGrabacion: v / 100 };
 }
 
+/**
+ * Medida FIJA del video del Estudio (lado largo 1920, números pares), según la forma del escenario. Nunca cambia
+ * mientras se graba: si el lienzo cambiaba de medida a mitad (el escenario se movía o quedaba en parte fuera de la
+ * pantalla), el MP4 no abría en la Mac ni en QuickTime (pasó el 9 nov 2026). Candado C-ESTUDIO-MEDIDA-FIJA.
+ */
+export function medidaGrabacionEstudio(anchoCss: number, altoCss: number): { ancho: number; alto: number } {
+  const par = (n: number) => Math.max(2, Math.round(n / 2) * 2);
+  const r = anchoCss > 0 && altoCss > 0 ? anchoCss / altoCss : 16 / 9;
+  return r >= 1 ? { ancho: 1920, alto: par(1920 / r) } : { ancho: par(1920 * r), alto: 1920 };
+}
+
 /** Atajos del estudio (los mismos que el reproductor de YouTube). */
 export function accionDeTecla(tecla: string): 'alternar' | 'atras' | 'adelante' | null {
   if (tecla === ' ' || tecla === 'k' || tecla === 'K') return 'alternar';

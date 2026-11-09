@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { cabecerasDePrueba } from './ayuda';
+import { cabecerasDePrueba, examinarVideo } from './ayuda';
 
 test.use({ extraHTTPHeaders: cabecerasDePrueba(), viewport: { width: 1280, height: 900 } });
 
@@ -87,54 +87,64 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   await page.getByText('Camera + wide video').click();
 
   const escenario = await page.locator('[data-escenario]').boundingBox();
-  const dpr = await page.evaluate(() => devicePixelRatio);
   expect(escenario).not.toBeNull();
 
   await page.getByRole('button', { name: 'Start recording' }).click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1500);
+  // CANDADO C-ESTUDIO-MEDIDA-FIJA: a mitad de la grabación la ventana se achica (el escenario cambia de tamaño).
+  // Antes el video cambiaba de medida a mitad y el MP4 no abría en la Mac. Ahora tiene que salir con UNA medida.
+  await page.setViewportSize({ width: 1000, height: 760 });
+  await page.waitForTimeout(1000);
+  // Bajar la página mientras se graba ya no saca el escenario de la pantalla (queda fijo arriba) y los botones
+  // siguen a la mano (barra fija abajo). Antes salía en el video solo un pedazo del escenario.
+  await page.mouse.wheel(0, 900);
+  await page.waitForTimeout(500);
+  const fijo = (await page.locator('[data-escenario]').boundingBox())!;
+  expect(fijo.y).toBeGreaterThanOrEqual(0);
+  const barra = (await page.locator('.estudio-controles').boundingBox())!;
+  expect(fijo.y + fijo.height).toBeLessThanOrEqual(barra.y + 1); // entero, sin quedar debajo de la barra
+  await expect(page.getByRole('button', { name: 'Finish' })).toBeInViewport();
+  await page.waitForTimeout(1000);
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
 
-  // El archivo grabado: sus medidas y sus colores.
+  // El archivo grabado: sus medidas y sus colores (con la ventana de vuelta a su tamaño para leerlo bien).
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.locator('.reproductor video').waitFor();
-  const r = await page.evaluate(async () => {
-    const v = document.querySelector('.reproductor video') as HTMLVideoElement;
-    v.muted = true;
-    // Se espera mirando el estado (los avisos del reproductor a veces ya pasaron): como mucho 15 s.
-    const esperar = async (listo: () => boolean) => {
-      for (let i = 0; i < 150 && !listo(); i++) await new Promise((ok) => setTimeout(ok, 100));
-    };
-    await esperar(() => v.readyState >= 1);
-    v.currentTime = 1.5;
-    await esperar(() => !v.seeking && v.readyState >= 2);
-    const c = document.createElement('canvas');
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
-    const x = c.getContext('2d')!;
-    x.drawImage(v, 0, 0);
-    const px = (fx: number, fy: number) =>
-      Array.from(x.getImageData(Math.floor(c.width * fx), Math.floor(c.height * fy), 1, 1).data.slice(0, 3));
-    return {
-      ancho: v.videoWidth,
-      alto: v.videoHeight,
-      esquina: px(0.01, 0.02),
-      arriba: px(0.97, 0.03),
-      video: px(0.7, 0.45),
-      foto: c.toDataURL('image/jpeg', 0.8),
-    };
-  });
-  writeFileSync(test.info().outputPath('estudio-grabado.jpg'), Buffer.from(r.foto.split(',')[1]!, 'base64'));
-  const anchoEsperado = escenario!.width * dpr;
-  expect(Math.abs(r.ancho - anchoEsperado)).toBeLessThan(6);
-  expect(Math.abs(r.ancho / r.alto - 16 / 9)).toBeLessThan(0.03);
-  expect(r.ancho).toBeLessThan(1280 * dpr - 50); // no es la pestaña entera
+  const id = new URL(page.url()).pathname.split('/')[2]!;
+  // Primero se espera a que el sitio termine de reordenar el MP4 por detrás (C-INDICE-MP4): leerlo a mitad del
+  // reemplazo daba cuadros negros en la prueba.
+  await expect
+    .poll(
+      async () => {
+        const b = await (
+          await page.request.get(`/media/${id}/video`, { headers: { range: 'bytes=0-65535' } })
+        ).body();
+        const cajas: string[] = [];
+        for (let i = 0; i + 8 <= b.length && cajas.length < 4;) {
+          const t = b.readUInt32BE(i);
+          cajas.push(b.subarray(i + 4, i + 8).toString());
+          if (t < 8) break;
+          i += t;
+        }
+        return cajas.join(',');
+      },
+      { timeout: 60_000 },
+    )
+    .toMatch(/^ftyp,(free,)?moov/);
+  const archivo = await (await page.request.get(`/media/${id}/video?descargar=1`)).body();
+  writeFileSync(test.info().outputPath('estudio-grabado.mp4'), archivo);
+  const examen = await examinarVideo(archivo);
+  // Medida fija y estándar (1920 × 1080) en TODOS los cuadros, también después de achicar la ventana.
+  expect(examen.medidas).toEqual(['1920,1080']);
+  const px = examen.cuadro(1);
   // La esquina es la máscara oscura (no la página blanca de Pantalay).
-  expect(r.esquina.every((n) => n < 80)).toBe(true);
+  expect(px(0.01, 0.02).every((n) => n < 80)).toBe(true);
   // Y arriba a la derecha tampoco sale la barra blanca del sitio (botón Grabar, cuenta).
-  expect(r.arriba.every((n) => n < 80)).toBe(true);
+  expect(px(0.97, 0.03).every((n) => n < 80)).toBe(true);
   // En la tarjeta del video sale el reproductor (verde).
-  const [rojo, verde, azul] = r.video as [number, number, number];
+  const [rojo, verde, azul] = px(0.7, 0.45) as [number, number, number];
   expect(verde).toBeGreaterThan(140);
   expect(rojo).toBeLessThan(90);
   expect(azul).toBeLessThan(140);
@@ -336,7 +346,15 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
     c.width = v.videoWidth;
     c.height = v.videoHeight;
     const x = c.getContext('2d')!;
-    x.drawImage(v, 0, 0);
+    // El cuadro puede no estar pintado todavía aunque el video diga que está listo: se redibuja hasta que tenga algo.
+    for (let i = 0; i < 20; i++) {
+      x.drawImage(v, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height).data;
+      let algo = false;
+      for (let j = 0; j < d.length; j += 4 * 997) if (d[j]! + d[j + 1]! + d[j + 2]! > 30) algo = true;
+      if (algo) break;
+      await new Promise((ok) => setTimeout(ok, 200));
+    }
     const d = x.getImageData(Math.floor(c.width * centro.x), Math.floor(c.height * centro.y), 1, 1).data;
     return {
       w: v.videoWidth,
@@ -346,7 +364,7 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
     };
   }, centro);
   writeFileSync(test.info().outputPath('estudio-vertical.jpg'), Buffer.from(r.foto.split(',')[1]!, 'base64'));
-  expect(Math.abs(r.w / r.h - 9 / 16)).toBeLessThan(0.02);
+  expect({ w: r.w, h: r.h }).toEqual({ w: 1080, h: 1920 });
   const [rojo, verde] = r.centro as [number, number, number];
   expect(verde).toBeGreaterThan(140);
   expect(rojo).toBeLessThan(90);

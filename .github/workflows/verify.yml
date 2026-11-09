@@ -34,6 +34,8 @@ jobs:
       - run: npm run build
       # Chromium de Playwright: la e2e de la extensión lo necesita (el Chrome de marca ya no carga extensiones sueltas).
       - run: npx playwright install --with-deps webkit chromium
+      # FFmpeg: las pruebas del Estudio examinan el MP4 grabado cuadro por cuadro (C-ESTUDIO-MEDIDA-FIJA).
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: npx wrangler d1 execute pantalai-local --local --file schema.sql
       - name: Sitio local + grabación real con Chrome
         run: |

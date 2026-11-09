@@ -2,6 +2,7 @@
 // Pantalla + cámara se componen en un lienzo con un reloj en un Worker: así sigue grabando
 // aunque la pestaña de PANTALAI quede en segundo plano mientras grabas otra ventana.
 import { pintar, Pizarra } from './dibujo';
+import { medidaGrabacionEstudio } from './estudio';
 import type { Segmento } from './tiempo';
 
 export type Modo = 'pantalla_camara' | 'pantalla' | 'camara';
@@ -507,9 +508,16 @@ export class Grabadora {
     this.videoPantalla = vp;
     this.videoCamara = vc;
     const s = pantalla.getVideoTracks()[0]!.getSettings();
-    // En el estudio manda el tamaño del recorte (lo que de verdad llega), no el de la pestaña entera.
-    this.ancho = (this.recortarA ? vp.videoWidth : 0) || (s.width ?? vp.videoWidth) || 1920;
-    this.alto = (this.recortarA ? vp.videoHeight : 0) || (s.height ?? vp.videoHeight) || 1080;
+    this.ancho = (s.width ?? vp.videoWidth) || 1920;
+    this.alto = (s.height ?? vp.videoHeight) || 1080;
+    if (this.recortarA) {
+      // Estudio: medida FIJA y estándar según la forma del escenario (1920 de lado largo). El recorte se escala
+      // adentro; si el escenario se mueve, el video NO cambia de medida (eso rompía el MP4 en la Mac).
+      const caja = this.recortarA.getBoundingClientRect();
+      const m = medidaGrabacionEstudio(caja.width, caja.height);
+      this.ancho = m.ancho;
+      this.alto = m.alto;
+    }
     const vertical = Boolean(this.a.vertical && vc);
     if (vertical) {
       const m = medidaVertical(this.a.calidad);
@@ -533,6 +541,7 @@ export class Grabadora {
       if (
         !vertical &&
         !this.area &&
+        !this.recortarA &&
         vp.videoWidth &&
         (vp.videoWidth !== lienzo.width || vp.videoHeight !== lienzo.height)
       ) {

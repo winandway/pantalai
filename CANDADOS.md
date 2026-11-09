@@ -746,3 +746,20 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   «Micrófono» y «Cámara» (guardados con el borrador) y la grabadora usa el elegido. Si no llega señal, el probador
   escucha 1,3 s cada uno de los otros micrófonos y ofrece «Usar este micrófono» con el primero que suena (también en
   Grabar). Prueba: `e2e/microfono.spec.ts` › «encuentra el micrófono que sí tiene sonido».
+
+## C-ESTUDIO-MEDIDA-FIJA (9 nov 2026)
+
+- Qué pasaba (Richard: «descargo el MP4 y no abre en la Mac»): en el Estudio el lienzo seguía el tamaño del recorte;
+  si el escenario se movía o quedaba en parte fuera de la pantalla (Richard bajó la página para ver los botones), el
+  video cambiaba de medida a mitad (2992×1150 → 2992×1684). Chrome lo tolera; QuickTime y la Mac no lo abren.
+  Además, lo que quedaba fuera de la pantalla no salía (a ratos solo la mitad del escenario).
+- Arreglo: (1) la grabación del Estudio tiene medida FIJA y estándar (`medidaGrabacionEstudio`: 1920×1080 horizontal,
+  1080×1920 vertical) y el lienzo NO se redimensiona si hay `recortarA`; (2) antes de pedir la grabación, la página
+  se prepara (`clavado`): se esconde todo menos el escenario, los botones van en una barra fija abajo (con los
+  volúmenes) y la página NO se puede desplazar (`html.estudio-sin-scroll`). NO usar `position: fixed` en el
+  escenario: con eso el navegador a veces grabó en negro.
+- Prueba: `e2e/estudio.spec.ts` › «graba solo el escenario» achica la ventana y baja la página a mitad de la
+  grabación; luego examina el MP4 con FFmpeg (`examinarVideo` en `e2e/ayuda.ts`): TODOS los cuadros 1920×1080,
+  esquinas oscuras y el verde del video. En CI se instala ffmpeg (verify.yml). Comprobada en ROJO el 9 nov 2026
+  (sin el freno: medidas mezcladas y «cabac decode … failed», el mismo error que rompía la Mac).
+- El video que Richard grabó así (`b70a1nd4h8y4x43ub836`) se reparó aparte con FFmpeg (1920×1080) y se le entregó.

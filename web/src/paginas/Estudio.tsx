@@ -112,6 +112,13 @@ export function Estudio() {
   const [camara, setCamara] = useState<MediaStream | null>(null);
   const [sinCamara, setSinCamara] = useState(false);
   const [recorte] = useState(() => puedeRecortarPestana());
+  const [clavado, setClavado] = useState(false);
+  const fijo = clavado || estado === 'cuenta' || estado === 'grabando' || estado === 'pausa';
+  // Mientras se graba, la página no se puede bajar: el escenario queda entero a la vista todo el tiempo.
+  useEffect(() => {
+    document.documentElement.classList.toggle('estudio-sin-scroll', fijo);
+    return () => document.documentElement.classList.remove('estudio-sin-scroll');
+  }, [fijo]);
 
   const marco = useRef<HTMLIFrameElement>(null);
   const escenario = useRef<HTMLDivElement>(null);
@@ -408,13 +415,17 @@ export function Estudio() {
     g.recortarA = escenario.current;
     g.ajustarVolumen('micro', volMicro / 100);
     g.ajustarVolumen('sistema', volumenDelVideo(video.plataforma, volVideo).enGrabacion);
-    // El escenario entero a la vista, justo debajo de la barra de arriba: lo que no se ve, no se graba.
+    // El escenario se clava arriba ANTES de pedir la grabación: si cambia de lugar después, el navegador lo pierde y
+    // graba en negro. Clavado, ya no se mueve aunque se baje la página (lo que no se ve no se graba).
+    setClavado(true);
+    await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
     const barra = document.querySelector('.encabezado')?.getBoundingClientRect().height ?? 0;
     window.scrollTo({ top: escenario.current.getBoundingClientRect().top + window.scrollY - barra - 8 });
     let flujo: MediaStream;
     try {
       flujo = await g.preparar();
     } catch (e) {
+      setClavado(false);
       g.liberar();
       const d = e as DOMException;
       if (d?.message === 'otra_superficie') setError({ texto: tx.otraPestana });
@@ -449,11 +460,13 @@ export function Estudio() {
       respaldo.current = { id: r.id, tipo: g.tipo.split(';')[0]!, creado: Date.now(), duracion: 0 };
     } catch (e) {
       limpiar();
+      setClavado(false);
       if (e instanceof ErrorApi && e.codigo === 'version_vieja') return window.location.reload();
       setError({ texto: textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor') });
       return;
     }
     setEstado('cuenta');
+    setClavado(false); // desde aquí lo sostiene «enCurso»
     for (let n = 3; n > 0; n--) {
       setCuenta(n);
       await new Promise((ok) => setTimeout(ok, 1000));
@@ -534,7 +547,9 @@ export function Estudio() {
   const enCurso = estado === 'cuenta' || estado === 'grabando' || estado === 'pausa';
 
   return (
-    <div className="estudio">
+    // Mientras se graba, el escenario queda fijo arriba y los botones en una barra fija abajo: bajar la página ya no lo
+    // saca de la pantalla (lo que no se ve no se graba; pasó el 9 nov 2026).
+    <div className={`estudio${enCurso || clavado ? ' grabando' : ''}`}>
       <header className="estudio-cabeza">
         <h1>{tx.titulo}</h1>
         <p>{tx.intro}</p>
@@ -764,6 +779,7 @@ export function Estudio() {
       </div>
 
       <div className="estudio-controles">
+        {enCurso && <ProbadorMicrofono compacto microfonoId={micId} />}
         <div className="estudio-reproductor" role="group" aria-label="Video">
           <button
             type="button"
@@ -857,6 +873,36 @@ export function Estudio() {
             </span>
           )}
         </div>
+        <div className="estudio-volumenes">
+          <label>
+            <span>
+              🔊 {tx.volumenVideo} <b>{volVideo}%</b>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={volVideo}
+              aria-label={tx.volumenVideo}
+              onChange={(e) => b.cambiar('volVideo', Number(e.target.value))}
+            />
+          </label>
+          <label>
+            <span>
+              🎤 {tx.volumenMicro} <b>{volMicro}%</b>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={200}
+              step={10}
+              value={volMicro}
+              aria-label={tx.volumenMicro}
+              onChange={(e) => b.cambiar('volMicro', Number(e.target.value))}
+            />
+          </label>
+        </div>
       </div>
       {video && (pideToque(video.plataforma, listo) || avisoVideo === 'no_arranco') && (
         <p className={`estudio-aviso${avisoVideo ? ' estudio-aviso-fuerte' : ''}`} role="status">
@@ -886,36 +932,6 @@ export function Estudio() {
           </a>
         </p>
       )}
-      <div className="estudio-volumenes">
-        <label>
-          <span>
-            🔊 {tx.volumenVideo} <b>{volVideo}%</b>
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={volVideo}
-            aria-label={tx.volumenVideo}
-            onChange={(e) => b.cambiar('volVideo', Number(e.target.value))}
-          />
-        </label>
-        <label>
-          <span>
-            🎤 {tx.volumenMicro} <b>{volMicro}%</b>
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={200}
-            step={10}
-            value={volMicro}
-            aria-label={tx.volumenMicro}
-            onChange={(e) => b.cambiar('volMicro', Number(e.target.value))}
-          />
-        </label>
-      </div>
       <p className="estudio-ayuda">
         {video?.plataforma === 'tiktok' ? tx.volumenAyudaTiktok : tx.volumenAyuda}
       </p>

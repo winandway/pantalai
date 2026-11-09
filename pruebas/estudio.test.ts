@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISENOS,
+  medidaGrabacionEstudio,
   disenoVerticalPara,
   volumenDelVideo,
   FORMATOS,
@@ -323,5 +324,15 @@ describe('estudio: posiciones del Short 9:16', () => {
     expect(claseEscenario('vertical', 'clasico', true, 'protagonista')).toBe(
       'escenario formato-vertical vertical-protagonista video-es-vertical',
     );
+  });
+});
+
+describe('estudio: medida fija del video', () => {
+  it('lado largo 1920 y números pares, según la forma del escenario', () => {
+    expect(medidaGrabacionEstudio(1148, 645.75)).toEqual({ ancho: 1920, alto: 1080 });
+    expect(medidaGrabacionEstudio(450, 800)).toEqual({ ancho: 1080, alto: 1920 });
+    expect(medidaGrabacionEstudio(0, 0)).toEqual({ ancho: 1920, alto: 1080 });
+    const m = medidaGrabacionEstudio(1001, 577);
+    expect((m.ancho % 2) + (m.alto % 2)).toBe(0);
   });
 });
