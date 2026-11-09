@@ -4,12 +4,19 @@ import type { Idioma } from './idioma';
 const en = {
   titulo: 'Reaction Studio',
   intro:
-    'Paste a YouTube link, react with your camera and record only the stage: no browser bar, no tabs, no desktop.',
-  enlace: 'YouTube link',
-  enlacePlaceholder: 'https://www.youtube.com/watch?v=…',
+    'Paste a YouTube or TikTok link, react with your camera and record only the stage: no browser bar, no tabs, no desktop.',
+  enlace: 'YouTube or TikTok link',
+  enlacePlaceholder: 'https://www.youtube.com/watch?v=… or https://www.tiktok.com/@…/video/…',
   cargar: 'Load video',
-  enlaceMalo: 'That does not look like a YouTube video link. Paste the full link of a video or a Short.',
+  enlaceMalo: 'That does not look like a YouTube or TikTok video link. Paste the full link of the video.',
   noExiste: 'We could not find that video. Check the link.',
+  ocupado: 'TikTok is not letting this video play right now. Try again in a minute.',
+  posicion: 'Layout',
+  disenos: {
+    clasico: 'Camera + wide video',
+    iguales: 'Two side by side',
+    vertical: 'Vertical video (TikTok, Shorts)',
+  },
   noInsertable:
     'The owner of this video does not allow it to play outside YouTube. Use Record → “Choose area” and share the YouTube tab instead.',
   irGrabar: 'Open Record',
@@ -49,13 +56,20 @@ const en = {
 const es: typeof en = {
   titulo: 'Estudio de reacciones',
   intro:
-    'Pega un enlace de YouTube, reacciona con tu cámara y graba solo el escenario: sin barra del navegador, sin pestañas y sin escritorio.',
-  enlace: 'Enlace de YouTube',
-  enlacePlaceholder: 'https://www.youtube.com/watch?v=…',
+    'Pega un enlace de YouTube o de TikTok, reacciona con tu cámara y graba solo el escenario: sin barra del navegador, sin pestañas y sin escritorio.',
+  enlace: 'Enlace de YouTube o de TikTok',
+  enlacePlaceholder: 'https://www.youtube.com/watch?v=… o https://www.tiktok.com/@…/video/…',
   cargar: 'Cargar video',
   enlaceMalo:
-    'Eso no parece el enlace de un video de YouTube. Pega el enlace completo de un video o de un Short.',
+    'Eso no parece el enlace de un video de YouTube o de TikTok. Pega el enlace completo del video.',
   noExiste: 'No encontramos ese video. Revisa el enlace.',
+  ocupado: 'TikTok no está dejando reproducir este video en este momento. Inténtalo en un minuto.',
+  posicion: 'Posición',
+  disenos: {
+    clasico: 'Cámara + video ancho',
+    iguales: 'Dos horizontales',
+    vertical: 'Video vertical (TikTok, Shorts)',
+  },
   noInsertable:
     'El dueño de este video no deja reproducirlo fuera de YouTube. Usa Grabar → «Elegir qué parte» y comparte la pestaña de YouTube.',
   irGrabar: 'Abrir Grabar',

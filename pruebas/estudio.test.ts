@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DISENOS,
+  disenoPara,
+  errorDeVideo,
+  leerMensajeTiktok,
+  ordenTiktok,
+  urlReproductorTiktok,
+  videoDeEnlace,
+  videoDeTiktok,
   ESCUCHAR_YOUTUBE,
   accionDeTecla,
   armarMascara,
@@ -171,5 +179,81 @@ describe('estudio: la máscara', () => {
         BrowserCaptureMediaStreamTrack: { prototype: { cropTo: f } },
       }),
     ).toBe(true);
+  });
+});
+
+describe('estudio: TikTok y las posiciones', () => {
+  it('reconoce los enlaces de TikTok', () => {
+    expect(
+      videoDeTiktok(
+        'https://www.tiktok.com/@genesisjoangeliqu/video/7691731841765690645?_r=1&_t=ZS-9BGPBWAFyug',
+      ),
+    ).toEqual({ id: '7691731841765690645', creador: '@genesisjoangeliqu' });
+    expect(videoDeTiktok('tiktok.com/@a.b_c/video/7691731841765690645')).toEqual({
+      id: '7691731841765690645',
+      creador: '@a.b_c',
+    });
+    expect(videoDeTiktok('https://www.tiktok.com/player/v1/7691731841765690645')?.id).toBe(
+      '7691731841765690645',
+    );
+    expect(videoDeTiktok('https://vm.tiktok.com/ZMabc123/')).toEqual({
+      id: '',
+      creador: '',
+      corto: 'https://vm.tiktok.com/ZMabc123/',
+    });
+    expect(videoDeTiktok('https://www.tiktok.com/t/ZTabc123/')?.corto).toBe(
+      'https://www.tiktok.com/t/ZTabc123/',
+    );
+    for (const malo of [
+      'https://www.tiktok.com/@alguien',
+      'https://www.tiktok.com/@a/video/abc',
+      'https://tiktok.com.evil.com/@a/video/7691731841765690645',
+      'https://vm.tiktok.com/',
+    ])
+      expect(videoDeTiktok(malo)).toBeNull();
+  });
+
+  it('une YouTube y TikTok, y sabe cuál es vertical', () => {
+    expect(videoDeEnlace('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toMatchObject({
+      plataforma: 'youtube',
+      vertical: false,
+    });
+    expect(videoDeEnlace('https://www.youtube.com/shorts/aBcD3fGh1_-')).toMatchObject({ vertical: true });
+    expect(videoDeEnlace('https://www.tiktok.com/@x/video/7691731841765690645')).toMatchObject({
+      plataforma: 'tiktok',
+      vertical: true,
+      creador: '@x',
+    });
+    expect(videoDeEnlace('https://vimeo.com/1')).toBeNull();
+    expect(disenoPara(true)).toBe('vertical');
+    expect(disenoPara(false)).toBe('clasico');
+    expect(DISENOS).toEqual(['clasico', 'iguales', 'vertical']);
+  });
+
+  it('arma el reproductor de TikTok sin sus botones y habla su protocolo', () => {
+    const u = new URL(urlReproductorTiktok('7691731841765690645'));
+    expect(u.origin + u.pathname).toBe('https://www.tiktok.com/player/v1/7691731841765690645');
+    for (const p of ['controls', 'play_button', 'progress_bar', 'rel', 'description', 'music_info'])
+      expect(u.searchParams.get(p)).toBe('0');
+    expect(ordenTiktok('play')).toEqual({ type: 'play', 'x-tiktok-player': true });
+    expect(ordenTiktok('seekTo', 12)).toEqual({ type: 'seekTo', value: 12, 'x-tiktok-player': true });
+    expect(leerMensajeTiktok({ type: 'onPlayerReady', 'x-tiktok-player': true })).toEqual({ tipo: 'listo' });
+    expect(leerMensajeTiktok('{"type":"onStateChange","value":1}')).toEqual({ tipo: 'info', estado: 1 });
+    expect(leerMensajeTiktok({ type: 'onCurrentTime', value: { currentTime: 3, duration: 20 } })).toEqual({
+      tipo: 'info',
+      tiempo: 3,
+      duracion: 20,
+    });
+    expect(
+      leerMensajeTiktok({
+        type: 'onPlayerError',
+        value: { errorCode: 2005, errorType: 'TOO_MANY_REQUESTS' },
+      }),
+    ).toEqual({ tipo: 'error', codigo: 2005 });
+    expect(leerMensajeTiktok('[tea-sdk]ready')).toBeNull();
+    expect(errorDeVideo('tiktok', 1001)).toBe('no_existe');
+    expect(errorDeVideo('tiktok', 2005)).toBe('ocupado');
+    expect(errorDeVideo('youtube', 150)).toBe('no_insertable');
+    expect(errorDeVideo('youtube', 2)).toBeNull();
   });
 });

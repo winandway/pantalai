@@ -957,12 +957,13 @@ export const GUIAS: Guia[] = [
     icono: '🎙️',
     imagen: 'estudio',
     en: {
-      titulo: 'Reaction Studio: react to a YouTube video with a podcast-style look',
+      titulo: 'Reaction Studio: react to a YouTube or TikTok video with a podcast-style look',
       resumen:
-        'Paste a YouTube link, play it right inside Pantalay and record your reaction in a podcast frame with your name, the creator and the topic. Only the stage is recorded.',
+        'Paste a YouTube or TikTok link, play it right inside Pantalay and record your reaction in a podcast frame with your name, the creator and the topic. Choose the layout. Only the stage is recorded.',
       cuerpo: [
         'Open the Reaction Studio from your account menu (or from Record). It works in Chrome and Edge on a computer. Your camera turns on inside the stage so you can see how you look.',
-        'Paste the link of a YouTube video or Short and press Load video. The video plays with YouTube’s official player, right inside the stage: nothing is downloaded. The creator’s name and the video title fill in by themselves, and you can change them.',
+        'Paste the link of a YouTube video, a YouTube Short or a TikTok and press Load video. It plays with the official YouTube or TikTok player, right inside the stage: nothing is downloaded. The creator’s name fills in by itself (and the title, for YouTube); you can change them and write today’s topic.',
+        'Choose the layout under Layout. “Camera + wide video”: your camera square and the video wide. “Two side by side”: you and the video, both horizontal and the same size. “Vertical video (TikTok, Shorts)”: your camera wide and the video standing up. When you load a TikTok or a Short, the vertical layout is picked for you; you can change it anytime before recording.',
         'The stage is your show: your camera with your name and “Host”, the video with “@creator · Reacting”, and the “Today’s topic” strip at the bottom. You can also give your show a name.',
         'Control the video with the buttons under the stage: Play, Pause, Back 5 s and Forward 5 s. Shortcuts: Space or K to play and pause, J or ← to go back 5 seconds, L or → to go forward 5 seconds.',
         'Press Start recording. When your browser asks what to share, choose “This tab” and turn on “Also share tab audio” so the video’s sound is recorded together with your microphone. After a 3-second countdown, react.',
@@ -972,12 +973,13 @@ export const GUIAS: Guia[] = [
       ],
     },
     es: {
-      titulo: 'Estudio de reacciones: reacciona a un video de YouTube con aspecto de podcast',
+      titulo: 'Estudio de reacciones: reacciona a un video de YouTube o de TikTok con aspecto de podcast',
       resumen:
-        'Pega un enlace de YouTube, reprodúcelo dentro de Pantalay y graba tu reacción en un marco de podcast con tu nombre, el creador y el tema. Solo se graba el escenario.',
+        'Pega un enlace de YouTube o de TikTok, reprodúcelo dentro de Pantalay y graba tu reacción en un marco de podcast con tu nombre, el creador y el tema. Elige la posición. Solo se graba el escenario.',
       cuerpo: [
         'Abre el Estudio de reacciones desde el menú de tu cuenta (o desde Grabar). Funciona en Chrome y Edge de computadora. Tu cámara se enciende dentro del escenario para que veas cómo sales.',
-        'Pega el enlace de un video o de un Short de YouTube y toca Cargar video. El video se reproduce con el reproductor oficial de YouTube, dentro del escenario: no se descarga nada. El nombre del creador y el título del video se llenan solos, y los puedes cambiar.',
+        'Pega el enlace de un video de YouTube, de un Short o de un TikTok y toca Cargar video. Se reproduce con el reproductor oficial de YouTube o de TikTok, dentro del escenario: no se descarga nada. El nombre del creador se llena solo (y el título, en YouTube); los puedes cambiar y escribir el tema de hoy.',
+        'Elige la posición en Posición. «Cámara + video ancho»: tu cámara cuadrada y el video ancho. «Dos horizontales»: tú y el video, los dos acostados y del mismo tamaño. «Video vertical (TikTok, Shorts)»: tu cámara ancha y el video de pie. Al cargar un TikTok o un Short se elige sola la vertical; la puedes cambiar cuando quieras antes de grabar.',
         'El escenario es tu programa: tu cámara con tu nombre y «Anfitrión», el video con «@creador · Reaccionando» y abajo la franja «Tema de hoy». También le puedes poner nombre a tu programa.',
         'Maneja el video con los botones de abajo del escenario: Reproducir, Pausar, Atrás 5 s y Adelante 5 s. Atajos: Espacio o K para reproducir y pausar, J o ← para volver 5 segundos, L o → para adelantar 5 segundos.',
         'Toca Empezar a grabar. Cuando el navegador pregunte qué compartir, elige «Esta pestaña» y enciende «Compartir también el audio de la pestaña», así se graba el sonido del video junto con tu micrófono. Después de la cuenta de 3 segundos, reacciona.',

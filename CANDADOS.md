@@ -673,3 +673,13 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - No tocar: el reproductor es el OFICIAL insertado (`youtube-nocookie.com/embed`, `controls=0`, `rel=0`,
   `enablejsapi=1`) controlado por mensajes; nada se descarga. `frame-src` de la CSP incluye youtube-nocookie y
   youtube. Ningún botón va dentro del escenario. `/datos/oembed` pide sesión y no escribe en la base.
+- Posiciones y TikTok (9 nov 2026, pedido de Richard al probar con un TikTok): el escenario sigue en 16:9 y tiene
+  tres posiciones (`clasico` cámara cuadrada + video ancho, `iguales` dos horizontales, `vertical` cámara ancha +
+  video 9:16). Un TikTok o un Short elige `vertical` solo (`disenoPara`). TikTok usa su reproductor oficial
+  `tiktok.com/player/v1/{id}` con `controls=0` y su protocolo de mensajes (`type`, `value`, `x-tiktok-player`);
+  el creador sale del enlace y los enlaces cortos (vm./vt./t/) los resuelve `/datos/oembed` siguiendo la redirección.
+  Prueba: `e2e/estudio.spec.ts` › TikTok vertical (exige la posición vertical marcada, la tarjeta 9:16, el verde en
+  su centro y la máscara oscura justo al lado). Comprobada en ROJO el 9 nov 2026 (sin la posición automática falla
+  la e2e y la unitaria).
+- Ojo: TikTok limita su reproductor por dominio; desde un navegador automático respondió «TOO_MANY_REQUESTS» (2005).
+  La página lo dice claro («inténtalo en un minuto») en vez de quedarse en negro.

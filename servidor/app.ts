@@ -27,7 +27,7 @@ import {
   sitemap,
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
-import { arrobaDe, videoDeYoutube } from '../web/src/logica/estudio';
+import { arrobaDe, videoDeTiktok, videoDeYoutube } from '../web/src/logica/estudio';
 import { REGISTROS_MAX_BYTES, esquemaRegistros, limpiarEnServidor } from './registros';
 import {
   bytesMaximos,
@@ -903,7 +903,57 @@ async function planDe(c: C, usuarioId: string): Promise<{ plan: Plan; limites: L
 
 // Estudio de reacciones: nombre del creador y título de un video de YouTube con su oEmbed público (sin claves ni
 // costo). Solo con sesión, y no escribe nada en la base. 401/403 de YouTube = el dueño no deja insertarlo.
+/**
+ * TikTok: el enlace corto (vm.tiktok.com, tiktok.com/t/…) se convierte en el largo siguiendo su redirección, y su
+ * oEmbed público dice si el video existe (ya no trae el creador: sale del propio enlace).
+ */
+async function oembedTiktok(c: C, texto: string) {
+  let t = videoDeTiktok(texto);
+  if (!t) return err(c, 400, 'enlace');
+  if (t.corto) {
+    try {
+      const r = await fetch(t.corto, { redirect: 'manual' });
+      t = videoDeTiktok(r.headers.get('location') ?? '');
+    } catch (e) {
+      console.error('oembed: el enlace corto de TikTok no respondió', e);
+      t = null;
+    }
+    if (!t || t.corto || !t.id) return err(c, 404, 'no_existe');
+  }
+  const vacio = {
+    plataforma: 'tiktok',
+    id: t.id,
+    vertical: true,
+    insertable: true,
+    autor: '',
+    creador: t.creador,
+  };
+  let r: Response;
+  try {
+    r = await fetch(
+      `https://www.tiktok.com/oembed?url=${encodeURIComponent(`https://www.tiktok.com/${t.creador || '@_'}/video/${t.id}`)}`,
+      { cf: { cacheTtl: 3600, cacheEverything: true } } as RequestInit,
+    );
+  } catch (e) {
+    console.error('oembed: TikTok no respondió', e);
+    return c.json({ ...vacio, titulo: '' });
+  }
+  if (r.status === 400 || r.status === 404) return err(c, 404, 'no_existe');
+  if (!r.ok) {
+    console.error('oembed: respuesta rara de TikTok', r.status);
+    return c.json({ ...vacio, titulo: '' });
+  }
+  const d = (await r.json().catch(() => ({}))) as { title?: unknown; author_unique_id?: unknown };
+  const unico = typeof d.author_unique_id === 'string' ? `@${d.author_unique_id.slice(0, 60)}` : '';
+  return c.json({
+    ...vacio,
+    titulo: typeof d.title === 'string' ? d.title.slice(0, 200) : '',
+    creador: t.creador || unico,
+  });
+}
+
 app.get('/datos/oembed', requiereSesion, async (c) => {
+  if (videoDeTiktok(c.req.query('url') ?? '')) return oembedTiktok(c, c.req.query('url') ?? '');
   const v = videoDeYoutube(c.req.query('url') ?? '');
   if (!v) return err(c, 400, 'enlace');
   const pedido = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${v.id}`)}`;
@@ -912,14 +962,38 @@ app.get('/datos/oembed', requiereSesion, async (c) => {
     r = await fetch(pedido, { cf: { cacheTtl: 3600, cacheEverything: true } } as RequestInit);
   } catch (e) {
     console.error('oembed: YouTube no respondió', e);
-    return c.json({ id: v.id, insertable: true, titulo: '', autor: '', creador: '' });
+    return c.json({
+      plataforma: 'youtube',
+      id: v.id,
+      vertical: v.short,
+      insertable: true,
+      titulo: '',
+      autor: '',
+      creador: '',
+    });
   }
   if (r.status === 401 || r.status === 403)
-    return c.json({ id: v.id, insertable: false, titulo: '', autor: '', creador: '' });
+    return c.json({
+      plataforma: 'youtube',
+      id: v.id,
+      vertical: v.short,
+      insertable: false,
+      titulo: '',
+      autor: '',
+      creador: '',
+    });
   if (r.status === 404 || r.status === 400) return err(c, 404, 'no_existe');
   if (!r.ok) {
     console.error('oembed: respuesta rara de YouTube', r.status);
-    return c.json({ id: v.id, insertable: true, titulo: '', autor: '', creador: '' });
+    return c.json({
+      plataforma: 'youtube',
+      id: v.id,
+      vertical: v.short,
+      insertable: true,
+      titulo: '',
+      autor: '',
+      creador: '',
+    });
   }
   const d = (await r.json().catch(() => ({}))) as {
     title?: unknown;
@@ -929,7 +1003,9 @@ app.get('/datos/oembed', requiereSesion, async (c) => {
   const texto = (x: unknown, n: number) => (typeof x === 'string' ? x.slice(0, n) : '');
   const autor = texto(d.author_name, 120);
   return c.json({
+    plataforma: 'youtube',
     id: v.id,
+    vertical: v.short,
     insertable: true,
     titulo: texto(d.title, 200),
     autor,

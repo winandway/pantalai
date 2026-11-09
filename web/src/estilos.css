@@ -4616,3 +4616,83 @@ main {
     min-width: 0;
   }
 }
+
+/* Posiciones del escenario: «clasico» es la de arriba (cámara cuadrada + video ancho). */
+.diseno-iguales .escenario-centro {
+  grid-template-columns: 1fr 1fr;
+}
+.diseno-iguales .escenario-camara .escenario-caja {
+  aspect-ratio: 16 / 9;
+}
+.diseno-vertical .escenario-centro {
+  grid-template-columns: auto auto;
+  justify-content: center;
+  gap: 3cqw;
+}
+.diseno-vertical .escenario-caja {
+  height: 31cqw;
+  aspect-ratio: auto;
+}
+.diseno-vertical .escenario-camara {
+  width: calc(31cqw * 16 / 9);
+}
+.diseno-vertical .escenario-camara .escenario-caja {
+  aspect-ratio: auto;
+}
+.diseno-vertical .escenario-video {
+  width: calc(31cqw * 9 / 16);
+}
+.diseno-vertical .cartel-video {
+  font-size: 1.25cqw;
+  padding: 0.5cqw 1cqw;
+}
+.diseno-vertical .cartel-video b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.estudio-posiciones {
+  margin: 0;
+}
+.miniatura-diseno {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 44px;
+  height: 25px;
+  margin-right: 0.4rem;
+  border-radius: 4px;
+  background: #1a1433;
+  vertical-align: middle;
+}
+.miniatura-diseno i {
+  display: block;
+  border-radius: 2px;
+}
+.miniatura-diseno i:first-child {
+  background: #ff3ea5;
+}
+.miniatura-diseno i:last-child {
+  background: #22d3ee;
+}
+.miniatura-clasico i:first-child {
+  width: 13px;
+  height: 12px;
+}
+.miniatura-clasico i:last-child {
+  width: 21px;
+  height: 12px;
+}
+.miniatura-iguales i {
+  width: 18px;
+  height: 10px;
+}
+.miniatura-vertical i:first-child {
+  width: 26px;
+  height: 15px;
+}
+.miniatura-vertical i:last-child {
+  width: 9px;
+  height: 16px;
+}

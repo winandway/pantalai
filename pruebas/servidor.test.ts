@@ -1140,7 +1140,9 @@ describe('estudio de reacciones: oEmbed de YouTube', () => {
     });
     const r = await c('/datos/oembed?url=https://www.youtube.com/shorts/aBcD3fGh1_-');
     expect(await r.json()).toEqual({
+      plataforma: 'youtube',
       id: 'aBcD3fGh1_-',
+      vertical: true,
       insertable: true,
       titulo: 'Un video',
       autor: 'Canal',
@@ -1158,9 +1160,45 @@ describe('estudio de reacciones: oEmbed de YouTube', () => {
     vi.unstubAllGlobals();
   });
 
+  it('TikTok: creador del enlace, enlace corto resuelto y video que no existe', async () => {
+    const c = await registrado('Ana', 'ana.tiktok@example.com', '9.9.9.3');
+    const pedidos: string[] = [];
+    vi.stubGlobal('fetch', async (u: string) => {
+      pedidos.push(u);
+      if (u.startsWith('https://vm.tiktok.com/'))
+        return new Response('', {
+          status: 301,
+          headers: { location: 'https://www.tiktok.com/@corto.user/video/7691731841765690645?_r=1' },
+        });
+      if (u.includes('7000000000000000000')) return new Response('', { status: 400 });
+      return new Response(JSON.stringify({ embed_product_id: '7691731841765690645' }), { status: 200 });
+    });
+    const largo = await c(
+      `/datos/oembed?url=${encodeURIComponent('https://www.tiktok.com/@genesis/video/7691731841765690645?_r=1')}`,
+    );
+    expect(await largo.json()).toEqual({
+      plataforma: 'tiktok',
+      id: '7691731841765690645',
+      vertical: true,
+      insertable: true,
+      autor: '',
+      creador: '@genesis',
+      titulo: '',
+    });
+    const corto = await c(`/datos/oembed?url=${encodeURIComponent('https://vm.tiktok.com/ZMabc123/')}`);
+    expect(await corto.json()).toMatchObject({ id: '7691731841765690645', creador: '@corto.user' });
+    expect(pedidos[1]).toBe('https://vm.tiktok.com/ZMabc123/');
+    const no = await c(
+      `/datos/oembed?url=${encodeURIComponent('https://www.tiktok.com/@x/video/7000000000000000000')}`,
+    );
+    expect(no.status).toBe(404);
+    vi.unstubAllGlobals();
+  });
+
   it('deja insertar el reproductor de YouTube y esconde el estudio de Google', async () => {
     const r = await cliente()('/datos/config');
     expect(r.headers.get('content-security-policy')).toContain('https://www.youtube-nocookie.com');
+    expect(r.headers.get('content-security-policy')).toContain('https://www.tiktok.com');
     const robots = await (await cliente()('/robots.txt')).text();
     expect(robots).toContain('Disallow: /studio');
   });

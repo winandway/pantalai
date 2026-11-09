@@ -1,4 +1,4 @@
-// Estudio de reacciones (fase 1): se pega un enlace de YouTube, se reproduce con el reproductor oficial insertado y se
+// Estudio de reacciones: se pega un enlace de YouTube o de TikTok, se reproduce con su reproductor oficial insertado y se
 // graba SOLO el escenario de la máscara «Podcast» (la propia pestaña recortada con Region Capture). Los botones quedan
 // fuera de lo que se graba. Plan: docs/PLAN-ESTUDIO-DE-REACCIONES.md · Candado: C-ESTUDIO-RECORTE.
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -7,19 +7,25 @@ import { useAviso } from '../componentes/Aviso';
 import { ErrorApi, enlaceVideo, pedir } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import {
+  DISENOS,
   ESCUCHAR_YOUTUBE,
   accionDeTecla,
   armarMascara,
+  disenoPara,
+  errorDeVideo,
+  leerMensajeTiktok,
   leerMensajeYoutube,
-  noInsertable,
+  ordenTiktok,
   ordenYoutube,
   puedeRecortarPestana,
   saltar,
   tituloReaccion,
   urlReproductor,
-  videoDeYoutube,
+  urlReproductorTiktok,
+  videoDeEnlace,
   zonaRelativa,
-  type VideoYoutube,
+  type Diseno,
+  type VideoPegado,
 } from '../logica/estudio';
 import { AJUSTES_INICIALES, Grabadora } from '../logica/grabadora';
 import { textoError, useIdioma } from '../logica/idioma';
@@ -32,8 +38,17 @@ import { COMMIT_PAGINA, recargarSiQuedoVieja } from '../logica/version';
 import { copiar } from './Biblioteca';
 
 const ORIGEN_YT = 'https://www.youtube-nocookie.com';
+const ORIGEN_TT = 'https://www.tiktok.com';
 type Estado = 'listo' | 'cuenta' | 'grabando' | 'pausa' | 'subiendo' | 'fallo';
-type Oembed = { id: string; insertable: boolean; titulo: string; autor: string; creador: string };
+type Oembed = {
+  plataforma?: 'youtube' | 'tiktok';
+  id: string;
+  vertical?: boolean;
+  insertable: boolean;
+  titulo: string;
+  autor: string;
+  creador: string;
+};
 
 export function Estudio() {
   const { idioma, t } = useIdioma();
@@ -45,8 +60,10 @@ export function Estudio() {
     creador: '',
     tema: '',
     programa: '',
+    diseno: 'clasico' as Diseno,
   });
-  const [video, setVideo] = useState<VideoYoutube | null>(null);
+  const diseno: Diseno = DISENOS.includes(b.valor.diseno) ? b.valor.diseno : 'clasico';
+  const [video, setVideo] = useState<VideoPegado | null>(null);
   const [error, setError] = useState<{ texto: string; grabar?: boolean } | null>(null);
   const [estado, setEstado] = useState<Estado>('listo');
   const [cuenta, setCuenta] = useState(3);
@@ -109,15 +126,19 @@ export function Estudio() {
   const cargar = useCallback(
     async (texto: string, rellenar: boolean) => {
       setError(null);
-      const v = videoDeYoutube(texto);
+      const v = videoDeEnlace(texto);
       if (!v) {
         setVideo(null);
         setError({ texto: tx.enlaceMalo });
         return;
       }
-      setVideo(v);
+      // El enlace corto de TikTok no trae el número del video: hay que esperar al servidor.
+      setVideo(v.id ? v : null);
       setReproduciendo(false);
       tiempo.current = v.inicio;
+      duracion.current = 0;
+      if (rellenar)
+        b.setValor((x) => ({ ...x, diseno: disenoPara(v.vertical), creador: v.creador || '', tema: '' }));
       try {
         const d = await pedir<Oembed>(`/datos/oembed?url=${encodeURIComponent(texto.trim())}`);
         if (!d.insertable) {
@@ -125,6 +146,7 @@ export function Estudio() {
           setError({ texto: tx.noInsertable, grabar: true });
           return;
         }
+        if (!v.id && d.id) setVideo({ ...v, id: d.id, creador: d.creador } as VideoPegado);
         if (rellenar)
           b.setValor((x) => ({ ...x, creador: d.creador || x.creador, tema: d.titulo || x.tema }));
       } catch (e) {
@@ -149,45 +171,67 @@ export function Estudio() {
   // Mensajes del reproductor oficial: listo, tiempo, estado y errores.
   useEffect(() => {
     const oir = (e: MessageEvent) => {
-      if (e.origin !== ORIGEN_YT || e.source !== marco.current?.contentWindow) return;
-      const m = leerMensajeYoutube(e.data);
+      if (e.source !== marco.current?.contentWindow) return;
+      const m =
+        e.origin === ORIGEN_YT
+          ? leerMensajeYoutube(e.data)
+          : e.origin === ORIGEN_TT
+            ? leerMensajeTiktok(e.data)
+            : null;
       if (!m) return;
       if (m.tipo === 'info') {
         if (m.tiempo !== undefined) tiempo.current = m.tiempo;
         if (m.duracion) duracion.current = m.duracion;
         if (m.estado !== undefined) setReproduciendo(m.estado === 1 || m.estado === 3);
-      } else if (m.tipo === 'error' && noInsertable(m.codigo)) {
-        setVideo(null);
-        setError({ texto: tx.noInsertable, grabar: true });
+      } else if (m.tipo === 'error') {
+        const problema = errorDeVideo(e.origin === ORIGEN_TT ? 'tiktok' : 'youtube', m.codigo);
+        if (problema === 'ocupado') setError({ texto: tx.ocupado });
+        else if (problema) {
+          setVideo(null);
+          setError(
+            problema === 'no_existe' ? { texto: tx.noExiste } : { texto: tx.noInsertable, grabar: true },
+          );
+        }
       }
     };
     window.addEventListener('message', oir);
     return () => window.removeEventListener('message', oir);
   }, [tx]);
 
-  const ordenar = useCallback((func: 'playVideo' | 'pauseVideo' | 'seekTo', args: unknown[] = []) => {
-    marco.current?.contentWindow?.postMessage(ordenYoutube(func, args), ORIGEN_YT);
-  }, []);
+  const plataforma = video?.plataforma;
+  const ordenar = useCallback(
+    (accionVideo: 'play' | 'pause' | 'seekTo', segundo?: number) => {
+      const w = marco.current?.contentWindow;
+      if (!w) return;
+      if (plataforma === 'tiktok') w.postMessage(ordenTiktok(accionVideo, segundo), ORIGEN_TT);
+      else if (accionVideo === 'seekTo')
+        w.postMessage(ordenYoutube('seekTo', [segundo ?? 0, true]), ORIGEN_YT);
+      else w.postMessage(ordenYoutube(accionVideo === 'play' ? 'playVideo' : 'pauseVideo'), ORIGEN_YT);
+    },
+    [plataforma],
+  );
 
   const alCargarMarco = useCallback(() => {
-    // Se le pide varias veces que avise su estado: el primer mensaje a veces llega antes de que esté escuchando.
+    // TikTok avisa solo; a YouTube hay que pedirle que avise su estado.
+    if (plataforma === 'tiktok') return;
+    // Se le pide varias veces: el primer mensaje a veces llega antes de que esté escuchando.
     let n = 0;
     const id = window.setInterval(() => {
       marco.current?.contentWindow?.postMessage(ESCUCHAR_YOUTUBE, ORIGEN_YT);
       if (++n >= 6) window.clearInterval(id);
     }, 400);
-  }, []);
+  }, [plataforma]);
 
   const accion = useCallback(
     (a: 'alternar' | 'atras' | 'adelante') => {
       if (!video) return;
       if (a === 'alternar') {
-        ordenar(reproduciendo ? 'pauseVideo' : 'playVideo');
+        ordenar(reproduciendo ? 'pause' : 'play');
         setReproduciendo(!reproduciendo);
       } else {
         const s = saltar(tiempo.current, a === 'atras' ? -5 : 5, duracion.current);
         tiempo.current = s;
-        ordenar('seekTo', [s, true]);
+        ordenar('seekTo', s);
       }
     },
     [video, reproduciendo, ordenar],
@@ -323,7 +367,7 @@ export function Estudio() {
     const id = videoId.current;
     if (!g || !s || !id) return;
     setEstado('subiendo');
-    ordenar('pauseVideo');
+    ordenar('pause');
     const foto = miniatura.current ?? (await g.miniatura().catch(() => null));
     const dur = await g.terminar('usuario');
     try {
@@ -461,9 +505,29 @@ export function Estudio() {
         ))}
       </div>
 
+      <fieldset className="selector-modo estudio-posiciones">
+        <legend>{tx.posicion}</legend>
+        {DISENOS.map((d) => (
+          <label key={d} className={diseno === d ? 'activo' : ''}>
+            <input
+              type="radio"
+              name="estudio-diseno"
+              checked={diseno === d}
+              disabled={enCurso}
+              onChange={() => b.cambiar('diseno', d)}
+            />
+            <span className={`miniatura-diseno miniatura-${d}`} aria-hidden="true">
+              <i />
+              <i />
+            </span>
+            {tx.disenos[d]}
+          </label>
+        ))}
+      </fieldset>
+
       {/* El escenario: lo ÚNICO que se graba. Nada de botones aquí adentro. */}
       <div className="escenario-marco">
-        <div ref={escenario} className="escenario" data-escenario>
+        <div ref={escenario} className={`escenario diseno-${diseno}`} data-escenario>
           <div className="escenario-cabeza">
             <span className="escenario-logo" aria-hidden="true">
               ▶
@@ -484,11 +548,18 @@ export function Estudio() {
               <div className="escenario-caja">
                 {video ? (
                   <iframe
-                    key={video.id}
+                    key={`${video.plataforma}-${video.id}`}
                     ref={marco}
                     title={m.tema}
-                    src={urlReproductor(video, location.origin)}
-                    allow="autoplay; encrypted-media; picture-in-picture"
+                    src={
+                      video.plataforma === 'tiktok'
+                        ? urlReproductorTiktok(video.id)
+                        : urlReproductor(
+                            { id: video.id, short: video.vertical, inicio: video.inicio },
+                            location.origin,
+                          )
+                    }
+                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                     referrerPolicy="strict-origin-when-cross-origin"
                     onLoad={alCargarMarco}
                   />

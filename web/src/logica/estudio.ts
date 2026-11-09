@@ -111,6 +111,143 @@ export function noInsertable(codigo: number): boolean {
   return codigo === 101 || codigo === 150 || codigo === 153;
 }
 
+// ---------- TikTok (reproductor oficial «Embed Player v1», developers.tiktok.com/doc/embed-player) ----------
+
+export type VideoTiktok = {
+  id: string;
+  /** El @ del creador, sacado del enlace («» si es un enlace corto). */
+  creador: string;
+  /** Enlace corto (vm.tiktok.com, vt.tiktok.com, tiktok.com/t/…): el servidor lo convierte en el largo. */
+  corto?: string;
+};
+
+const HOSTS_TIKTOK = new Set([
+  'tiktok.com',
+  'www.tiktok.com',
+  'm.tiktok.com',
+  'vm.tiktok.com',
+  'vt.tiktok.com',
+]);
+const ID_TIKTOK = /^\d{8,25}$/;
+
+function aUrl(texto: string): URL | null {
+  const limpio = texto.trim();
+  if (!limpio) return null;
+  try {
+    return new URL(/^https?:\/\//i.test(limpio) ? limpio : `https://${limpio}`);
+  } catch {
+    return null;
+  }
+}
+
+/** Reconoce un enlace de TikTok: el largo (@usuario/video/123…), el del reproductor o uno corto. */
+export function videoDeTiktok(texto: string): VideoTiktok | null {
+  const url = aUrl(texto);
+  if (!url) return null;
+  const host = url.hostname.toLowerCase();
+  if (!HOSTS_TIKTOK.has(host)) return null;
+  const partes = url.pathname.split('/').filter(Boolean);
+  if (host === 'vm.tiktok.com' || host === 'vt.tiktok.com' || partes[0] === 't') {
+    const codigo = host.startsWith('v') ? partes[0] : partes[1];
+    if (!codigo || !/^[A-Za-z0-9]{4,20}$/.test(codigo)) return null;
+    return { id: '', creador: '', corto: `https://${host}/${host.startsWith('v') ? '' : 't/'}${codigo}/` };
+  }
+  if (partes[0]?.startsWith('@') && partes[1] === 'video' && ID_TIKTOK.test(partes[2] ?? ''))
+    return { id: partes[2]!, creador: partes[0].slice(0, 61) };
+  if ((partes[0] === 'player' && partes[1] === 'v1') || (partes[0] === 'embed' && partes[1] === 'v2'))
+    return ID_TIKTOK.test(partes[2] ?? '') ? { id: partes[2]!, creador: '' } : null;
+  return null;
+}
+
+/** El reproductor oficial de TikTok sin sus botones (los nuestros van fuera del escenario). */
+export function urlReproductorTiktok(id: string): string {
+  const q = new URLSearchParams({
+    controls: '0',
+    progress_bar: '0',
+    play_button: '0',
+    volume_control: '0',
+    fullscreen_button: '0',
+    timestamp: '0',
+    music_info: '0',
+    description: '0',
+    rel: '0',
+    native_context_menu: '0',
+    closed_caption: '0',
+  });
+  return `https://www.tiktok.com/player/v1/${id}?${q.toString()}`;
+}
+
+/** Orden para el reproductor de TikTok (su protocolo: type, value y la marca «x-tiktok-player»). */
+export function ordenTiktok(tipo: 'play' | 'pause' | 'seekTo', valor?: number) {
+  return valor === undefined
+    ? { type: tipo, 'x-tiktok-player': true }
+    : { type: tipo, value: valor, 'x-tiktok-player': true };
+}
+
+/** Interpreta un mensaje del reproductor de TikTok (llega como objeto o como texto). */
+export function leerMensajeTiktok(dato: unknown): MensajeYoutube | null {
+  let m: unknown = dato;
+  if (typeof dato === 'string') {
+    try {
+      m = JSON.parse(dato);
+    } catch {
+      return null;
+    }
+  }
+  if (!m || typeof m !== 'object') return null;
+  const { type, value } = m as { type?: string; value?: unknown };
+  const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : undefined);
+  if (type === 'onPlayerReady') return { tipo: 'listo' };
+  if (type === 'onStateChange') return { tipo: 'info', estado: num(value) };
+  if (type === 'onCurrentTime' && value && typeof value === 'object') {
+    const v = value as { currentTime?: unknown; duration?: unknown };
+    return { tipo: 'info', tiempo: num(v.currentTime), duracion: num(v.duration) };
+  }
+  if (type === 'onPlayerError' && value && typeof value === 'object')
+    return { tipo: 'error', codigo: num((value as { errorCode?: unknown }).errorCode) ?? 0 };
+  return null;
+}
+
+// ---------- Las dos plataformas juntas ----------
+
+export type Plataforma = 'youtube' | 'tiktok';
+export type VideoPegado =
+  | { plataforma: 'youtube'; id: string; vertical: boolean; inicio: number; creador: string }
+  | { plataforma: 'tiktok'; id: string; vertical: true; inicio: 0; creador: string; corto?: string };
+
+/** Reconoce un enlace de YouTube o de TikTok. */
+export function videoDeEnlace(texto: string): VideoPegado | null {
+  const y = videoDeYoutube(texto);
+  if (y) return { plataforma: 'youtube', id: y.id, vertical: y.short, inicio: y.inicio, creador: '' };
+  const t = videoDeTiktok(texto);
+  if (t)
+    return { plataforma: 'tiktok', id: t.id, vertical: true, inicio: 0, creador: t.creador, corto: t.corto };
+  return null;
+}
+
+/**
+ * Las posiciones del escenario (todas en 16:9): cámara cuadrada + video ancho, dos horizontales iguales, o cámara
+ * ancha + video vertical (TikTok, Shorts).
+ */
+export type Diseno = 'clasico' | 'iguales' | 'vertical';
+export const DISENOS: Diseno[] = ['clasico', 'iguales', 'vertical'];
+
+/** La posición que conviene para el video: vertical para TikTok y Shorts, la clásica para lo demás. */
+export function disenoPara(vertical: boolean): Diseno {
+  return vertical ? 'vertical' : 'clasico';
+}
+
+/** Errores que significan «este video no se puede reproducir aquí». */
+export function errorDeVideo(
+  plataforma: Plataforma,
+  codigo: number,
+): 'no_insertable' | 'no_existe' | 'ocupado' | null {
+  if (plataforma === 'youtube') return noInsertable(codigo) ? 'no_insertable' : null;
+  if (codigo === 1001) return 'no_existe';
+  if (codigo === 2001 || codigo === 2005) return 'ocupado';
+  return null;
+}
+
 /** Atajos del estudio (los mismos que el reproductor de YouTube). */
 export function accionDeTecla(tecla: string): 'alternar' | 'atras' | 'adelante' | null {
   if (tecla === ' ' || tecla === 'k' || tecla === 'K') return 'alternar';
