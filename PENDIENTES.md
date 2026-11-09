@@ -32,6 +32,12 @@
 
 ## De mi lado
 
+- [x] SEO (9 nov 2026): español con su dirección «/es», hreflang, títulos y descripciones con palabras clave, datos
+      estructurados, mapa del sitio con las dos versiones y 4 páginas por búsqueda (C-SEO-IDIOMAS).
+- [ ] SEO, siguiente: medir en Search Console en 2 a 4 semanas qué búsquedas traen visitas y escribir más páginas
+      para las que asomen. «Pantalla verde» (fondo virtual) no existe en Pantalay: si se quiere posicionar, primero
+      hay que construir la función.
+
 - [x] Estudio de reacciones, fase 1 (9 nov 2026): `/studio`, enlace de YouTube con reproductor oficial, ±5 s y
       atajos, creador y título automáticos, máscara «Podcast» neón 16:9, graba solo el escenario (candado
       C-ESTUDIO-RECORTE), guía en Docs en los dos idiomas.

@@ -211,7 +211,7 @@ function Logo({ icono, tam = 28 }: { icono: SimpleIcon; tam?: number }) {
 }
 
 export function Inicio() {
-  const { t, idioma } = useIdioma();
+  const { t, idioma, enlace } = useIdioma();
   const { usuario, cargando } = useSesion();
   const es = idioma === 'es';
   useEffect(() => {
@@ -250,7 +250,7 @@ export function Inicio() {
             {empezar}
             <a
               className="boton secundario grande portada-segundo"
-              href="/docs/start-here"
+              href={enlace('/docs/start-here')}
               onClick={alClicEnlace}
             >
               {es ? 'Ver cómo funciona' : 'See how it works'}
@@ -358,7 +358,11 @@ export function Inicio() {
             >
               🎙️ {es ? 'Abrir el Estudio de reacciones' : 'Open the Reaction Studio'}
             </a>
-            <a className="boton secundario grande" href="/docs/reaction-studio" onClick={alClicEnlace}>
+            <a
+              className="boton secundario grande"
+              href={enlace('/docs/reaction-studio')}
+              onClick={alClicEnlace}
+            >
               {es ? 'Ver cómo funciona' : 'See how it works'}
             </a>
           </div>

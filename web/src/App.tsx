@@ -10,7 +10,7 @@ import { Encabezado, Pie } from './componentes/Marco';
 import { pedir, type Usuario } from './logica/api';
 import { borrarBorradoresDeCuenta } from './logica/borrador';
 import { ContextoIdioma, TEXTOS, idiomaGuardado, useIdioma, type Idioma } from './logica/idioma';
-import { alClicEnlace, useRuta } from './logica/ruta';
+import { alClicEnlace, navegar, useRuta } from './logica/ruta';
 import { ContextoSesion } from './logica/sesion';
 import { Biblioteca } from './paginas/Biblioteca';
 import { Docs } from './paginas/Docs';
@@ -21,11 +21,24 @@ import { PaginaEquipo, UnirseEquipo } from './paginas/Equipo';
 import { Grabar } from './paginas/Grabar';
 import { Estudio } from './paginas/Estudio';
 import { Inicio } from './paginas/Inicio';
+import { PaginaLanding } from './paginas/Landing';
+import { SLUGS_LANDING, landingPorSlug } from './paginas/landings';
+import { LEGALES } from './paginas/legales';
+import { conIdioma, esPublicaTraducible, idiomaDeRuta, sinPrefijo } from './logica/rutasIdioma';
+
+const SLUGS_TRADUCIBLES = [...SLUGS_LANDING, ...LEGALES.map((l) => l.slug)];
 import { PaginaVideo } from './paginas/Video';
 
 export function App() {
-  const ruta = useRuta();
-  const [idioma, setIdioma] = useState<Idioma>(idiomaGuardado);
+  const rutaCompleta = useRuta();
+  // «/es/…» es la versión en español de una página pública (SEO). Para elegir la página se usa la dirección sin
+  // «/es»; en las páginas públicas manda el idioma de la dirección (así Google ve cada idioma en su dirección).
+  const ruta = sinPrefijo(rutaCompleta);
+  const publica = esPublicaTraducible(ruta, SLUGS_TRADUCIBLES);
+  const [idiomaElegido, setIdioma] = useState<Idioma>(() =>
+    idiomaDeRuta(rutaCompleta) === 'es' ? 'es' : idiomaGuardado(),
+  );
+  const idioma: Idioma = publica ? idiomaDeRuta(rutaCompleta) : idiomaElegido;
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(true);
 
@@ -44,14 +57,26 @@ export function App() {
     document.documentElement.lang = idioma;
   }, [idioma]);
 
-  const cambiar = useCallback((i: Idioma) => {
-    setIdioma(i);
-    try {
-      localStorage.setItem('pantalai:idioma', i);
-    } catch {
-      /* sin almacenamiento */
-    }
-  }, []);
+  const cambiar = useCallback(
+    (i: Idioma) => {
+      setIdioma(i);
+      try {
+        localStorage.setItem('pantalai:idioma', i);
+      } catch {
+        /* sin almacenamiento */
+      }
+      // En una página pública, cambiar de idioma es ir a su gemela en el otro idioma.
+      if (publica) navegar(conIdioma(ruta, i), true);
+    },
+    [publica, ruta],
+  );
+  const enlace = useCallback(
+    (destino: string) =>
+      esPublicaTraducible(destino.split('#')[0]!.split('?')[0]!, SLUGS_TRADUCIBLES)
+        ? conIdioma(destino, idioma)
+        : destino,
+    [idioma],
+  );
 
   const salir = useCallback(async () => {
     if (usuario) borrarBorradoresDeCuenta(usuario.id);
@@ -65,8 +90,8 @@ export function App() {
   }, [usuario]);
 
   const valorIdioma = useMemo(
-    () => ({ idioma, cambiar, t: (c: keyof (typeof TEXTOS)['en']) => TEXTOS[idioma][c] }),
-    [idioma, cambiar],
+    () => ({ idioma, cambiar, enlace, t: (c: keyof (typeof TEXTOS)['en']) => TEXTOS[idioma][c] }),
+    [idioma, cambiar, enlace],
   );
   const valorSesion = useMemo(() => ({ usuario, cargando, setUsuario, salir }), [usuario, cargando, salir]);
 
@@ -86,6 +111,8 @@ export function App() {
   else if (ruta === '/record') pagina = <Grabar />;
   else if (ruta === '/studio') pagina = <Estudio />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
+  else if (partes.length === 1 && landingPorSlug(partes[0]!))
+    pagina = <PaginaLanding landing={landingPorSlug(partes[0]!)!} />;
   else if (ruta === '/pricing') pagina = <Precios />;
   else if (ruta === '/account') pagina = <Cuenta />;
   else if (legalPorSlug(partes[0] ?? '') && partes.length === 1)

@@ -584,7 +584,7 @@ describe('páginas y salud', () => {
     } as unknown as Fetcher;
     const r = await cliente()('/');
     expect(r.status).toBe(200);
-    expect(await r.text()).toContain('<title>PANTALAI');
+    expect(await r.text()).toContain('<title>Free Screen Recorder');
     expect(r.headers.get('content-security-policy')).toContain("default-src 'self'");
     expect(r.headers.get('strict-transport-security')).toContain('max-age');
     expect(pedidos).toEqual(['/', '/app.html', '/app']);

@@ -1140,10 +1140,17 @@ export const TEXTOS: Record<Idioma, Record<Clave, string>> = { en, es };
 export type ClaveTexto = Clave;
 
 export type Traductor = (clave: Clave) => string;
-export const ContextoIdioma = createContext<{ idioma: Idioma; t: Traductor; cambiar: (i: Idioma) => void }>({
+export const ContextoIdioma = createContext<{
+  idioma: Idioma;
+  t: Traductor;
+  cambiar: (i: Idioma) => void;
+  /** Enlace interno en el idioma actual: las páginas públicas en español van bajo «/es» (SEO). */
+  enlace: (ruta: string) => string;
+}>({
   idioma: 'en',
   t: (c) => en[c],
   cambiar: () => undefined,
+  enlace: (r) => r,
 });
 export const useIdioma = () => useContext(ContextoIdioma);
 

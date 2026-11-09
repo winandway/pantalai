@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useIdioma } from '../logica/idioma';
+import { LANDINGS } from '../paginas/landings';
+import { sinPrefijo } from '../logica/rutasIdioma';
 import { alClicEnlace, useRuta } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { useEstadoGrabacion } from '../logica/estadoGrabacion';
@@ -20,10 +22,10 @@ export function Logo() {
 }
 
 export function Encabezado() {
-  const { t, idioma, cambiar } = useIdioma();
+  const { t, idioma, cambiar, enlace } = useIdioma();
   const { usuario, salir, cargando } = useSesion();
   const grabacion = useEstadoGrabacion();
-  const ruta = useRuta();
+  const ruta = sinPrefijo(useRuta());
   const [menu, setMenu] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -41,7 +43,7 @@ export function Encabezado() {
   return (
     <header className="encabezado">
       <a
-        href={usuario ? '/library' : '/'}
+        href={usuario ? '/library' : enlace('/')}
         onClick={alClicEnlace}
         className="encabezado-logo"
         aria-label="Pantalay"
@@ -59,7 +61,7 @@ export function Encabezado() {
             <span aria-hidden="true">🎙️</span> {t('estudioCorto')}
           </a>
         )}
-        <a href="/docs" onClick={alClicEnlace} className={ruta.startsWith('/docs') ? 'activo' : ''}>
+        <a href={enlace('/docs')} onClick={alClicEnlace} className={ruta.startsWith('/docs') ? 'activo' : ''}>
           {t('docs')}
         </a>
       </nav>
@@ -140,23 +142,31 @@ export function Encabezado() {
 }
 
 export function Pie() {
-  const { t } = useIdioma();
+  const { t, idioma, enlace } = useIdioma();
   return (
     <footer className="pie">
+      {/* Las páginas de cada búsqueda, enlazadas desde todo el sitio (SEO: enlaces internos). */}
+      <nav className="pie-enlaces pie-herramientas" aria-label="Pantalay">
+        {LANDINGS.map((l) => (
+          <a key={l.slug} href={enlace(`/${l.slug}`)} onClick={alClicEnlace}>
+            {l[idioma].h1}
+          </a>
+        ))}
+      </nav>
       <nav className="pie-enlaces" aria-label={t('cta.legal')}>
-        <a href="/docs" onClick={alClicEnlace}>
+        <a href={enlace('/docs')} onClick={alClicEnlace}>
           Docs
         </a>
-        <a href="/terms" onClick={alClicEnlace}>
+        <a href={enlace('/terms')} onClick={alClicEnlace}>
           {t('legal.pie')}
         </a>
-        <a href="/privacy" onClick={alClicEnlace}>
+        <a href={enlace('/privacy')} onClick={alClicEnlace}>
           {t('legal.privacidad')}
         </a>
-        <a href="/acceptable-use" onClick={alClicEnlace}>
+        <a href={enlace('/acceptable-use')} onClick={alClicEnlace}>
           {t('legal.uso')}
         </a>
-        <a href="/cookies" onClick={alClicEnlace}>
+        <a href={enlace('/cookies')} onClick={alClicEnlace}>
           {t('legal.cookies')}
         </a>
       </nav>

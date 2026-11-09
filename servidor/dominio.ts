@@ -4,6 +4,40 @@
 import { GUIAS } from '../web/src/paginas/guias';
 import { LEGALES, legalPorSlug } from '../web/src/paginas/legales';
 import { contenidoDeRuta, datosEstructurados, DOMINIO } from './seo';
+import { LANDINGS, landingPorSlug, SLUGS_LANDING } from '../web/src/paginas/landings';
+import { conIdioma, esPublicaTraducible, idiomaDeRuta, sinPrefijo } from '../web/src/logica/rutasIdioma';
+import type { Idioma } from '../web/src/logica/idioma';
+
+/** Las páginas públicas en inglés (cada una tiene su gemela en español bajo «/es»). */
+function rutasBase(): string[] {
+  return [
+    '/',
+    ...LANDINGS.map((l) => `/${l.slug}`),
+    '/docs',
+    ...GUIAS.map((g) => `/docs/${g.slug}`),
+    ...LEGALES.map((l) => `/${l.slug}`),
+  ];
+}
+
+/** ¿Esta página pública tiene versión en los dos idiomas? */
+function traducible(ruta: string): boolean {
+  const base = sinPrefijo(ruta);
+  return (
+    esPublicaTraducible(base, [...SLUGS_LANDING, ...LEGALES.map((l) => l.slug)]) &&
+    rutasBase().includes(base.replace(/\/+$/, '') || '/')
+  );
+}
+
+/** Las etiquetas hreflang de una página: inglés, español y x-default (inglés). */
+export function alternasIdioma(ruta: string): { idioma: Idioma | 'x-default'; url: string }[] {
+  if (!traducible(ruta)) return [];
+  const base = sinPrefijo(ruta.replace(/\/+$/, '') || '/');
+  return [
+    { idioma: 'en', url: `${DOMINIO}${conIdioma(base, 'en')}` },
+    { idioma: 'es', url: `${DOMINIO}${conIdioma(base, 'es')}` },
+    { idioma: 'x-default', url: `${DOMINIO}${conIdioma(base, 'en')}` },
+  ];
+}
 
 export { DOMINIO };
 export const HOSTS_VIEJOS = new Set(['pantalai.sitios.dev', 'www.pantalay.com']);
@@ -19,14 +53,21 @@ export function redireccion(url: string, metodo: string): string | null {
 
 /** Páginas públicas para Google y los buscadores de IA. */
 export function rutasPublicas(): string[] {
-  return ['/', '/docs', ...GUIAS.map((g) => `/docs/${g.slug}`), ...LEGALES.map((l) => `/${l.slug}`)];
+  const base = rutasBase();
+  return [...base, ...base.map((r) => conIdioma(r, 'es'))];
 }
 
+/** Mapa del sitio con las dos versiones de cada página enlazadas (hreflang), como pide Google. */
 export function sitemap(): string {
   const urls = rutasPublicas()
-    .map((r) => `  <url><loc>${DOMINIO}${r}</loc></url>`)
+    .map((r) => {
+      const alternas = alternasIdioma(r)
+        .map((a) => `<xhtml:link rel="alternate" hreflang="${a.idioma}" href="${a.url}"/>`)
+        .join('');
+      return `  <url><loc>${DOMINIO}${r}</loc>${alternas}</url>`;
+    })
     .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`;
 }
 
 /** Buscadores de IA invitados por su nombre (además de todos los demás con «*»). */
@@ -101,26 +142,49 @@ export function archivoGoogle(nombre: string, codigos: string[]): string | null 
 const escapar = (t: string) =>
   t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** Título y resumen que ve Google en cada página pública (las guías de Docs llevan los suyos). */
+/** Título y resumen que ve Google en cada página pública, en el idioma de su dirección (español bajo «/es»). */
 export function metaDeRuta(ruta: string): { titulo: string; descripcion: string; indexar: boolean } | null {
   if (
-    /^\/(library|record|studio|embed\/|v\/[^/]+\/edit|pricing|admin|panel|checkout|reset-password|verify-email|account|team|join)/.test(
+    // Palabra completa: «/record-screen-and-camera» es pública aunque empiece como «/record».
+    /^\/(?:(?:library|record|studio|pricing|admin|panel|checkout|reset-password|verify-email|account|team|join)(?:\/|$)|embed\/|v\/[^/]+\/edit)/.test(
       ruta,
     )
   )
     return { titulo: 'Pantalay', descripcion: '', indexar: false };
-  if (ruta === '/docs' || ruta === '/docs/')
+  const idioma = idiomaDeRuta(ruta);
+  const es = idioma === 'es';
+  const r = sinPrefijo(ruta).replace(/\/+$/, '') || '/';
+  if (r === '/')
+    return es
+      ? {
+          titulo: 'Grabar pantalla gratis online con cámara y enlace al instante | Pantalay',
+          descripcion:
+            'Grabador de pantalla gratis en tu navegador: graba pantalla, cámara y sonido, comparte con un enlace en segundos y descarga en MP4. Estudio de reacciones para YouTube y TikTok.',
+          indexar: true,
+        }
+      : {
+          titulo: 'Free Screen Recorder Online — Record Screen & Camera | Pantalay',
+          descripcion:
+            'Free screen recorder in your browser: record your screen, camera and sound, share a link in seconds and download MP4. Reaction studio for YouTube and TikTok.',
+          indexar: true,
+        };
+  if (r === '/docs')
     return {
-      titulo: 'Docs · Pantalay',
-      descripcion:
-        'Guides for Pantalay: record your screen and camera, trim, draw while you record, share, download MP4 and use AI.',
+      titulo: es ? 'Docs de Pantalay: guías para grabar tu pantalla' : 'Docs · Pantalay',
+      descripcion: es
+        ? 'Guías de Pantalay: graba tu pantalla y tu cámara, recorta, dibuja mientras grabas, comparte, descarga en MP4 y usa la IA.'
+        : 'Guides for Pantalay: record your screen and camera, trim, draw while you record, share, download MP4 and use AI.',
       indexar: true,
     };
-  const m = /^\/docs\/([a-z0-9-]+)\/?$/.exec(ruta);
+  const landing = landingPorSlug(r.slice(1));
+  if (landing)
+    return { titulo: landing[idioma].titulo, descripcion: landing[idioma].descripcion, indexar: true };
+  const m = /^\/docs\/([a-z0-9-]+)$/.exec(r);
   const g = m ? GUIAS.find((x) => x.slug === m[1]) : undefined;
-  if (g) return { titulo: `${g.en.titulo} · Pantalay Docs`, descripcion: g.en.resumen, indexar: true };
-  const l = legalPorSlug(ruta.replace(/^\/|\/$/g, ''));
-  if (l) return { titulo: `${l.en.titulo} · Pantalay`, descripcion: l.en.resumen, indexar: true };
+  if (g)
+    return { titulo: `${g[idioma].titulo} · Pantalay Docs`, descripcion: g[idioma].resumen, indexar: true };
+  const l = legalPorSlug(r.slice(1));
+  if (l) return { titulo: `${l[idioma].titulo} · Pantalay`, descripcion: l[idioma].resumen, indexar: true };
   return null;
 }
 
@@ -144,7 +208,20 @@ export function prepararCabecera(html: string, ruta: string, codigos: string[]):
         () => `<meta property="og:url" content="${DOMINIO}${ruta.replace(/\/$/, '')}" />`,
       );
   }
+  // El idioma de la página (para Google y los lectores de pantalla) y sus gemelas en el otro idioma (hreflang).
+  if (idiomaDeRuta(ruta) === 'es') h = h.replace('<html lang="en">', '<html lang="es">');
+  const alternas = alternasIdioma(ruta)
+    .map((a) => `<link rel="alternate" hreflang="${a.idioma}" href="${a.url}" />`)
+    .join('\n    ');
+  if (idiomaDeRuta(ruta) === 'es')
+    h = h
+      .replace(/<meta property="og:locale"[^>]*>/, '')
+      .replace(
+        '<meta property="og:type"',
+        '<meta property="og:locale" content="es_ES" />\n    <meta property="og:type"',
+      );
   const extra = [
+    alternas,
     meta && !meta.indexar ? '<meta name="robots" content="noindex" />' : '',
     etiquetasGoogle(codigos),
     '<link rel="alternate" type="text/plain" title="LLMs" href="/llms.txt" />',

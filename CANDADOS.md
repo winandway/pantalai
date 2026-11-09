@@ -784,3 +784,20 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   con `autoGanancia: false`; Grabar lo deja como estaba (por defecto sí).
 - Prueba: `pruebas/mezcla.test.ts` y `e2e/estudio.spec.ts` (micrófono al 200 % → FFmpeg `volumedetect`: pico ≤ −0,5
   dB; queda en −1 dB). Comprobada en ROJO el 9 nov 2026: solo con el compresor el pico fue 0,0 dB.
+
+## C-SEO-IDIOMAS (9 nov 2026)
+
+- Qué pasaba (Richard: «no la veo posicionada en las búsquedas»): todo vivía en una sola dirección en inglés; el
+  español solo aparecía al cambiar el idioma en la página, así que Google no tenía nada en español («grabar pantalla»).
+  Tampoco había páginas para cada búsqueda.
+- Arreglo: el español vive bajo «/es/…» con las mismas palabras en inglés en la dirección (`web/src/logica/rutasIdioma.ts`;
+  inglés sigue siendo el principal). Cada página pública (portada, Docs, cada guía, legales y las páginas por búsqueda)
+  tiene `<html lang>`, título y descripción en su idioma (`metaDeRuta`), texto para Google en su idioma
+  (`contenidoDeRuta`), datos estructurados (`datosEstructurados`: SoftwareApplication, FAQPage, HowTo, TechArticle,
+  BreadcrumbList), etiquetas hreflang en/es/x-default (`alternasIdioma`) y su lugar en el mapa del sitio con
+  `xhtml:link`. En la app, en las páginas públicas manda el idioma de la dirección y el selector lleva a la gemela;
+  los enlaces internos usan `enlace()` del contexto de idioma. Páginas por búsqueda (`web/src/paginas/landings.ts`):
+  screen-recorder, record-screen-and-camera, reaction-video-maker, vertical-video-recorder, enlazadas desde el pie.
+- Ojo: la lista de páginas privadas compara la palabra completa («/record-screen-and-camera» es pública aunque
+  empiece como «/record»; antes se ocultaba de Google).
+- Prueba: `pruebas/seo-idiomas.test.ts` y `e2e/seo.spec.ts`. Comprobadas en ROJO el 9 nov 2026 (sin «/es» = español).

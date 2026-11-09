@@ -6,7 +6,7 @@ import { alClicEnlace } from '../logica/ruta';
 import { GUIAS, SECCIONES, type Guia } from './guias';
 
 export function Docs({ slug }: { slug: string }) {
-  const { t, idioma } = useIdioma();
+  const { t, idioma, enlace } = useIdioma();
   const [q, setQ] = useState('');
   const buscador = useRef<HTMLInputElement>(null);
   const guia = GUIAS.find((g) => g.slug === slug);
@@ -41,7 +41,7 @@ export function Docs({ slug }: { slug: string }) {
   return (
     <div className="docs">
       <aside className="docs-lateral">
-        <a href="/docs" onClick={alClicEnlace} className={`docs-inicio ${!slug ? 'activo' : ''}`}>
+        <a href={enlace('/docs')} onClick={alClicEnlace} className={`docs-inicio ${!slug ? 'activo' : ''}`}>
           📘 {t('docsTitulo')}
         </a>
         <input
@@ -61,7 +61,7 @@ export function Docs({ slug }: { slug: string }) {
             {guias.map((g) => (
               <a
                 key={g.slug}
-                href={`/docs/${g.slug}`}
+                href={enlace(`/docs/${g.slug}`)}
                 onClick={alClicEnlace}
                 className={g.slug === slug ? 'activo' : ''}
               >
@@ -74,7 +74,7 @@ export function Docs({ slug }: { slug: string }) {
       <article className="docs-contenido">
         {guia ? (
           <>
-            <a href="/docs" onClick={alClicEnlace} className="enlace docs-volver">
+            <a href={enlace('/docs')} onClick={alClicEnlace} className="enlace docs-volver">
               {t('docsVolver')}
             </a>
             <p className="ayuda">
@@ -131,7 +131,7 @@ export function Docs({ slug }: { slug: string }) {
                   {guias.map((g) => (
                     <a
                       key={g.slug}
-                      href={`/docs/${g.slug}`}
+                      href={enlace(`/docs/${g.slug}`)}
                       onClick={alClicEnlace}
                       className="tarjeta docs-tarjeta"
                     >

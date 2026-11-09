@@ -6,7 +6,7 @@ import { alClicEnlace } from '../logica/ruta';
 import { ACTUALIZADO, LEGALES, type Legal as TipoLegal } from './legales';
 
 export function Legal({ legal }: { legal: TipoLegal }) {
-  const { idioma, t } = useIdioma();
+  const { idioma, t, enlace } = useIdioma();
   const texto = legal[idioma];
   useEffect(() => {
     document.title = `${texto.titulo} · Pantalay`;
@@ -34,7 +34,7 @@ export function Legal({ legal }: { legal: TipoLegal }) {
           ))}
         </nav>
         <nav>
-          <a href="/docs" onClick={alClicEnlace}>
+          <a href={enlace('/docs')} onClick={alClicEnlace}>
             📚 Docs
           </a>
         </nav>

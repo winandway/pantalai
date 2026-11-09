@@ -46,7 +46,12 @@ const video: Video = {
   es_dueno: false,
 };
 
-const idioma = { idioma: 'en' as const, t: (c: keyof typeof TEXTOS.en) => TEXTOS.en[c], cambiar: vi.fn() };
+const idioma = {
+  idioma: 'en' as const,
+  t: (c: keyof typeof TEXTOS.en) => TEXTOS.en[c],
+  cambiar: vi.fn(),
+  enlace: (r: string) => r,
+};
 
 beforeEach(() => {
   URL.createObjectURL = vi.fn(() => 'blob:vtt');

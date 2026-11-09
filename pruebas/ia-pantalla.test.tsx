@@ -6,7 +6,12 @@ import { ProveedorAviso } from '../web/src/componentes/Aviso';
 import { ContextoIdioma, TEXTOS } from '../web/src/logica/idioma';
 import { ahorro, documentoATexto } from '../web/src/logica/ia';
 
-const idioma = { idioma: 'es' as const, t: (c: keyof typeof TEXTOS.en) => TEXTOS.es[c], cambiar: vi.fn() };
+const idioma = {
+  idioma: 'es' as const,
+  t: (c: keyof typeof TEXTOS.en) => TEXTOS.es[c],
+  cambiar: vi.fn(),
+  enlace: (r: string) => r,
+};
 const envolver = (n: React.ReactNode) =>
   render(
     <ContextoIdioma.Provider value={idioma}>

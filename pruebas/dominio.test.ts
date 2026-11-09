@@ -80,8 +80,8 @@ describe('CANDADO C-GOOGLE: listo para verificar en Google Search Console', () =
     expect(h).not.toContain('noindex');
     expect(prepararCabecera(base, '/library', [])).toContain('<meta name="robots" content="noindex" />');
     expect(prepararCabecera(base, '/pricing', [])).toContain('noindex');
-    // La portada conserva su título y suma los datos para Google y las IAs.
-    expect(prepararCabecera(base, '/', [])).toContain('<title>Pantalay</title>');
+    // La portada lleva su título con las palabras que la gente busca (SEO, 9 nov 2026) y los datos para Google.
+    expect(prepararCabecera(base, '/', [])).toContain('<title>Free Screen Recorder Online');
     expect(prepararCabecera(base, '/', [])).toContain('"@type":"FAQPage"');
   });
 });
