@@ -37,7 +37,7 @@
       C-ESTUDIO-RECORTE), guía en Docs en los dos idiomas.
 - [x] Estudio: TikTok (enlaces largos y cortos) y selector de posiciones en el escenario 16:9: cámara + video ancho,
       dos horizontales, video vertical (9 nov 2026, pedido de Richard).
-- [ ] Estudio, fase 2: escenario vertical 9:16 completo para publicar como Short (cámara arriba, video abajo).
+- [x] Estudio, fase 2: escenario vertical 9:16 para Shorts, TikTok y Reels (cámara arriba, video abajo) (9 nov 2026).
 - [ ] Estudio, fase 3: personalizar nombre del programa, logo y colores guardados por cuenta; varias máscaras.
 - [ ] Estudio, fase 4: cartel «Hablando/Escuchando» con el micrófono, barras de sonido, «Para YouTube» con el
       creador ya puesto.

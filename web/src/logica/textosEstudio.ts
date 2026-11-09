@@ -16,6 +16,8 @@ const en = {
   noArranco: 'The video did not start. Tap the video directly, or open it on its own page.',
   abrirTiktok: 'Open on TikTok',
   abrirYoutube: 'Open on YouTube',
+  formato: 'Format',
+  formatos: { horizontal: 'Horizontal 16:9 (YouTube)', vertical: 'Vertical 9:16 (Shorts, TikTok, Reels)' },
   posicion: 'Layout',
   disenos: {
     clasico: 'Camera + wide video',
@@ -75,6 +77,8 @@ const es: typeof en = {
   noArranco: 'El video no arrancó. Tócalo directamente o ábrelo en su página.',
   abrirTiktok: 'Abrir en TikTok',
   abrirYoutube: 'Abrir en YouTube',
+  formato: 'Formato',
+  formatos: { horizontal: 'Horizontal 16:9 (YouTube)', vertical: 'Vertical 9:16 (Shorts, TikTok, Reels)' },
   posicion: 'Posición',
   disenos: {
     clasico: 'Cámara + video ancho',

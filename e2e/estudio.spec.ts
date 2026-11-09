@@ -242,6 +242,79 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
   expect((r.afuera as number[]).every((n) => n < 90)).toBe(true);
 });
 
+// Formato vertical 9:16: el archivo sale vertical (Short), con la cámara arriba y el video abajo.
+test('el estudio graba un Short vertical 9:16', async ({ page }) => {
+  await page.route('https://www.youtube-nocookie.com/embed/**', (r) =>
+    r.fulfill({ status: 200, contentType: 'text/html', body: REPRODUCTOR_FALSO }),
+  );
+  await page.route('**/datos/oembed?**', (r) =>
+    r.fulfill({
+      json: {
+        plataforma: 'youtube',
+        id: 'dQw4w9WgXcQ',
+        vertical: false,
+        insertable: true,
+        titulo: 'Tema vertical',
+        autor: '',
+        creador: '@c',
+      },
+    }),
+  );
+  await page.goto('/signup');
+  const puede = await page.evaluate(() => 'CropTarget' in window);
+  test.skip(!puede, 'Este navegador no tiene Region Capture.');
+  await page.getByLabel('Your name').fill('Soporte E2E');
+  await page.getByLabel('Email').fill(`e2e.estudio.vertical.${Date.now()}@example.com`);
+  await page.getByLabel('Password', { exact: true }).fill(`Prueba-${Date.now()}`);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page).toHaveURL(/\/library/);
+  await page.goto('/studio');
+  await page.getByText('Vertical 9:16').click();
+  await expect(page.locator('.estudio-posiciones')).toHaveCount(0);
+  await page.getByLabel('YouTube or TikTok link').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  await page.getByRole('button', { name: 'Load video' }).click();
+  await expect(page.locator('.escenario-tema')).toHaveText('Tema vertical');
+  const total = (await page.locator('[data-escenario]').boundingBox())!;
+  expect(Math.abs(total.width / total.height - 9 / 16)).toBeLessThan(0.01);
+  const cam = (await page.locator('.escenario-camara .escenario-caja').boundingBox())!;
+  const vid = (await page.locator('.escenario-video .escenario-caja').boundingBox())!;
+  expect(cam.y + cam.height).toBeLessThan(vid.y); // cámara arriba, video abajo
+  const centro = {
+    x: (vid.x + vid.width / 2 - total.x) / total.width,
+    y: (vid.y + vid.height / 2 - total.y) / total.height,
+  };
+  await page.getByRole('button', { name: 'Start recording' }).click();
+  await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
+  await page.waitForTimeout(3000);
+  await page.getByRole('button', { name: 'Finish' }).click();
+  await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
+  await page.locator('.reproductor video').waitFor();
+  const r = await page.evaluate(async (centro) => {
+    const v = document.querySelector('.reproductor video') as HTMLVideoElement;
+    v.muted = true;
+    if (v.readyState < 1) await new Promise((ok) => v.addEventListener('loadedmetadata', ok, { once: true }));
+    v.currentTime = 1.5;
+    await new Promise((ok) => v.addEventListener('seeked', ok, { once: true }));
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth;
+    c.height = v.videoHeight;
+    const x = c.getContext('2d')!;
+    x.drawImage(v, 0, 0);
+    const d = x.getImageData(Math.floor(c.width * centro.x), Math.floor(c.height * centro.y), 1, 1).data;
+    return {
+      w: v.videoWidth,
+      h: v.videoHeight,
+      centro: Array.from(d.slice(0, 3)),
+      foto: c.toDataURL('image/jpeg', 0.8),
+    };
+  }, centro);
+  writeFileSync(test.info().outputPath('estudio-vertical.jpg'), Buffer.from(r.foto.split(',')[1]!, 'base64'));
+  expect(Math.abs(r.w / r.h - 9 / 16)).toBeLessThan(0.02);
+  const [rojo, verde] = r.centro as [number, number, number];
+  expect(verde).toBeGreaterThan(140);
+  expect(rojo).toBeLessThan(90);
+});
+
 // Plan B: un video que no obedece al play nunca deja la portada muerta: aviso claro, botón de vuelta y «Abrir».
 test('si el video no arranca, se avisa y se ofrece abrirlo', async ({ page }) => {
   await page.route('https://www.youtube-nocookie.com/embed/**', (r) =>

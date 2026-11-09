@@ -64,5 +64,19 @@ for (const idioma of ['en', 'es']) {
   await p.screenshot({ path: png, clip: caja });
   execFileSync('cwebp', ['-quiet', '-q', '82', png, '-o', `web/public/capturas/estudio-${idioma}.webp`]);
   console.log('captura', idioma);
+  // La misma, en vertical 9:16 (Shorts, TikTok, Reels).
+  await p.locator('.estudio-formatos label').nth(1).click();
+  await p.waitForTimeout(800);
+  const vertical = `docs/capturas/estudio-vertical-${idioma}.png`;
+  await p.locator('.escenario').screenshot({ path: vertical });
+  execFileSync('cwebp', [
+    '-quiet',
+    '-q',
+    '82',
+    vertical,
+    '-o',
+    `web/public/capturas/estudio-vertical-${idioma}.webp`,
+  ]);
+  await p.locator('.estudio-formatos label').nth(0).click();
 }
 await navegador.close();

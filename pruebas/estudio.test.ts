@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISENOS,
+  FORMATOS,
+  claseEscenario,
   enlaceOriginal,
   pideToque,
   disenoPara,
@@ -278,5 +280,15 @@ describe('estudio: el play de TikTok (portada que pide un toque)', () => {
     expect(enlaceOriginal({ plataforma: 'tiktok', id: '7691731841765690645', creador: '' })).toBe(
       'https://www.tiktok.com/player/v1/7691731841765690645',
     );
+  });
+});
+
+describe('estudio: formato vertical 9:16', () => {
+  it('arma las clases del escenario', () => {
+    expect(claseEscenario('horizontal', 'iguales', false)).toBe('escenario diseno-iguales');
+    expect(claseEscenario('horizontal', 'vertical', true)).toBe('escenario diseno-vertical');
+    expect(claseEscenario('vertical', 'clasico', false)).toBe('escenario formato-vertical');
+    expect(claseEscenario('vertical', 'iguales', true)).toBe('escenario formato-vertical video-es-vertical');
+    expect(FORMATOS).toEqual(['horizontal', 'vertical']);
   });
 });

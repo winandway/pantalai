@@ -8,6 +8,8 @@ import { ErrorApi, enlaceVideo, pedir } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import {
   DISENOS,
+  FORMATOS,
+  claseEscenario,
   ESCUCHAR_YOUTUBE,
   accionDeTecla,
   armarMascara,
@@ -27,6 +29,7 @@ import {
   videoDeEnlace,
   zonaRelativa,
   type Diseno,
+  type Formato,
   type VideoPegado,
 } from '../logica/estudio';
 import { AJUSTES_INICIALES, Grabadora } from '../logica/grabadora';
@@ -63,7 +66,9 @@ export function Estudio() {
     tema: '',
     programa: '',
     diseno: 'clasico' as Diseno,
+    formato: 'horizontal' as Formato,
   });
+  const formato: Formato = FORMATOS.includes(b.valor.formato) ? b.valor.formato : 'horizontal';
   const diseno: Diseno = DISENOS.includes(b.valor.diseno) ? b.valor.diseno : 'clasico';
   const [video, setVideo] = useState<VideoPegado | null>(null);
   const [error, setError] = useState<{ texto: string; grabar?: boolean; abrir?: boolean } | null>(null);
@@ -538,29 +543,55 @@ export function Estudio() {
         ))}
       </div>
 
-      <fieldset className="selector-modo estudio-posiciones">
-        <legend>{tx.posicion}</legend>
-        {DISENOS.map((d) => (
-          <label key={d} className={diseno === d ? 'activo' : ''}>
+      <fieldset className="selector-modo estudio-formatos">
+        <legend>{tx.formato}</legend>
+        {FORMATOS.map((f) => (
+          <label key={f} className={formato === f ? 'activo' : ''}>
             <input
               type="radio"
-              name="estudio-diseno"
-              checked={diseno === d}
+              name="estudio-formato"
+              checked={formato === f}
               disabled={enCurso}
-              onChange={() => b.cambiar('diseno', d)}
+              onChange={() => b.cambiar('formato', f)}
             />
-            <span className={`miniatura-diseno miniatura-${d}`} aria-hidden="true">
+            <span className={`miniatura-formato miniatura-f-${f}`} aria-hidden="true">
               <i />
               <i />
             </span>
-            {tx.disenos[d]}
+            {tx.formatos[f]}
           </label>
         ))}
       </fieldset>
 
+      {formato === 'horizontal' && (
+        <fieldset className="selector-modo estudio-posiciones">
+          <legend>{tx.posicion}</legend>
+          {DISENOS.map((d) => (
+            <label key={d} className={diseno === d ? 'activo' : ''}>
+              <input
+                type="radio"
+                name="estudio-diseno"
+                checked={diseno === d}
+                disabled={enCurso}
+                onChange={() => b.cambiar('diseno', d)}
+              />
+              <span className={`miniatura-diseno miniatura-${d}`} aria-hidden="true">
+                <i />
+                <i />
+              </span>
+              {tx.disenos[d]}
+            </label>
+          ))}
+        </fieldset>
+      )}
+
       {/* El escenario: lo ÚNICO que se graba. Nada de botones aquí adentro. */}
       <div className="escenario-marco">
-        <div ref={escenario} className={`escenario diseno-${diseno}`} data-escenario>
+        <div
+          ref={escenario}
+          className={claseEscenario(formato, diseno, Boolean(video?.vertical))}
+          data-escenario
+        >
           <div className="escenario-cabeza">
             <span className="escenario-logo" aria-hidden="true">
               ▶

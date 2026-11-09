@@ -694,3 +694,10 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   `pointer-events: none` sobre los reproductores. Ojo: TikTok corta con «TOO_MANY_REQUESTS» (2005) si se le prueba
   muchas veces seguidas desde la misma conexión, y a los navegadores automáticos les muestra «Mira este video en
   TikTok»: no confundir con un fallo nuestro.
+- Formato vertical 9:16 (9 nov 2026, Richard pidió el Short): «Formato» horizontal 16:9 o vertical 9:16. En vertical
+  la posición es fija (cámara arriba que llena el espacio libre, video abajo, tema al pie en dos líneas) y un video
+  vertical se muestra al centro en 4:5 (el iframe 9:16 se recorta arriba y abajo). Las medidas internas usan
+  `var(--u)` (1cqw en horizontal, 2,3cqw en vertical) para que las letras se lean igual. OJO: en el propio
+  `.escenario` NO usar `cqw` (se mide contra la ventana, no contra él): sus márgenes van en los hijos.
+  Prueba: `e2e/estudio.spec.ts` › Short vertical 9:16 (archivo 9:16, cámara arriba del video, verde en el video).
+  Comprobada en ROJO el 9 nov 2026 (sin el formato vertical el archivo sale 16:9).

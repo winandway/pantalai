@@ -225,6 +225,19 @@ export function videoDeEnlace(texto: string): VideoPegado | null {
   return null;
 }
 
+/** El formato del video que sale: horizontal 16:9 (YouTube) o vertical 9:16 (Shorts, TikTok, Reels). */
+export type Formato = 'horizontal' | 'vertical';
+export const FORMATOS: Formato[] = ['horizontal', 'vertical'];
+
+/**
+ * Las clases del escenario. En vertical la posición es fija (cámara arriba, video abajo, tema al pie) y un video
+ * vertical se recorta al centro (4:5) para que quepa sin quedar como una tira finita.
+ */
+export function claseEscenario(formato: Formato, diseno: Diseno, videoVertical: boolean): string {
+  if (formato === 'vertical') return `escenario formato-vertical${videoVertical ? ' video-es-vertical' : ''}`;
+  return `escenario diseno-${diseno}`;
+}
+
 /**
  * Las posiciones del escenario (todas en 16:9): cámara cuadrada + video ancho, dos horizontales iguales, o cámara
  * ancha + video vertical (TikTok, Shorts).
