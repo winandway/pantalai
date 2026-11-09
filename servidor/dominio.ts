@@ -57,6 +57,7 @@ export function robots(): string {
     '/media/',
     '/library',
     '/record',
+    '/studio',
     '/checkout',
     '/account',
     '/panel/',
@@ -103,7 +104,7 @@ const escapar = (t: string) =>
 /** Título y resumen que ve Google en cada página pública (las guías de Docs llevan los suyos). */
 export function metaDeRuta(ruta: string): { titulo: string; descripcion: string; indexar: boolean } | null {
   if (
-    /^\/(library|record|embed\/|v\/[^/]+\/edit|pricing|admin|panel|checkout|reset-password|verify-email|account|team|join)/.test(
+    /^\/(library|record|studio|embed\/|v\/[^/]+\/edit|pricing|admin|panel|checkout|reset-password|verify-email|account|team|join)/.test(
       ruta,
     )
   )

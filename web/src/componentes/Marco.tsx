@@ -96,6 +96,9 @@ export function Encabezado() {
                   <a role="menuitem" href="/library" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
                     {t('biblioteca')}
                   </a>
+                  <a role="menuitem" href="/studio" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
+                    🎙️ {t('estudio')}
+                  </a>
                   <a role="menuitem" href="/account" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
                     {t('cta.menu')}
                   </a>

@@ -19,6 +19,7 @@ import { Entrar, Recuperar, Restablecer } from './paginas/Entrar';
 import { FranjaCorreo, VerificarCorreo } from './componentes/VerificarCorreo';
 import { PaginaEquipo, UnirseEquipo } from './paginas/Equipo';
 import { Grabar } from './paginas/Grabar';
+import { Estudio } from './paginas/Estudio';
 import { Inicio } from './paginas/Inicio';
 import { PaginaVideo } from './paginas/Video';
 
@@ -83,6 +84,7 @@ export function App() {
   else if (partes[0] === 'team' && partes[1] && partes.length === 2) pagina = <PaginaEquipo id={partes[1]} />;
   else if (ruta === '/join') pagina = <UnirseEquipo />;
   else if (ruta === '/record') pagina = <Grabar />;
+  else if (ruta === '/studio') pagina = <Estudio />;
   else if (partes[0] === 'docs') pagina = <Docs slug={partes[1] ?? ''} />;
   else if (ruta === '/pricing') pagina = <Precios />;
   else if (ruta === '/account') pagina = <Cuenta />;

@@ -158,7 +158,8 @@ export const CABECERAS_SEGURIDAD: Record<string, string> = {
     "media-src 'self' blob:",
     "connect-src 'self' https://cloudflareinsights.com https://api.stripe.com",
     "worker-src 'self' blob:",
-    'frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com',
+    // Estudio de reacciones: el reproductor oficial insertado de YouTube.
+    'frame-src https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com https://www.youtube-nocookie.com https://www.youtube.com',
     "frame-ancestors 'self'",
   ].join('; '),
   'X-Frame-Options': 'SAMEORIGIN',

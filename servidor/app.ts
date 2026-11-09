@@ -27,6 +27,7 @@ import {
   sitemap,
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
+import { arrobaDe, videoDeYoutube } from '../web/src/logica/estudio';
 import { REGISTROS_MAX_BYTES, esquemaRegistros, limpiarEnServidor } from './registros';
 import {
   bytesMaximos,
@@ -899,6 +900,42 @@ async function planDe(c: C, usuarioId: string): Promise<{ plan: Plan; limites: L
   const plan: Plan = esPlan(f?.plan) ? f.plan : 'starter';
   return { plan, limites: limitesDe(plan, cobroActivo(c.env)) };
 }
+
+// Estudio de reacciones: nombre del creador y título de un video de YouTube con su oEmbed público (sin claves ni
+// costo). Solo con sesión, y no escribe nada en la base. 401/403 de YouTube = el dueño no deja insertarlo.
+app.get('/datos/oembed', requiereSesion, async (c) => {
+  const v = videoDeYoutube(c.req.query('url') ?? '');
+  if (!v) return err(c, 400, 'enlace');
+  const pedido = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${v.id}`)}`;
+  let r: Response;
+  try {
+    r = await fetch(pedido, { cf: { cacheTtl: 3600, cacheEverything: true } } as RequestInit);
+  } catch (e) {
+    console.error('oembed: YouTube no respondió', e);
+    return c.json({ id: v.id, insertable: true, titulo: '', autor: '', creador: '' });
+  }
+  if (r.status === 401 || r.status === 403)
+    return c.json({ id: v.id, insertable: false, titulo: '', autor: '', creador: '' });
+  if (r.status === 404 || r.status === 400) return err(c, 404, 'no_existe');
+  if (!r.ok) {
+    console.error('oembed: respuesta rara de YouTube', r.status);
+    return c.json({ id: v.id, insertable: true, titulo: '', autor: '', creador: '' });
+  }
+  const d = (await r.json().catch(() => ({}))) as {
+    title?: unknown;
+    author_name?: unknown;
+    author_url?: unknown;
+  };
+  const texto = (x: unknown, n: number) => (typeof x === 'string' ? x.slice(0, n) : '');
+  const autor = texto(d.author_name, 120);
+  return c.json({
+    id: v.id,
+    insertable: true,
+    titulo: texto(d.title, 200),
+    autor,
+    creador: arrobaDe(texto(d.author_url, 300), autor),
+  });
+});
 
 app.get('/datos/plan', requiereSesion, async (c) => {
   const p = await planDe(c, c.get('usuario')!.id);

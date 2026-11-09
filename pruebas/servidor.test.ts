@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import app, { PARTE_MIN } from '../servidor/app';
 import { almacenFalso, baseFalsa } from './falsos';
 
@@ -1117,5 +1117,51 @@ describe('CANDADO C-MARCA-GRABADA: la marca va dentro del video (también en el 
       await soporte('/datos/videos', { method: 'POST', json: { tipo: 'video/mp4' } })
     ).json()) as { marca: boolean };
     expect(s.marca).toBe(false);
+  });
+});
+
+describe('estudio de reacciones: oEmbed de YouTube', () => {
+  it('pide sesión, valida el enlace y devuelve creador y título', async () => {
+    const anon = cliente('9.9.9.1');
+    expect((await anon('/datos/oembed?url=https://youtu.be/dQw4w9WgXcQ')).status).toBe(401);
+    const c = await registrado('Ana', 'ana.oembed@example.com', '9.9.9.2');
+    expect((await c('/datos/oembed?url=https://evil.com/x')).status).toBe(400);
+    const pedidos: string[] = [];
+    vi.stubGlobal('fetch', async (u: string) => {
+      pedidos.push(u);
+      return new Response(
+        JSON.stringify({
+          title: 'Un video',
+          author_name: 'Canal',
+          author_url: 'https://www.youtube.com/@canal',
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    });
+    const r = await c('/datos/oembed?url=https://www.youtube.com/shorts/aBcD3fGh1_-');
+    expect(await r.json()).toEqual({
+      id: 'aBcD3fGh1_-',
+      insertable: true,
+      titulo: 'Un video',
+      autor: 'Canal',
+      creador: '@canal',
+    });
+    expect(pedidos[0]).toContain('https://www.youtube.com/oembed?format=json&url=');
+    expect(pedidos[0]).toContain(encodeURIComponent('watch?v=aBcD3fGh1_-'));
+    vi.stubGlobal('fetch', async () => new Response('', { status: 401 }));
+    const no = (await (await c('/datos/oembed?url=https://youtu.be/dQw4w9WgXcQ')).json()) as {
+      insertable: boolean;
+    };
+    expect(no.insertable).toBe(false);
+    vi.stubGlobal('fetch', async () => new Response('', { status: 404 }));
+    expect((await c('/datos/oembed?url=https://youtu.be/dQw4w9WgXcQ')).status).toBe(404);
+    vi.unstubAllGlobals();
+  });
+
+  it('deja insertar el reproductor de YouTube y esconde el estudio de Google', async () => {
+    const r = await cliente()('/datos/config');
+    expect(r.headers.get('content-security-policy')).toContain('https://www.youtube-nocookie.com');
+    const robots = await (await cliente()('/robots.txt')).text();
+    expect(robots).toContain('Disallow: /studio');
   });
 });

@@ -652,3 +652,24 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   quita localhost/127.0.0.1 del manifiesto y compila `__PRUEBAS__ = false` (falla el armado si queda un `http:`). La
   compilación `--pruebas` sí los acepta para la e2e.
 - Pruebas en `pruebas/registros.test.ts` y `pruebas/extension.test.tsx`; la de rutas comprobada en rojo.
+
+## C-ESTUDIO-RECORTE (9 nov 2026)
+
+- Protege: el Estudio de reacciones (`/studio`) graba SOLO el escenario de la máscara «Podcast» (cámara + video de
+  YouTube + carteles + tema), nunca la pestaña entera, la barra del sitio, los botones ni el escritorio.
+- Cómo funciona: `Grabadora.recortarA = escenario` → `getDisplayMedia({ preferCurrentTab: true })` (esta pestaña) →
+  `track.restrictTo(RestrictionTarget)` (Element Capture, Chrome 132+: solo el elemento aunque algo le pase por
+  encima) o, si no existe, `track.cropTo(CropTarget)` (Region Capture). El escenario lleva `isolation: isolate`
+  (Element Capture lo exige). Al empezar, la página lleva el escenario a la vista debajo de la barra de arriba.
+  La pista recortada pasa por el mismo lienzo y el mismo mezclador de siempre (marca, versión, subida por partes).
+- Cómo se veía roto (primer intento, 9 nov 2026): `cropTo` solo, y al bajar la página la barra blanca del sitio
+  salía tapando el escenario dentro del video. Y `cropTo` en Chrome vive en `BrowserCaptureMediaStreamTrack`, no en
+  `MediaStreamTrack`: mirar el prototipo equivocado apagaba el estudio entero.
+- Prueba: `e2e/estudio.spec.ts` (graba de verdad con un reproductor de YouTube falso y verde servido en la dirección
+  del oficial; exige ancho del archivo = ancho del escenario, 16:9, esquinas oscuras sin la barra del sitio y el verde
+  en la tarjeta del video). Comprobada en ROJO el 9 nov 2026: sin `restrictTo` el archivo midió 132 px de más.
+  Lo puro: `pruebas/estudio.test.ts` (enlaces de YouTube, protocolo del reproductor, máscara, Region Capture; en rojo
+  aceptando cualquier dominio). oEmbed: `pruebas/servidor.test.ts` › estudio de reacciones.
+- No tocar: el reproductor es el OFICIAL insertado (`youtube-nocookie.com/embed`, `controls=0`, `rel=0`,
+  `enablejsapi=1`) controlado por mensajes; nada se descarga. `frame-src` de la CSP incluye youtube-nocookie y
+  youtube. Ningún botón va dentro del escenario. `/datos/oembed` pide sesión y no escribe en la base.

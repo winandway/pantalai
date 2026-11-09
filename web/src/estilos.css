@@ -4362,3 +4362,257 @@ main {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- estudio de reacciones (máscara «Podcast», neón oscuro) ---------- */
+.enlace-estudio {
+  display: inline-block;
+  margin: -0.25rem 0 0.75rem;
+  font-weight: 600;
+}
+.estudio {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.25rem 16px 2.5rem;
+  display: grid;
+  gap: 0.9rem;
+}
+.estudio-cabeza h1 {
+  margin: 0 0 0.25rem;
+}
+.estudio-cabeza p,
+.estudio-ayuda {
+  margin: 0;
+  color: var(--tinta-suave);
+}
+.estudio-ayuda {
+  font-size: 0.85rem;
+}
+.estudio-aviso {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radio);
+  background: #fff7e6;
+  border: 1px solid #f5d38a;
+}
+.estudio-enlace label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+.estudio-fila {
+  display: flex;
+  gap: 0.5rem;
+}
+.estudio-fila input {
+  flex: 1;
+  min-width: 0;
+}
+.estudio-campos {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 0.6rem;
+}
+.estudio-campos .campo {
+  margin: 0;
+}
+.escenario-marco {
+  display: flex;
+  justify-content: center;
+}
+.escenario {
+  --neon-a: #ff3ea5;
+  --neon-b: #22d3ee;
+  --neon-c: #a78bfa;
+  container-type: inline-size;
+  /* Element Capture exige que el escenario sea su propio «contexto de apilado». */
+  isolation: isolate;
+  position: relative;
+  width: min(100%, calc((100vh - 200px) * 16 / 9));
+  min-width: min(100%, 560px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 14px;
+  color: #f5f3ff;
+  background:
+    radial-gradient(60% 80% at 15% 20%, rgba(255, 62, 165, 0.22), transparent 60%),
+    radial-gradient(60% 80% at 85% 80%, rgba(34, 211, 238, 0.2), transparent 60%),
+    linear-gradient(160deg, #0b0a1a 0%, #120d2a 55%, #07111c 100%);
+  display: grid;
+  grid-template-rows: 13% 1fr 15%;
+  padding: 2.2cqw 2.8cqw;
+  box-sizing: border-box;
+  font-family: Inter, system-ui, sans-serif;
+}
+.escenario::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 4cqw 4cqw;
+  pointer-events: none;
+}
+.escenario > * {
+  position: relative;
+}
+.escenario-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
+  font-size: 2.2cqw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.escenario-logo {
+  display: grid;
+  place-items: center;
+  width: 3.6cqw;
+  height: 3.6cqw;
+  border-radius: 50%;
+  font-size: 1.5cqw;
+  background: linear-gradient(135deg, var(--neon-a), var(--neon-c));
+  box-shadow: 0 0 1.6cqw rgba(255, 62, 165, 0.6);
+}
+.escenario-programa {
+  text-shadow: 0 0 1cqw rgba(167, 139, 250, 0.7);
+}
+.escenario-pildora {
+  margin-left: auto;
+  font-size: 1.3cqw;
+  padding: 0.5cqw 1.2cqw;
+  border-radius: 99px;
+  border: 1px solid var(--neon-b);
+  color: var(--neon-b);
+  box-shadow: 0 0 1cqw rgba(34, 211, 238, 0.45);
+}
+.escenario-centro {
+  display: grid;
+  grid-template-columns: 36fr 58fr;
+  gap: 2.4cqw;
+  align-items: center;
+  min-height: 0;
+}
+.escenario-tarjeta {
+  margin: 0;
+  display: grid;
+  gap: 1cqw;
+  min-width: 0;
+}
+.escenario-caja {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 1.4cqw;
+  overflow: hidden;
+  background: #000;
+  border: 0.35cqw solid var(--neon-b);
+  box-shadow:
+    0 0 2cqw rgba(34, 211, 238, 0.55),
+    inset 0 0 0.6cqw rgba(34, 211, 238, 0.4);
+}
+.escenario-camara .escenario-caja {
+  aspect-ratio: 36 / 32.6;
+  border-color: var(--neon-a);
+  box-shadow:
+    0 0 2cqw rgba(255, 62, 165, 0.55),
+    inset 0 0 0.6cqw rgba(255, 62, 165, 0.4);
+}
+.escenario-caja video,
+.escenario-caja iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+.escenario-caja video {
+  transform: scaleX(-1);
+}
+.escenario-caja iframe {
+  pointer-events: none;
+}
+.escenario-vacio {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 6cqw;
+  color: rgba(255, 255, 255, 0.25);
+}
+.cartel {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 1.6cqw;
+  padding: 0.6cqw 1.4cqw;
+  border-radius: 0.8cqw;
+  background: rgba(255, 62, 165, 0.16);
+  border-left: 0.45cqw solid var(--neon-a);
+}
+.cartel-video {
+  background: rgba(34, 211, 238, 0.14);
+  border-left-color: var(--neon-b);
+}
+.escenario-pie {
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+  min-width: 0;
+  padding: 0 1.6cqw;
+  border-radius: 1.2cqw;
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.22), rgba(34, 211, 238, 0.1));
+  border: 1px solid rgba(167, 139, 250, 0.45);
+}
+.escenario-etiqueta {
+  flex: none;
+  font-size: 1.3cqw;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.5cqw 1.1cqw;
+  border-radius: 0.6cqw;
+  background: var(--neon-c);
+  color: #120d2a;
+}
+.escenario-tema {
+  font-size: 2.1cqw;
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.estudio-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: space-between;
+  align-items: center;
+}
+.estudio-reproductor,
+.estudio-grabacion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.estudio-cuenta {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--rojo);
+}
+.estudio-reloj {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+@media (max-width: 700px) {
+  .estudio-campos {
+    grid-template-columns: 1fr;
+  }
+  .escenario {
+    min-width: 0;
+  }
+}

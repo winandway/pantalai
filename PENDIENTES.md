@@ -32,6 +32,14 @@
 
 ## De mi lado
 
+- [x] Estudio de reacciones, fase 1 (9 nov 2026): `/studio`, enlace de YouTube con reproductor oficial, ±5 s y
+      atajos, creador y título automáticos, máscara «Podcast» neón 16:9, graba solo el escenario (candado
+      C-ESTUDIO-RECORTE), guía en Docs en los dos idiomas.
+- [ ] Estudio, fase 2: máscara vertical 9:16 para Shorts y reproductor de TikTok, elegir dónde va la cámara.
+- [ ] Estudio, fase 3: personalizar nombre del programa, logo y colores guardados por cuenta; varias máscaras.
+- [ ] Estudio, fase 4: cartel «Hablando/Escuchando» con el micrófono, barras de sonido, «Para YouTube» con el
+      creador ya puesto.
+
 - [x] Partes de subida iguales (grabaciones largas), vista previa con imagen, burbuja flotante, forma vertical,
       borde de colores, «Grabando» arriba, ruedita de subida, «Subir otra vez» (19 oct 2026, comprobado en vivo).
 

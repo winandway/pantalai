@@ -272,6 +272,13 @@ export class Grabadora {
   private logo: HTMLImageElement | null = null;
   /** La pantalla compartida tal cual (para elegir el área sobre ella). */
   pantallaCruda: MediaStream | null = null;
+  /**
+   * Estudio de reacciones: se graba ESTA pestaña recortada a este elemento (Region Capture de Chrome). Lo de afuera
+   * (botones, barra del navegador, el resto de la página) no sale. Candado C-ESTUDIO-RECORTE.
+   */
+  recortarA: Element | null = null;
+  /** Dónde va la marca (en fracciones del video): en el estudio, sobre la cámara. null = abajo a la derecha. */
+  zonaMarca: { x: number; y: number; w: number; h: number } | null = null;
 
   /** Qué se compartió: «monitor» (pantalla completa), «window» (una ventana) o «browser» (una pestaña). */
   superficie(): string {
@@ -321,7 +328,13 @@ export class Grabadora {
     let camara: MediaStream | null = null;
     let micro: MediaStream | null = null;
 
-    if (this.a.modo !== 'camara') {
+    if (this.recortarA) {
+      pantalla = await this.pestanaRecortada(this.recortarA);
+      this.flujos.push(pantalla);
+      pantalla.getVideoTracks()[0]?.addEventListener('ended', () => {
+        if (this.grabador && this.grabador.state !== 'inactive') this.terminar('pantalla_cerrada');
+      });
+    } else if (this.a.modo !== 'camara') {
       pantalla = await navigator.mediaDevices.getDisplayMedia({
         // «monitor» deja preseleccionada la pantalla completa en Chrome: así salen también los programas instalados.
         video: { height: { ideal: alto }, frameRate: { ideal: 30 }, displaySurface: 'monitor' },
@@ -422,6 +435,48 @@ export class Grabadora {
     return new MediaStream(audio ? [video, audio] : [video]);
   }
 
+  /** Esta pestaña, recortada al elemento. Si se eligió otra pestaña o pantalla, lanza «otra_superficie». */
+  private async pestanaRecortada(elemento: Element): Promise<MediaStream> {
+    const flujo = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: { ideal: 30 } },
+      audio: this.a.audioSistema
+        ? {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            suppressLocalAudioPlayback: false,
+          }
+        : false,
+      preferCurrentTab: true,
+      selfBrowserSurface: 'include',
+      surfaceSwitching: 'exclude',
+      monitorTypeSurfaces: 'exclude',
+      systemAudio: 'exclude',
+    } as DisplayMediaStreamOptions);
+    const pista = flujo.getVideoTracks()[0] as
+      | (MediaStreamTrack & {
+          cropTo?: (t: unknown) => Promise<void>;
+          restrictTo?: (t: unknown) => Promise<void>;
+        })
+      | undefined;
+    type Fabrica = { fromElement: (e: Element) => Promise<unknown> } | undefined;
+    const g = globalThis as { CropTarget?: Fabrica; RestrictionTarget?: Fabrica };
+    try {
+      // Element Capture (Chrome 132+): graba SOLO el elemento, aunque algo de la página le pase por encima (la barra
+      // de arriba al bajar, un aviso). Si no existe, Region Capture: el rectángulo del elemento tal como se ve.
+      // Solo funciona con la pestaña donde vive el elemento: si se compartió otra, falla.
+      if (pista?.restrictTo && g.RestrictionTarget)
+        await pista.restrictTo(await g.RestrictionTarget.fromElement(elemento));
+      else if (pista?.cropTo && g.CropTarget) await pista.cropTo(await g.CropTarget.fromElement(elemento));
+      else throw new Error('sin_recorte');
+    } catch (e) {
+      for (const p of flujo.getTracks()) p.stop();
+      console.error('estudio: no se pudo recortar la pestaña', e);
+      throw new DOMException('otra_superficie', 'InvalidStateError');
+    }
+    return flujo;
+  }
+
   private async componer(pantalla: MediaStream, camara: MediaStream | null): Promise<MediaStreamTrack> {
     const vp = document.createElement('video');
     const vc = camara ? document.createElement('video') : null;
@@ -436,8 +491,9 @@ export class Grabadora {
     this.videoPantalla = vp;
     this.videoCamara = vc;
     const s = pantalla.getVideoTracks()[0]!.getSettings();
-    this.ancho = (s.width ?? vp.videoWidth) || 1920;
-    this.alto = (s.height ?? vp.videoHeight) || 1080;
+    // En el estudio manda el tamaño del recorte (lo que de verdad llega), no el de la pestaña entera.
+    this.ancho = (this.recortarA ? vp.videoWidth : 0) || (s.width ?? vp.videoWidth) || 1920;
+    this.alto = (this.recortarA ? vp.videoHeight : 0) || (s.height ?? vp.videoHeight) || 1080;
     const vertical = Boolean(this.a.vertical && vc);
     if (vertical) {
       const m = medidaVertical(this.a.calidad);
@@ -544,10 +600,13 @@ export class Grabadora {
     }
     const W = ctx.canvas.width;
     const H = ctx.canvas.height;
-    const zona = vertical
-      ? partesVertical(W, H, this.a.camaraArriba ?? true, this.a.reparto ?? REPARTO_INICIAL).camara
-      : { x: 0, y: 0, w: W, h: H };
-    const m = marcaEn(zona, Math.min(W, H));
+    const z = this.zonaMarca;
+    const zona = z
+      ? { x: z.x * W, y: z.y * H, w: z.w * W, h: z.h * H }
+      : vertical
+        ? partesVertical(W, H, this.a.camaraArriba ?? true, this.a.reparto ?? REPARTO_INICIAL).camara
+        : { x: 0, y: 0, w: W, h: H };
+    const m = marcaEn(zona, z ? Math.min(zona.w, zona.h) * 1.6 : Math.min(W, H));
     ctx.save();
     ctx.font = `700 ${m.letra}px Inter, system-ui, sans-serif`;
     const texto = 'pantalay.com';
@@ -555,7 +614,7 @@ export class Grabadora {
     const alto = m.icono + m.relleno;
     const x = zona.x + zona.w - m.margen - ancho;
     // En el Short va ARRIBA a la derecha de la cámara (se ve más y tapa menos); en lo demás, abajo a la derecha.
-    const y = vertical ? zona.y + m.margen : zona.y + zona.h - m.margen - alto;
+    const y = vertical || z ? zona.y + m.margen : zona.y + zona.h - m.margen - alto;
     ctx.globalAlpha = 0.85;
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();

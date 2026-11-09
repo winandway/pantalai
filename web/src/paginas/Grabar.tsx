@@ -24,7 +24,7 @@ import {
 import { ElegirArea } from '../componentes/ElegirArea';
 import { COMMIT_PAGINA, recargarSiQuedoVieja } from '../logica/version';
 import { textoError, useIdioma } from '../logica/idioma';
-import { navegar } from '../logica/ruta';
+import { alClicEnlace, navegar } from '../logica/ruta';
 import { abrirVentana, montarBurbuja, type Burbuja } from '../logica/burbuja';
 import { fijarEstadoGrabacion } from '../logica/estadoGrabacion';
 type Niveles = { micro: number; sistema: number };
@@ -528,6 +528,9 @@ export function Grabar() {
         <div className="grabar-ajustes">
           <section className="tarjeta">
             <h1>{t('nuevaGrabacion')}</h1>
+            <a href="/studio" onClick={alClicEnlace} className="enlace-estudio">
+              🎙️ {t('estudio')} →
+            </a>
             <fieldset className="selector-modo">
               <legend>{t('modo')}</legend>
               {(
