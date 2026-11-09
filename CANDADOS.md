@@ -823,3 +823,14 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   el mismo video), perfil del creador en «/channel/<id>» (banner, inicial, videos y me gusta; `/datos/red-canal/<id>`
   y `/datos/red?autor=`), y en la portada el carrusel de videos va primero, bajo «Tu video, donde ya está tu gente»,
   antes de los logos. Prueba: `e2e/red.spec.ts` (banner, 30 y 10 espacios, perfil). En ROJO el 9 nov 2026.
+
+## C-GRABAR-ARRIBA (9 nov 2026)
+
+- Qué pasaba (Richard: «ese botón no hace nada y engaña»): en Grabar y en el Estudio, el «Grabar» rojo del encabezado
+  llevaba a la misma página, así que parecía que no hacía nada; y en el Estudio, mientras se grababa, «Grabando»
+  llevaba a /record (se salía del Estudio).
+- Arreglo: en /record y /studio el «Grabar» de arriba manda el evento `EVENTO_GRABAR` y la página arranca su
+  grabación (`useBotonGrabarDeArriba`), igual que el botón de abajo y con el mismo clic (el navegador lo permite).
+  El Estudio avisa al encabezado (`fijarEstadoGrabacion`) y «Grabando» se queda en /studio.
+- Prueba: `e2e/estudio.spec.ts` › Short vertical y `e2e/grabar-pestana.spec.ts` arrancan con el botón de arriba.
+  Comprobadas en ROJO el 9 nov 2026.

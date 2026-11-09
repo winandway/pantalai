@@ -3,6 +3,7 @@ import { useIdioma } from '../logica/idioma';
 import { LANDINGS } from '../paginas/landings';
 import { sinPrefijo } from '../logica/rutasIdioma';
 import { TEXTOS_RED } from '../logica/textosRed';
+import { EVENTO_GRABAR } from '../logica/estadoGrabacion';
 import { alClicEnlace, useRuta } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
 import { useEstadoGrabacion } from '../logica/estadoGrabacion';
@@ -79,7 +80,7 @@ export function Encabezado() {
           <>
             {grabacion.grabando ? (
               <a
-                href="/record"
+                href={ruta === '/studio' ? '/studio' : '/record'}
                 onClick={alClicEnlace}
                 className="boton grabar-boton grabando-ahora"
                 aria-live="polite"
@@ -88,7 +89,20 @@ export function Encabezado() {
                 {grabacion.pausa ? t('enPausa') : t('grabandoAhora')} {formatoTiempo(grabacion.segundos)}
               </a>
             ) : (
-              <a href="/record" onClick={alClicEnlace} className="boton grabar-boton">
+              <a
+                href="/record"
+                onClick={(e) => {
+                  // En Grabar y en el Estudio, el «Grabar» de arriba arranca la grabación igual que el de abajo
+                  // (antes llevaba a la misma página y parecía que no hacía nada; Richard, 9 nov 2026).
+                  if (ruta === '/record' || ruta === '/studio') {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent(EVENTO_GRABAR));
+                    return;
+                  }
+                  alClicEnlace(e);
+                }}
+                className="boton grabar-boton"
+              >
                 <span className="punto-rojo" aria-hidden="true" /> {t('grabar')}
               </a>
             )}

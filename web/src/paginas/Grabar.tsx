@@ -27,7 +27,7 @@ import { COMMIT_PAGINA, recargarSiQuedoVieja } from '../logica/version';
 import { textoError, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { abrirVentana, montarBurbuja, type Burbuja } from '../logica/burbuja';
-import { fijarEstadoGrabacion } from '../logica/estadoGrabacion';
+import { fijarEstadoGrabacion, useBotonGrabarDeArriba } from '../logica/estadoGrabacion';
 type Niveles = { micro: number; sistema: number };
 import { useSesion } from '../logica/sesion';
 import {
@@ -97,6 +97,8 @@ export function Grabar() {
   const previa = useRef<HTMLVideoElement>(null);
   const camaraPrevia = useRef<HTMLVideoElement>(null);
   const terminarRef = useRef<() => Promise<void>>(async () => undefined);
+  const arrancarArriba = useRef<() => void>(() => undefined);
+  useBotonGrabarDeArriba(useCallback(() => arrancarArriba.current(), []));
   const miniaturaInicio = useRef<Blob | null>(null);
   const flotante = useRef<Burbuja | null>(null);
   const [niveles, setNiveles] = useState<Niveles>({ micro: 0, sistema: 0 });
@@ -499,6 +501,11 @@ export function Grabar() {
     document.addEventListener('keydown', tecla);
     return () => document.removeEventListener('keydown', tecla);
   }, [estado, terminar, lapices.activo, cambiarLapices]);
+
+  // El «Grabar» del encabezado arranca la grabación igual que «Empezar a grabar».
+  arrancarArriba.current = () => {
+    if (estado === 'ajustes') void empezar();
+  };
 
   if (!usuario) return null;
   const cambiar = <K extends keyof Ajustes>(k: K, v: Ajustes[K]) => setA((x) => ({ ...x, [k]: v }));

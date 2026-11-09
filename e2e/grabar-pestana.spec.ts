@@ -37,7 +37,8 @@ for (const superficie of ['browser', 'monitor'] as const) {
     await expect(page).toHaveURL(/\/library/);
     await page.goto('/record');
     await page.getByText('Screen + Cam').click();
-    await page.getByRole('button', { name: 'Start recording' }).click();
+    // El «Record» de arriba arranca la grabación igual que «Start recording» (Richard, 9 nov 2026).
+    await page.locator('.encabezado .grabar-boton').click();
     await expect(page.locator('.barra-grabacion .indicador')).toHaveText('Recording', { timeout: 20_000 });
 
     // Lo que se está grabando: ¿hay cámara (no blanco) en la esquina de la burbuja (abajo a la izquierda)?

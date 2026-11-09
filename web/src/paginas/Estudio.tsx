@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
+import { fijarEstadoGrabacion, useBotonGrabarDeArriba } from '../logica/estadoGrabacion';
 import { ProbadorMicrofono } from '../componentes/ProbadorMicrofono';
 import { ErrorApi, enlaceVideo, pedir } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
@@ -139,6 +140,9 @@ export function Estudio() {
   const miniatura = useRef<Blob | null>(null);
   const pararNiveles = useRef<() => void>(() => undefined);
   const terminarRef = useRef<() => Promise<void>>(async () => undefined);
+  // El «Grabar» del encabezado arranca la grabación del Estudio, igual que «Empezar a grabar».
+  const arrancarArriba = useRef<() => void>(() => undefined);
+  useBotonGrabarDeArriba(useCallback(() => arrancarArriba.current(), []));
 
   useEffect(() => {
     if (!cargando && !usuario) navegar(`/login?volver=${encodeURIComponent('/studio')}`, true);
@@ -441,6 +445,16 @@ export function Estudio() {
     return () => window.removeEventListener('keydown', tecla);
   }, [accion]);
 
+  // El encabezado dice «Grabando 0:12» mientras se graba en el Estudio (igual que en Grabar).
+  useEffect(() => {
+    fijarEstadoGrabacion({
+      grabando: estado === 'cuenta' || estado === 'grabando' || estado === 'pausa',
+      pausa: estado === 'pausa',
+      segundos,
+    });
+  }, [estado, segundos]);
+  useEffect(() => () => fijarEstadoGrabacion({ grabando: false, pausa: false, segundos: 0 }), []);
+
   // Reloj de la grabación.
   useEffect(() => {
     if (estado !== 'grabando') return;
@@ -614,6 +628,10 @@ export function Estudio() {
       await pedir(`/datos/videos/${id}/cancelar`, { method: 'POST' }).catch(() => undefined);
     }
   }
+
+  arrancarArriba.current = () => {
+    if (estado === 'listo' && !clavado) void empezar();
+  };
 
   if (!usuario) return null;
   const m = armarMascara({

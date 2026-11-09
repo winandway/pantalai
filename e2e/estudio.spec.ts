@@ -336,8 +336,11 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
     x: (vid.x + vid.width / 2 - total.x) / total.width,
     y: (vid.y + vid.height / 2 - total.y) / total.height,
   };
-  await page.getByRole('button', { name: 'Start recording' }).click();
+  // El «Record» de arriba arranca la grabación del Estudio igual que el de abajo (Richard, 9 nov 2026).
+  await page.locator('.encabezado .grabar-boton').click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
+  await expect(page.locator('.encabezado .grabar-boton')).toContainText('Recording');
+  await expect(page).toHaveURL(/\/studio$/);
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
