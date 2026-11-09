@@ -86,7 +86,12 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
     v.muted = true;
     if (v.readyState < 1) await new Promise((ok) => v.addEventListener('loadedmetadata', ok, { once: true }));
     v.currentTime = 1.5;
-    await new Promise((ok) => v.addEventListener('seeked', ok, { once: true }));
+    // A veces el navegador no avisa «seeked»: se espera como mucho 5 s y se sigue (el cuadro ya está).
+    await Promise.race([
+      new Promise((ok) => v.addEventListener('seeked', ok, { once: true })),
+      new Promise((ok) => setTimeout(ok, 5000)),
+    ]);
+    if (v.readyState < 2) await new Promise((ok) => v.addEventListener('loadeddata', ok, { once: true }));
     const c = document.createElement('canvas');
     c.width = v.videoWidth;
     c.height = v.videoHeight;
@@ -188,6 +193,12 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
   );
   await page.getByRole('button', { name: /Play/ }).click();
   await expect(page.getByRole('button', { name: /Play/ })).toBeVisible();
+  // Si no arranca, se explica con amabilidad que TikTok pide la sesión iniciada en el navegador (Richard, 9 nov 2026).
+  await expect(page.getByText('TikTok only plays inside other sites if you are signed in')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in to TikTok' }).first()).toHaveAttribute(
+    'href',
+    'https://www.tiktok.com/login',
+  );
   // El toque dentro del video tiene que llegarle (antes una capa lo bloqueaba y quedaba la portada muerta).
   await page.frameLocator('.escenario iframe').locator('body').click();
   await expect(page.getByRole('button', { name: /Pause$/ })).toBeVisible();
@@ -220,7 +231,12 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
       if (v.readyState < 1)
         await new Promise((ok) => v.addEventListener('loadedmetadata', ok, { once: true }));
       v.currentTime = 1.5;
-      await new Promise((ok) => v.addEventListener('seeked', ok, { once: true }));
+      // A veces el navegador no avisa «seeked»: se espera como mucho 5 s y se sigue (el cuadro ya está).
+      await Promise.race([
+        new Promise((ok) => v.addEventListener('seeked', ok, { once: true })),
+        new Promise((ok) => setTimeout(ok, 5000)),
+      ]);
+      if (v.readyState < 2) await new Promise((ok) => v.addEventListener('loadeddata', ok, { once: true }));
       const c = document.createElement('canvas');
       c.width = v.videoWidth;
       c.height = v.videoHeight;
@@ -294,7 +310,12 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
     v.muted = true;
     if (v.readyState < 1) await new Promise((ok) => v.addEventListener('loadedmetadata', ok, { once: true }));
     v.currentTime = 1.5;
-    await new Promise((ok) => v.addEventListener('seeked', ok, { once: true }));
+    // A veces el navegador no avisa «seeked»: se espera como mucho 5 s y se sigue (el cuadro ya está).
+    await Promise.race([
+      new Promise((ok) => v.addEventListener('seeked', ok, { once: true })),
+      new Promise((ok) => setTimeout(ok, 5000)),
+    ]);
+    if (v.readyState < 2) await new Promise((ok) => v.addEventListener('loadeddata', ok, { once: true }));
     const c = document.createElement('canvas');
     c.width = v.videoWidth;
     c.height = v.videoHeight;
@@ -354,6 +375,33 @@ test('si el video no arranca, se avisa y se ofrece abrirlo', async ({ page }) =>
     'href',
     'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
   );
+});
+
+// El Estudio se encuentra fácil: botón en el menú, opción en Grabar y tarjeta grande en la portada (Richard, 9 nov 2026).
+test('el estudio está a la vista en el menú, en Grabar y en la portada', async ({ page }) => {
+  await page.goto('/');
+  const tarjeta = page.locator('#estudio-de-reacciones');
+  await expect(tarjeta.getByRole('heading', { name: 'React to any video like a pro podcast' })).toBeVisible();
+  await expect(tarjeta.getByRole('link', { name: /Open the Reaction Studio/ })).toHaveAttribute(
+    'href',
+    '/signup',
+  );
+  await expect(page.locator('.portada-novedad')).toContainText('Reaction Studio');
+  await page.goto('/signup');
+  await page.getByLabel('Your name').fill('Soporte E2E');
+  await page.getByLabel('Email').fill(`e2e.estudio.menu.${Date.now()}@example.com`);
+  await page.getByLabel('Password', { exact: true }).fill(`Prueba-${Date.now()}`);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page).toHaveURL(/\/library/);
+  await page
+    .locator('.encabezado-nav')
+    .getByRole('link', { name: /Reactions/ })
+    .click();
+  await expect(page).toHaveURL(/\/studio$/);
+  await page.goto('/record');
+  await page.getByRole('link', { name: /React to a video/ }).click();
+  await expect(page).toHaveURL(/\/studio$/);
+  await expect(page.getByText('YouTube plays without an account')).toBeVisible();
 });
 
 test('el estudio pide sesión y no se indexa', async ({ page, request }) => {

@@ -54,6 +54,11 @@ export function Encabezado() {
             {t('biblioteca')}
           </a>
         )}
+        {usuario && (
+          <a href="/studio" onClick={alClicEnlace} className={ruta === '/studio' ? 'activo' : ''}>
+            <span aria-hidden="true">🎙️</span> {t('estudioCorto')}
+          </a>
+        )}
         <a href="/docs" onClick={alClicEnlace} className={ruta.startsWith('/docs') ? 'activo' : ''}>
           {t('docs')}
         </a>

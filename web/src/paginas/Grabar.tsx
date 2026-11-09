@@ -528,10 +528,7 @@ export function Grabar() {
         <div className="grabar-ajustes">
           <section className="tarjeta">
             <h1>{t('nuevaGrabacion')}</h1>
-            <a href="/studio" onClick={alClicEnlace} className="enlace-estudio">
-              🎙️ {t('estudio')} →
-            </a>
-            <fieldset className="selector-modo">
+            <fieldset className="selector-modo con-reaccion">
               <legend>{t('modo')}</legend>
               {(
                 [
@@ -553,6 +550,14 @@ export function Grabar() {
                   {etiqueta}
                 </label>
               ))}
+              {/* Reaccionar a un video de YouTube o TikTok: lleva al Estudio de reacciones. */}
+              <a href="/studio" onClick={alClicEnlace} className="modo-reaccion">
+                <span className="modo-icono" aria-hidden="true">
+                  🎙️
+                </span>
+                {t('modoReaccion')}
+                <span className="modo-nuevo">{t('nuevo')}</span>
+              </a>
             </fieldset>
             {a.modo === 'pantalla_camara' && (
               <fieldset className="selector-modo selector-formato">

@@ -4824,3 +4824,118 @@ main {
   -webkit-box-orient: vertical;
   line-height: 1.2;
 }
+
+/* ---------- portada: tarjeta grande del Estudio de reacciones ---------- */
+.portada-estudio {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 40px;
+  align-items: center;
+  margin: 24px auto;
+  max-width: 1180px;
+  padding: 56px 48px;
+  border-radius: 24px;
+  color: #f5f3ff;
+  background:
+    radial-gradient(50% 70% at 10% 15%, rgba(255, 62, 165, 0.28), transparent 60%),
+    radial-gradient(50% 70% at 90% 85%, rgba(34, 211, 238, 0.24), transparent 60%),
+    linear-gradient(160deg, #0b0a1a 0%, #120d2a 55%, #07111c 100%);
+  box-shadow: 0 30px 80px rgba(18, 13, 42, 0.35);
+}
+.portada-estudio h2 {
+  color: #fff;
+  margin: 14px 0 12px;
+}
+.portada-estudio p {
+  color: #d6d0f5;
+  font-size: 1.08rem;
+  line-height: 1.6;
+}
+.portada-estudio ul {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 24px;
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+.portada-estudio li::first-letter {
+  color: #4ade80;
+}
+.portada-estudio-etiqueta {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid #22d3ee;
+  color: #22d3ee;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.35);
+}
+.portada-estudio-cta {
+  background: linear-gradient(135deg, #ff3ea5, #a78bfa);
+  border-color: transparent;
+  color: #fff;
+}
+.portada-estudio .boton.secundario {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.portada-estudio-capturas {
+  position: relative;
+  padding: 0 14% 40px 0;
+}
+.portada-estudio-capturas img {
+  display: block;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+.portada-estudio-ancha {
+  width: 100%;
+}
+.portada-estudio-vertical {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24%;
+  border: 3px solid #0b0a1a;
+}
+@media (max-width: 900px) {
+  .portada-estudio {
+    grid-template-columns: 1fr;
+    padding: 32px 20px;
+    margin: 16px;
+  }
+}
+
+/* Grabar: la cuarta opción «Reacción» lleva al Estudio. */
+.selector-modo.con-reaccion {
+  grid-template-columns: repeat(4, 1fr);
+}
+.selector-modo a.modo-reaccion {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--tinta);
+  text-decoration: none;
+  background: linear-gradient(160deg, #fff0f8, #ecfdff);
+}
+.selector-modo a.modo-reaccion:hover {
+  border-color: #ff3ea5;
+}
+.modo-nuevo {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #c21d7a;
+  text-transform: uppercase;
+}

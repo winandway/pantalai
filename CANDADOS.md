@@ -701,3 +701,11 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   `.escenario` NO usar `cqw` (se mide contra la ventana, no contra él): sus márgenes van en los hijos.
   Prueba: `e2e/estudio.spec.ts` › Short vertical 9:16 (archivo 9:16, cámara arriba del video, verde en el video).
   Comprobada en ROJO el 9 nov 2026 (sin el formato vertical el archivo sale 16:9).
+- A la vista y sesión de TikTok (9 nov 2026, Richard: «si a mí me costó encontrarlo, que soy el CEO, imagínate los
+  demás»; y comprobó que TikTok solo se reproduce con la sesión de TikTok iniciada en el navegador). Hay botón
+  «🎙️ Reacciones» en el menú de arriba, la opción «Reaccionar a un video» en los modos de Grabar y una tarjeta grande
+  en la portada (`#estudio-de-reacciones`). En el estudio, una línea fija dice que YouTube no pide cuenta y TikTok sí,
+  con «Iniciar sesión en TikTok» (`https://www.tiktok.com/login`); si un TikTok no arranca o TikTok lo bloquea, el
+  aviso lo explica con amabilidad. No se puede saber desde nuestra página si la persona tiene sesión en TikTok (es
+  otro sitio): por eso se dice siempre que falla. Prueba: `e2e/estudio.spec.ts` › «está a la vista…» y › TikTok
+  vertical (texto de sesión). Comprobadas en ROJO el 9 nov 2026 quitando el botón del menú y el texto de sesión.

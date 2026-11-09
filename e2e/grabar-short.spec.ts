@@ -128,9 +128,17 @@ test('grabar un Short vertical para reaccionar', async ({ page }) => {
             foto: c.toDataURL('image/jpeg', 0.7),
           });
         };
+        let listo = false;
+        const una = () => {
+          if (listo) return;
+          listo = true;
+          sacar();
+        };
         const ir = () => {
           v.currentTime = 1.5;
-          v.addEventListener('seeked', sacar, { once: true });
+          v.addEventListener('seeked', una, { once: true });
+          // A veces el navegador no avisa «seeked»: a los 5 s se toma el cuadro igual.
+          setTimeout(una, 5000);
         };
         if (v.readyState >= 1) ir();
         else v.addEventListener('loadedmetadata', ir, { once: true });

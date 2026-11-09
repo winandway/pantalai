@@ -158,6 +158,7 @@ const VITRINA: { captura: string; etiqueta: T2; titulo: T2; texto: T2; puntos: T
 /** La lista completa de lo que trae Pantalay. */
 const HERRAMIENTAS: [string, T2][] = [
   ['🖥️', T('Screen + camera up to 4K', 'Pantalla + cámara hasta 4K')],
+  ['🎙️', T('Reaction Studio for YouTube and TikTok', 'Estudio de reacciones para YouTube y TikTok')],
   ['🫧', T('Floating camera bubble', 'Burbuja de cámara flotante')],
   ['🌈', T('Animated color border', 'Borde de colores animado')],
   ['📱', T('Vertical bubble for shorts', 'Burbuja vertical para shorts')],
@@ -227,9 +228,11 @@ export function Inicio() {
     <div className="portada">
       <section className="portada-hero">
         <div className="portada-hero-texto">
-          <a className="portada-novedad" href="/docs/draw-on-screen" onClick={alClicEnlace}>
+          <a className="portada-novedad" href="#estudio-de-reacciones">
             <b>{es ? 'Nuevo' : 'New'}</b>{' '}
-            {es ? 'Dibuja sobre tu pantalla mientras grabas →' : 'Draw on your screen while you record →'}
+            {es
+              ? 'Estudio de reacciones: reacciona a YouTube y TikTok con aspecto de podcast →'
+              : 'Reaction Studio: react to YouTube and TikTok with a podcast look →'}
           </a>
           <h1>
             {es ? (
@@ -303,6 +306,79 @@ export function Inicio() {
             </p>
           </li>
         </ol>
+      </section>
+
+      {/* El Estudio de reacciones, en grande: es la función que más se vende (pedido de Richard, 9 nov 2026). */}
+      <section className="portada-estudio" id="estudio-de-reacciones">
+        <div className="portada-estudio-texto">
+          <span className="portada-estudio-etiqueta">
+            🎙️ {es ? 'Nuevo · Estudio de reacciones' : 'New · Reaction Studio'}
+          </span>
+          <h2>
+            {es
+              ? 'Reacciona a cualquier video como en un podcast profesional'
+              : 'React to any video like a pro podcast'}
+          </h2>
+          <p>
+            {es
+              ? 'Pega el enlace de un video de YouTube o de TikTok y reacciona en vivo. Tú sales con tu nombre, el video con el nombre de su creador y abajo el tema del día. Se graba solo el escenario: nada de barras, pestañas ni escritorio.'
+              : 'Paste a YouTube or TikTok link and react live. You appear with your name, the video with its creator’s name and today’s topic at the bottom. Only the stage is recorded: no bars, tabs or desktop.'}
+          </p>
+          <ul>
+            <li>
+              ✓{' '}
+              {es
+                ? 'Sin descargar el video: se reproduce con el reproductor oficial'
+                : 'No downloads: it plays with the official player'}
+            </li>
+            <li>
+              ✓{' '}
+              {es
+                ? 'Horizontal para YouTube o vertical 9:16 para Shorts, TikTok y Reels'
+                : 'Horizontal for YouTube or vertical 9:16 for Shorts, TikTok and Reels'}
+            </li>
+            <li>
+              ✓{' '}
+              {es
+                ? 'Tres posiciones: cámara + video ancho, dos horizontales o video vertical'
+                : 'Three layouts: camera + wide video, side by side or vertical video'}
+            </li>
+            <li>
+              ✓{' '}
+              {es
+                ? 'Tu voz y el sonido del video, juntos y en sincronía'
+                : 'Your voice and the video’s sound, together and in sync'}
+            </li>
+          </ul>
+          <div className="fila-botones izquierda">
+            <a
+              className="boton grande portada-estudio-cta"
+              href={usuario ? '/studio' : '/signup'}
+              onClick={alClicEnlace}
+            >
+              🎙️ {es ? 'Abrir el Estudio de reacciones' : 'Open the Reaction Studio'}
+            </a>
+            <a className="boton secundario grande" href="/docs/reaction-studio" onClick={alClicEnlace}>
+              {es ? 'Ver cómo funciona' : 'See how it works'}
+            </a>
+          </div>
+        </div>
+        <div className="portada-estudio-capturas">
+          <img
+            className="portada-estudio-ancha"
+            src={`/capturas/estudio-escenario-${idioma}.webp`}
+            alt={es ? 'Estudio de reacciones en horizontal' : 'Reaction Studio, horizontal'}
+            loading="lazy"
+          />
+          <img
+            className="portada-estudio-vertical"
+            src={`/capturas/estudio-vertical-${idioma}.webp`}
+            alt={
+              es ? 'Estudio de reacciones en vertical para Shorts' : 'Reaction Studio, vertical for Shorts'
+            }
+            loading="lazy"
+          />
+        </div>
       </section>
 
       {VITRINA.map((v, i) => (

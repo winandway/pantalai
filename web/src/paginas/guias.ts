@@ -956,13 +956,14 @@ export const GUIAS: Guia[] = [
     seccion: 'grabar',
     icono: '🎙️',
     imagen: 'estudio',
-    imagenes: [null, null, 'estudio-vertical'],
+    imagenes: [null, null, null, 'estudio-vertical'],
     en: {
       titulo: 'Reaction Studio: react to a YouTube or TikTok video with a podcast-style look',
       resumen:
         'Paste a YouTube or TikTok link, play it right inside Pantalay and record your reaction in a podcast frame with your name, the creator and the topic. Choose the layout. Only the stage is recorded.',
       cuerpo: [
-        'Open the Reaction Studio from your account menu (or from Record). It works in Chrome and Edge on a computer. Your camera turns on inside the stage so you can see how you look.',
+        'Open the Reaction Studio with the 🎙️ Reactions button in the top menu, or in Record choose “React to a video”. It works in Chrome and Edge on a computer. Your camera turns on inside the stage so you can see how you look.',
+        'YouTube plays without an account. TikTok only plays inside other sites if you are signed in to TikTok in the same browser: if a TikTok does not start, sign in at tiktok.com, come back and load the video again. Pantalay reminds you with a link to sign in.',
         'Paste the link of a YouTube video, a YouTube Short or a TikTok and press Load video. It plays with the official YouTube or TikTok player, right inside the stage: nothing is downloaded. The creator’s name fills in by itself (and the title, for YouTube); you can change them and write today’s topic.',
         'Choose the format. “Horizontal 16:9 (YouTube)” makes a wide video. “Vertical 9:16 (Shorts, TikTok, Reels)” makes a standing video: your camera on top, the video below and today’s topic at the bottom. A vertical TikTok shows its center, so it fills its box.',
         'In the horizontal format, choose the layout under Layout. “Camera + wide video”: your camera square and the video wide. “Two side by side”: you and the video, both horizontal and the same size. “Vertical video (TikTok, Shorts)”: your camera wide and the video standing up. When you load a TikTok or a Short, the vertical layout is picked for you; you can change it anytime before recording.',
@@ -979,7 +980,8 @@ export const GUIAS: Guia[] = [
       resumen:
         'Pega un enlace de YouTube o de TikTok, reprodúcelo dentro de Pantalay y graba tu reacción en un marco de podcast con tu nombre, el creador y el tema. Elige la posición. Solo se graba el escenario.',
       cuerpo: [
-        'Abre el Estudio de reacciones desde el menú de tu cuenta (o desde Grabar). Funciona en Chrome y Edge de computadora. Tu cámara se enciende dentro del escenario para que veas cómo sales.',
+        'Abre el Estudio de reacciones con el botón 🎙️ Reacciones del menú de arriba, o en Grabar elige «Reaccionar a un video». Funciona en Chrome y Edge de computadora. Tu cámara se enciende dentro del escenario para que veas cómo sales.',
+        'YouTube se reproduce sin cuenta. TikTok solo se reproduce dentro de otras páginas si tienes tu sesión de TikTok iniciada en el mismo navegador: si un TikTok no arranca, inicia sesión en tiktok.com, vuelve y carga el video otra vez. Pantalay te lo recuerda con un enlace para iniciar sesión.',
         'Pega el enlace de un video de YouTube, de un Short o de un TikTok y toca Cargar video. Se reproduce con el reproductor oficial de YouTube o de TikTok, dentro del escenario: no se descarga nada. El nombre del creador se llena solo (y el título, en YouTube); los puedes cambiar y escribir el tema de hoy.',
         'Elige el formato. «Horizontal 16:9 (YouTube)» hace un video acostado. «Vertical 9:16 (Shorts, TikTok, Reels)» hace un video de pie: tu cámara arriba, el video abajo y el tema de hoy al pie. Un TikTok vertical muestra su centro, para que llene su recuadro.',
         'En el formato horizontal, elige la posición en Posición. «Cámara + video ancho»: tu cámara cuadrada y el video ancho. «Dos horizontales»: tú y el video, los dos acostados y del mismo tamaño. «Video vertical (TikTok, Shorts)»: tu cámara ancha y el video de pie. Al cargar un TikTok o un Short se elige sola la vertical; la puedes cambiar cuando quieras antes de grabar.',

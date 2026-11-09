@@ -10,10 +10,16 @@ const en = {
   cargar: 'Load video',
   enlaceMalo: 'That does not look like a YouTube or TikTok video link. Paste the full link of the video.',
   noExiste: 'We could not find that video. Check the link.',
-  ocupado: 'TikTok is not letting this video play right now. Try again in a minute, or open it on TikTok.',
+  ocupado:
+    'TikTok is not letting this video play here. It almost always means you are not signed in to TikTok in this browser: sign in at tiktok.com, then load the video again.',
   tocarTiktok:
     'TikTok asks for one tap: tap the video once to start it. After that, use these buttons to play, pause and skip.',
   noArranco: 'The video did not start. Tap the video directly, or open it on its own page.',
+  noArrancoTiktok:
+    'The TikTok did not start. TikTok only plays inside other sites if you are signed in to TikTok in this browser: sign in at tiktok.com, come back and load the video again.',
+  ayudaPlataformas:
+    'YouTube plays without an account. TikTok asks you to be signed in to TikTok in this same browser.',
+  entrarTiktok: 'Sign in to TikTok',
   abrirTiktok: 'Open on TikTok',
   abrirYoutube: 'Open on YouTube',
   formato: 'Format',
@@ -71,10 +77,15 @@ const es: typeof en = {
     'Eso no parece el enlace de un video de YouTube o de TikTok. Pega el enlace completo del video.',
   noExiste: 'No encontramos ese video. Revisa el enlace.',
   ocupado:
-    'TikTok no está dejando reproducir este video en este momento. Inténtalo en un minuto o ábrelo en TikTok.',
+    'TikTok no deja reproducir este video aquí. Casi siempre es porque no has iniciado sesión en TikTok en este navegador: entra a tiktok.com, inicia sesión y vuelve a cargar el video.',
   tocarTiktok:
     'TikTok pide un toque: toca el video una vez para que arranque. Después lo manejas con estos botones: reproducir, pausar y saltar.',
   noArranco: 'El video no arrancó. Tócalo directamente o ábrelo en su página.',
+  noArrancoTiktok:
+    'El TikTok no arrancó. TikTok solo se reproduce dentro de otras páginas si tienes tu sesión de TikTok iniciada en este navegador: inicia sesión en tiktok.com, vuelve y carga el video otra vez.',
+  ayudaPlataformas:
+    'YouTube se reproduce sin cuenta. TikTok pide que tengas tu sesión de TikTok iniciada en este mismo navegador.',
+  entrarTiktok: 'Iniciar sesión en TikTok',
   abrirTiktok: 'Abrir en TikTok',
   abrirYoutube: 'Abrir en YouTube',
   formato: 'Formato',

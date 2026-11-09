@@ -2,6 +2,10 @@
 export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
   en: [
     [
+      'Reaction Studio',
+      'Paste a YouTube or TikTok link and react in a podcast frame with your name, the creator and the topic. Horizontal or vertical 9:16.',
+    ],
+    [
       'Screen + camera',
       'Your screen with your face in a bubble, just the screen, or just the camera. Up to 4K.',
     ],
@@ -32,6 +36,10 @@ export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
     ],
   ],
   es: [
+    [
+      'Estudio de reacciones',
+      'Pega un enlace de YouTube o de TikTok y reacciona en un marco de podcast con tu nombre, el creador y el tema. Horizontal o vertical 9:16.',
+    ],
     [
       'Pantalla + cámara',
       'Tu pantalla con tu cara en una burbuja, solo la pantalla o solo la cámara. Hasta 4K.',

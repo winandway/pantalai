@@ -44,6 +44,7 @@ import { copiar } from './Biblioteca';
 
 const ORIGEN_YT = 'https://www.youtube-nocookie.com';
 const ORIGEN_TT = 'https://www.tiktok.com';
+const ENTRAR_TIKTOK = 'https://www.tiktok.com/login';
 type Estado = 'listo' | 'cuenta' | 'grabando' | 'pausa' | 'subiendo' | 'fallo';
 type Oembed = {
   plataforma?: 'youtube' | 'tiktok';
@@ -495,6 +496,12 @@ export function Estudio() {
             {tx.cargar}
           </button>
         </div>
+        <p className="estudio-ayuda">
+          {tx.ayudaPlataformas}{' '}
+          <a href={ENTRAR_TIKTOK} target="_blank" rel="noopener noreferrer">
+            {tx.entrarTiktok}
+          </a>
+        </p>
         {b.recuperado && (
           <p className="recuperado">
             {t('recuperado')}{' '}
@@ -513,9 +520,9 @@ export function Estudio() {
               {tx.irGrabar}
             </a>
           )}
-          {error.abrir && video && (
-            <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
-              {video.plataforma === 'tiktok' ? tx.abrirTiktok : tx.abrirYoutube}
+          {error.abrir && video?.plataforma === 'tiktok' && (
+            <a href={ENTRAR_TIKTOK} target="_blank" rel="noopener noreferrer">
+              {tx.entrarTiktok}
             </a>
           )}
         </p>
@@ -742,10 +749,22 @@ export function Estudio() {
       </div>
       {video && (pideToque(video.plataforma, listo) || avisoVideo === 'no_arranco') && (
         <p className={`estudio-aviso${avisoVideo ? ' estudio-aviso-fuerte' : ''}`} role="status">
-          {pideToque(video.plataforma, listo) ? tx.tocarTiktok : tx.noArranco}{' '}
+          {pideToque(video.plataforma, listo) && !avisoVideo
+            ? tx.tocarTiktok
+            : video.plataforma === 'tiktok'
+              ? tx.noArrancoTiktok
+              : tx.noArranco}{' '}
           <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
             {video.plataforma === 'tiktok' ? tx.abrirTiktok : tx.abrirYoutube}
           </a>
+          {video.plataforma === 'tiktok' && (
+            <>
+              {' · '}
+              <a href={ENTRAR_TIKTOK} target="_blank" rel="noopener noreferrer">
+                {tx.entrarTiktok}
+              </a>
+            </>
+          )}
         </p>
       )}
       {estado === 'fallo' && (
