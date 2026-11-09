@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { metaDeRuta, prepararCabecera, rutasPublicas, sitemap } from '../servidor/dominio';
+import {
+  metaDeRuta,
+  prepararCabecera,
+  robots,
+  rutasPublicas,
+  sitemap,
+  sitemapVideos,
+} from '../servidor/dominio';
 import { contenidoDeRuta, datosEstructurados } from '../servidor/seo';
 import { conIdioma, esPublicaTraducible, idiomaDeRuta, sinPrefijo } from '../web/src/logica/rutasIdioma';
 import { LANDINGS } from '../web/src/paginas/landings';
@@ -101,5 +108,59 @@ describe('lo que recibe Google', () => {
     expect(xml).toContain(
       '<loc>https://pantalay.com/es/screen-recorder</loc><xhtml:link rel="alternate" hreflang="en" href="https://pantalay.com/screen-recorder"/>',
     );
+  });
+});
+
+// CANDADO C-VIDEO-SITEMAP: lo que Google pide para indexar videos.
+describe('mapa de videos para Google', () => {
+  it('cada video publicado lleva su página, miniatura, título, descripción, archivo, reproductor, duración y fecha', () => {
+    const x = sitemapVideos([
+      {
+        id: 'abc',
+        titulo: 'Reacción <increíble> & más',
+        descripcion: '',
+        autor: 'Richard',
+        duracion: 62.4,
+        publicado_en: Date.UTC(2026, 10, 9, 21, 0, 0),
+        vistas: 7,
+        tiene_miniatura: true,
+      },
+    ]);
+    expect(x).toContain('xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"');
+    expect(x).toContain('<loc>https://pantalay.com/videos/abc</loc>');
+    expect(x).toContain(
+      '<video:thumbnail_loc>https://pantalay.com/media/abc/miniatura</video:thumbnail_loc>',
+    );
+    expect(x).toContain('<video:title>Reacción &lt;increíble&gt; &amp; más</video:title>');
+    expect(x).toContain(
+      '<video:description>Reacción &lt;increíble&gt; &amp; más · Richard · Pantalay</video:description>',
+    );
+    expect(x).toContain('<video:content_loc>https://pantalay.com/media/abc/video</video:content_loc>');
+    expect(x).toContain('<video:player_loc>https://pantalay.com/embed/abc</video:player_loc>');
+    expect(x).toContain('<video:duration>62</video:duration>');
+    expect(x).toContain('<video:publication_date>2026-11-09T21:00:00.000Z</video:publication_date>');
+    // Sin miniatura propia, la imagen de Pantalay (Google exige una miniatura).
+    expect(
+      sitemapVideos([
+        {
+          id: 'z',
+          titulo: 't',
+          descripcion: 'd',
+          autor: 'a',
+          duracion: 0,
+          publicado_en: 0,
+          vistas: 0,
+          tiene_miniatura: false,
+        },
+      ]),
+    ).toContain('<video:thumbnail_loc>https://pantalay.com/og.png</video:thumbnail_loc>');
+  });
+
+  it('el archivo de buscadores deja leer miniaturas y videos, y anuncia el mapa de videos', () => {
+    const r = robots();
+    expect(r).toContain('Allow: /media/*/miniatura');
+    expect(r).toContain('Allow: /media/*/video');
+    expect(r).toContain('Disallow: /media/');
+    expect(r).toContain('Sitemap: https://pantalay.com/video-sitemap.xml');
   });
 });

@@ -25,6 +25,8 @@ import {
   redireccion,
   robots,
   sitemap,
+  sitemapVideos,
+  type VideoParaMapa,
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
 import { arrobaDe, videoDeTiktok, videoDeYoutube } from '../web/src/logica/estudio';
@@ -270,6 +272,24 @@ app.use('*', async (c, next) => {
   const destino = redireccion(c.req.url, c.req.method);
   if (destino) return c.redirect(destino, 301);
   await next();
+});
+
+// Mapa de videos para Google (pestaña Videos y resultados con video). Solo lee; hasta 5000 videos.
+app.get('/video-sitemap.xml', async (c) => {
+  const filas = await c.env.DB.prepare(
+    `SELECT v.id, v.titulo, v.descripcion, u.nombre AS autor, v.duracion, r.publicado_en, v.tiene_miniatura,
+       (SELECT COUNT(*) FROM vistas x WHERE x.video_id = v.id) AS vistas
+     FROM red_publicaciones r JOIN videos v ON v.id = r.video_id JOIN usuarios u ON u.id = v.usuario_id
+     WHERE r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace' AND v.archivado = 0
+     ORDER BY r.publicado_en DESC LIMIT 5000`,
+  )
+    .all<Omit<VideoParaMapa, 'tiene_miniatura'> & { tiene_miniatura: number }>()
+    .catch((e) => {
+      console.error('video-sitemap', e);
+      return { results: [] as (Omit<VideoParaMapa, 'tiene_miniatura'> & { tiene_miniatura: number })[] };
+    });
+  const videos = (filas.results ?? []).map((v) => ({ ...v, tiene_miniatura: Boolean(v.tiene_miniatura) }));
+  return c.body(sitemapVideos(videos), 200, { 'content-type': 'application/xml; charset=utf-8' });
 });
 
 app.get('/sitemap.xml', async (c) => {
@@ -2493,12 +2513,15 @@ app.get('/datos/red', async (c) => {
   const limite = Math.min(48, Math.max(1, Number(c.req.query('limite')) || 24));
   const antes = Number(c.req.query('antes')) || Number.MAX_SAFE_INTEGER;
   const excepto = (c.req.query('excepto') ?? '').slice(0, 40);
-  // «autor»: solo los videos de un creador (su perfil).
+  // «autor»: solo los videos de un creador (su perfil). «forma»: vertical (Shorts) u horizontal.
   const autor = (c.req.query('autor') ?? '').slice(0, 40);
+  const forma = c.req.query('forma');
+  const filtroForma =
+    forma === 'vertical' ? ' AND v.alto > v.ancho' : forma === 'horizontal' ? ' AND v.alto <= v.ancho' : '';
   const orden =
     c.req.query('orden') === 'gustados' ? 'r.me_gusta DESC, r.publicado_en DESC' : 'r.publicado_en DESC';
   const filas = await c.env.DB.prepare(
-    `${SQL_RED} AND r.publicado_en < ? AND v.id != ?${autor ? ' AND v.usuario_id = ?' : ''} ORDER BY ${orden} LIMIT ?`,
+    `${SQL_RED} AND r.publicado_en < ? AND v.id != ?${autor ? ' AND v.usuario_id = ?' : ''}${filtroForma} ORDER BY ${orden} LIMIT ?`,
   )
     .bind(...(autor ? [antes, excepto, autor, limite] : [antes, excepto, limite]))
     .all<FilaRed>();

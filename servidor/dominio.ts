@@ -111,9 +111,12 @@ export function robots(): string {
     '/panel/',
     '/admin',
   ];
+  // La miniatura y el archivo de cada video SÍ se dejan leer: Google los exige para indexar videos (la regla más
+  // larga gana sobre «Disallow: /media/»). Los privados siguen protegidos: sin permiso, el servidor responde 404.
+  const permitidas = ['/media/*/miniatura', '/media/*/video'];
   const bloque = (agente: string) =>
-    `User-agent: ${agente}\nAllow: /\n${privadas.map((p) => `Disallow: ${p}`).join('\n')}\n`;
-  return `${['*', ...BOTS_IA].map(bloque).join('\n')}\nSitemap: ${DOMINIO}/sitemap.xml\n# Guide for AI assistants: ${DOMINIO}/llms.txt\n`;
+    `User-agent: ${agente}\nAllow: /\n${permitidas.map((p) => `Allow: ${p}`).join('\n')}\n${privadas.map((p) => `Disallow: ${p}`).join('\n')}\n`;
+  return `${['*', ...BOTS_IA].map(bloque).join('\n')}\nSitemap: ${DOMINIO}/sitemap.xml\nSitemap: ${DOMINIO}/video-sitemap.xml\n# Guide for AI assistants: ${DOMINIO}/llms.txt\n`;
 }
 
 // ---------- Google Search Console ----------
@@ -254,4 +257,60 @@ export function prepararCabecera(html: string, ruta: string, codigos: string[]):
   // El texto de la página, escrito en el HTML para quien no ejecuta JavaScript (React lo reemplaza al cargar).
   const texto = contenidoDeRuta(ruta);
   return texto ? h.replace('<div id="raiz"></div>', () => `<div id="raiz">${texto}</div>`) : h;
+}
+
+// ---------- Mapa de videos para Google (9 nov 2026, candado C-VIDEO-SITEMAP) ----------
+// Lo que pide Google para que un video aparezca en la búsqueda y en la pestaña Videos: una página propia por video
+// (/videos/<id>) que se pueda indexar, miniatura que se pueda leer, título, descripción, el archivo del video o su
+// reproductor, duración y fecha. developers.google.com/search/docs/appearance/video
+
+export type VideoParaMapa = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  autor: string;
+  duracion: number;
+  publicado_en: number;
+  vistas: number;
+  tiene_miniatura: boolean;
+};
+
+const xml = (t: string) =>
+  t
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+    // Caracteres de control que rompen un XML.
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+
+/** El mapa de videos (formato de Google: sitemap con la extensión «video»). */
+export function sitemapVideos(videos: VideoParaMapa[]): string {
+  const entradas = videos
+    .map((v) => {
+      const miniatura = v.tiene_miniatura ? `${DOMINIO}/media/${v.id}/miniatura` : `${DOMINIO}/og.png`;
+      const descripcion = (v.descripcion.trim() || `${v.titulo} · ${v.autor} · Pantalay`).slice(0, 2048);
+      const duracion = Math.min(28800, Math.max(1, Math.round(v.duracion)));
+      return `  <url>
+    <loc>${DOMINIO}/videos/${v.id}</loc>
+    <video:video>
+      <video:thumbnail_loc>${xml(miniatura)}</video:thumbnail_loc>
+      <video:title>${xml(v.titulo.slice(0, 100))}</video:title>
+      <video:description>${xml(descripcion)}</video:description>
+      <video:content_loc>${DOMINIO}/media/${v.id}/video</video:content_loc>
+      <video:player_loc>${DOMINIO}/embed/${v.id}</video:player_loc>
+      <video:duration>${duracion}</video:duration>
+      <video:view_count>${Math.max(0, Math.round(v.vistas))}</video:view_count>
+      <video:publication_date>${new Date(v.publicado_en).toISOString()}</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+      <video:requires_subscription>no</video:requires_subscription>
+      <video:uploader>${xml(v.autor.slice(0, 255))}</video:uploader>
+      <video:live>no</video:live>
+    </video:video>
+  </url>`;
+    })
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n${entradas}\n</urlset>\n`;
 }

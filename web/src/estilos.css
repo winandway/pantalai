@@ -5643,3 +5643,61 @@ html.estudio-sin-scroll {
   color: inherit;
   text-decoration: none;
 }
+
+/* Estante de Shorts (videos verticales) y reproductor vertical */
+.red-shorts {
+  margin: 32px 0;
+}
+.red-shorts h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.red-shorts-logo {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  background: linear-gradient(135deg, #ff3ea5, #a78bfa);
+}
+.red-shorts-fila {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(170px, 210px);
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+}
+.red-short {
+  display: grid;
+  gap: 6px;
+  color: var(--tinta);
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+.red-short-imagen {
+  position: relative;
+  display: block;
+  aspect-ratio: 9 / 16;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0b0a1a;
+}
+.red-short-imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.red-short.red-vacia .red-short-imagen {
+  background: linear-gradient(160deg, rgba(255, 62, 165, 0.14), rgba(34, 211, 238, 0.14)), var(--fondo-suave);
+  border: 2px dashed var(--borde);
+}
+.red-ver-reproductor.vertical {
+  width: min(100%, calc((100vh - 180px) * 9 / 16));
+  margin: 0 auto;
+}

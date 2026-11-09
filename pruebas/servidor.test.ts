@@ -1325,3 +1325,22 @@ describe('CANDADO C-RED-VIDEOS: perfil del creador', () => {
     expect((await anon('/datos/red-canal/nadie')).status).toBe(404);
   });
 });
+
+describe('CANDADO C-RED-VIDEOS: Shorts', () => {
+  it('separa los Shorts (verticales) de los videos horizontales', async () => {
+    const ana = await registrado('Ana', 'ana.shorts@example.com', '7.7.12.1');
+    const ancho = await videoListo(ana);
+    const alto = await videoListo(ana);
+    await env.DB.prepare('UPDATE videos SET ancho = 1080, alto = 1920 WHERE id = ?').bind(alto.id).run();
+    for (const v of [ancho, alto])
+      await ana(`/datos/videos/${v.id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    const anon = cliente('7.7.12.2');
+    const ids = async (q: string) =>
+      ((await (await anon(`/datos/red?${q}`)).json()) as { videos: { id: string; vertical: boolean }[] })
+        .videos;
+    expect((await ids('forma=vertical')).map((v) => v.id)).toEqual([alto.id]);
+    expect((await ids('forma=vertical'))[0]!.vertical).toBe(true);
+    expect((await ids('forma=horizontal')).map((v) => v.id)).toEqual([ancho.id]);
+    expect(await ids('')).toHaveLength(2);
+  });
+});

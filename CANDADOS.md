@@ -834,3 +834,16 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   El Estudio avisa al encabezado (`fijarEstadoGrabacion`) y «Grabando» se queda en /studio.
 - Prueba: `e2e/estudio.spec.ts` › Short vertical y `e2e/grabar-pestana.spec.ts` arrancan con el botón de arriba.
   Comprobadas en ROJO el 9 nov 2026.
+
+## C-VIDEO-SITEMAP y Shorts en la red (9 nov 2026)
+
+- Google y los videos: `robots.txt` BLOQUEABA `/media/`, así que Google no podía leer ni miniaturas ni videos (sin
+  eso no indexa ninguno). Ahora `Allow: /media/*/miniatura` y `Allow: /media/*/video` (la regla más larga gana) y
+  sigue `Disallow: /media/` para lo demás; los privados siguen dando 404 sin permiso. Mapa de videos en
+  `/video-sitemap.xml` (`sitemapVideos`, extensión video de Google: página, miniatura, título, descripción,
+  content_loc, player_loc, duración, vistas, fecha, autor), anunciado en robots. Cada `/videos/<id>` lleva
+  `VideoObject`. Para Search Console: enviar `https://pantalay.com/video-sitemap.xml`.
+- Shorts: `/datos/red?forma=vertical|horizontal`; en «Videos» van dos filas de videos, el estante de Shorts (9:16,
+  8 espacios con relleno) y el resto. Un Short se abre con el reproductor en vertical.
+- Prueba: `pruebas/seo-idiomas.test.ts` › mapa de videos y robots; `pruebas/servidor.test.ts` › Shorts;
+  `e2e/red.spec.ts` › estante de Shorts. Comprobadas en ROJO el 9 nov 2026.

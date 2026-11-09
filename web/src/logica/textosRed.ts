@@ -52,6 +52,8 @@ const en = {
   canalVideos: (n: number) => (n === 1 ? '1 video' : `${n} videos`),
   canalGustas: (n: number) => (n === 1 ? '1 like' : `${n} likes`),
   canalNoExiste: 'This creator has no published videos yet.',
+  shorts: 'Shorts',
+  tuShortAqui: 'Your Short here',
 };
 
 const es: typeof en = {
@@ -105,6 +107,8 @@ const es: typeof en = {
   canalVideos: (n: number) => (n === 1 ? '1 video' : `${n} videos`),
   canalGustas: (n: number) => (n === 1 ? '1 me gusta' : `${n} me gusta`),
   canalNoExiste: 'Este creador todavía no tiene videos publicados.',
+  shorts: 'Shorts',
+  tuShortAqui: 'Tu Short aquí',
 };
 
 export const TEXTOS_RED: Record<Idioma, typeof en> = { en, es };

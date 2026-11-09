@@ -2,6 +2,9 @@
 
 ## 👤 Depende de Richard
 
+- 👤 En Google Search Console → Sitemaps: enviar `https://pantalay.com/video-sitemap.xml` (el mapa de videos).
+  Destraba: que Google indexe cada video publicado en Videos.
+
 - 👤 Registrar el agente de derechos de autor (DMCA) de Pantalay en la Oficina de Derechos de Autor de EE. UU.
   (designated agent, 6 USD, en línea, a nombre de Windoce LLC). Destraba: la protección legal de la red de videos
   («Publicar en Pantalay») cuando alguien suba contenido de terceros. Mientras tanto ya existen «Denunciar» y ocultar.

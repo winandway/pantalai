@@ -78,6 +78,63 @@ export function TarjetaVacia({ chica = false }: { chica?: boolean }) {
   );
 }
 
+/** Un Short (video vertical): miniatura 9:16 con su título y vistas. Si no hay video, un espacio vacío. */
+export function TarjetaShort({ v }: { v: TarjetaRed | null }) {
+  const { idioma } = useIdioma();
+  const { usuario } = useSesion();
+  const tx = TEXTOS_RED[idioma];
+  if (!v)
+    return (
+      <a className="red-short red-vacia" href={usuario ? '/studio' : '/signup'} onClick={alClicEnlace}>
+        <span className="red-short-imagen">
+          <span className="red-sin-miniatura" aria-hidden="true">
+            ▶
+          </span>
+        </span>
+        <span className="red-titulo">{tx.tuShortAqui}</span>
+      </a>
+    );
+  return (
+    <a className="red-short" href={`/videos/${v.id}`} onClick={alClicEnlace}>
+      <span className="red-short-imagen">
+        {v.miniatura ? (
+          <img src={v.miniatura} alt="" loading="lazy" />
+        ) : (
+          <span className="red-sin-miniatura" aria-hidden="true">
+            ▶
+          </span>
+        )}
+      </span>
+      <span className="red-titulo">{v.titulo}</span>
+      <span className="red-meta">{tx.vistas(v.vistas)}</span>
+    </a>
+  );
+}
+
+/** El estante de Shorts (videos verticales), entre las filas de videos normales. */
+function EstanteShorts({ shorts }: { shorts: TarjetaRed[] }) {
+  const { idioma } = useIdioma();
+  const tx = TEXTOS_RED[idioma];
+  return (
+    <section className="red-shorts" aria-label={tx.shorts}>
+      <h2>
+        <span className="red-shorts-logo" aria-hidden="true">
+          ▮
+        </span>{' '}
+        {tx.shorts}
+      </h2>
+      <div className="red-shorts-fila">
+        {shorts.map((v) => (
+          <TarjetaShort key={v.id} v={v} />
+        ))}
+        {relleno(shorts.length, 8).map((i) => (
+          <TarjetaShort key={`vacio-${i}`} v={null} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /** Rellena con espacios vacíos hasta «total» (cuando todavía hay pocos videos). */
 function relleno(n: number, total: number): number[] {
   return Array.from({ length: Math.max(0, total - n) }, (_, i) => i);
@@ -106,10 +163,19 @@ export function PaginaRed() {
   const tx = TEXTOS_RED[idioma];
   const { usuario } = useSesion();
   const [videos, setVideos] = useState<TarjetaRed[] | null>(null);
+  const [shorts, setShorts] = useState<TarjetaRed[]>([]);
   const [hayMas, setHayMas] = useState(false);
 
+  useEffect(() => {
+    void pedir<{ videos: TarjetaRed[] }>('/datos/red?limite=12&forma=vertical')
+      .then((r) => setShorts(r.videos))
+      .catch(() => undefined);
+  }, []);
+
   const cargar = useCallback(async (antes?: number) => {
-    const r = await pedir<{ videos: TarjetaRed[] }>(`/datos/red?limite=24${antes ? `&antes=${antes}` : ''}`);
+    const r = await pedir<{ videos: TarjetaRed[] }>(
+      `/datos/red?limite=24&forma=horizontal${antes ? `&antes=${antes}` : ''}`,
+    );
     setVideos((x) => (antes && x ? [...x, ...r.videos] : r.videos));
     setHayMas(r.videos.length === 24);
   }, []);
@@ -142,13 +208,17 @@ export function PaginaRed() {
               </a>
             </p>
           )}
+          {/* Dos filas de videos, el estante de Shorts y después el resto (como en las plataformas grandes). */}
           <div className="red-cuadricula">
-            {videos.map((v) => (
-              <Tarjeta key={v.id} v={v} />
-            ))}
-            {relleno(videos.length, 30).map((i) => (
-              <TarjetaVacia key={`vacio-${i}`} />
-            ))}
+            {[...videos, ...relleno(videos.length, 30).map(() => null)]
+              .slice(0, 10)
+              .map((v, i) => (v ? <Tarjeta key={v.id} v={v} /> : <TarjetaVacia key={`vacio-a-${i}`} />))}
+          </div>
+          <EstanteShorts shorts={shorts} />
+          <div className="red-cuadricula">
+            {[...videos, ...relleno(videos.length, 30).map(() => null)]
+              .slice(10)
+              .map((v, i) => (v ? <Tarjeta key={v.id} v={v} /> : <TarjetaVacia key={`vacio-b-${i}`} />))}
           </div>
           {hayMas && (
             <button
@@ -253,7 +323,7 @@ export function VerVideoRed({ id }: { id: string }) {
         <BannerRed chico />
       </div>
       <div className="red-ver-principal">
-        <div className="red-ver-reproductor">
+        <div className={`red-ver-reproductor${red?.vertical ? ' vertical' : ''}`}>
           {video ? (
             <Reproductor video={video} alTiempo={alTiempo} atajos />
           ) : (
