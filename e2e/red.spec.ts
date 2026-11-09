@@ -30,10 +30,23 @@ test('publicar un video en la red de Pantalay', async ({ page, browser, request 
   // En «Videos» aparece y se abre con su página.
   await page.locator('.encabezado-nav').getByRole('link', { name: 'Videos' }).click();
   await expect(page).toHaveURL(/\/videos$/);
+  // La red se ve llena desde el principio: banner y espacios vacíos hasta 30.
+  await expect(page.locator('.red-banner')).toBeVisible();
+  const reales = await page.locator('.red-cuadricula .red-tarjeta:not(.red-vacia)').count();
+  await expect(page.locator('.red-cuadricula .red-vacia')).toHaveCount(Math.max(0, 30 - reales));
   await page.locator(`a[href="/videos/${id}"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/videos/${id}$`));
   await expect(page.locator('.red-ver-titulo')).toHaveText('vertical-verde');
   await expect(page.locator('.red-ver-reproductor video')).toBeVisible();
+  // Más videos a la derecha, completados con espacios vacíos hasta 10.
+  await expect(page.locator('.red-ver-lado .red-tarjeta')).toHaveCount(10);
+  // El nombre del autor lleva a su perfil, con banner y sus videos.
+  await page.locator('.red-ver-autor a').click();
+  await expect(page).toHaveURL(/\/channel\/[A-Za-z0-9_-]+$/);
+  await expect(page.locator('.red-canal-portada')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Soporte E2E' })).toBeVisible();
+  await expect(page.locator(`.red-cuadricula a[href="/videos/${id}"]`)).toBeVisible();
+  await page.goBack();
   await page.getByRole('button', { name: /Like · 0/ }).click();
   await expect(page.getByRole('button', { name: /Liked · 1/ })).toBeVisible();
 

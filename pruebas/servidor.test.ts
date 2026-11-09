@@ -1305,3 +1305,23 @@ describe('CANDADO C-RED-VIDEOS: la red de videos de Pantalay', () => {
     ).toBe(403);
   });
 });
+
+describe('CANDADO C-RED-VIDEOS: perfil del creador', () => {
+  it('lista solo los videos de ese creador y su perfil existe si publicó algo', async () => {
+    const ana = await registrado('Ana', 'ana.canal@example.com', '7.7.11.1');
+    const beto = await registrado('Beto', 'beto.canal@example.com', '7.7.11.2');
+    const a = await videoListo(ana);
+    const b = await videoListo(beto);
+    await ana(`/datos/videos/${a.id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    await beto(`/datos/videos/${b.id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    const anon = cliente('7.7.11.3');
+    const todos = (await (await anon('/datos/red')).json()) as { videos: { id: string; autor_id: string }[] };
+    const idAna = todos.videos.find((v) => v.id === a.id)!.autor_id;
+    const deAna = (await (await anon(`/datos/red?autor=${idAna}`)).json()) as { videos: { id: string }[] };
+    expect(deAna.videos.map((v) => v.id)).toEqual([a.id]);
+    expect(await (await anon(`/datos/red-canal/${idAna}`)).json()).toEqual({
+      canal: { id: idAna, nombre: 'Ana', videos: 1, me_gusta: 0 },
+    });
+    expect((await anon('/datos/red-canal/nadie')).status).toBe(404);
+  });
+});

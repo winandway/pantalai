@@ -18,6 +18,7 @@ export type TarjetaRed = {
   id: string;
   titulo: string;
   autor: string;
+  autor_id: string;
   duracion: number;
   vertical: boolean;
   miniatura: string | null;
@@ -53,6 +54,52 @@ export function Tarjeta({ v, chica = false }: { v: TarjetaRed; chica?: boolean }
   );
 }
 
+/** Espacio vacío (la red se ve llena desde el principio): invita a grabar y publicar. */
+export function TarjetaVacia({ chica = false }: { chica?: boolean }) {
+  const { idioma } = useIdioma();
+  const { usuario } = useSesion();
+  const tx = TEXTOS_RED[idioma];
+  return (
+    <a
+      className={`red-tarjeta red-vacia${chica ? ' chica' : ''}`}
+      href={usuario ? '/record' : '/signup'}
+      onClick={alClicEnlace}
+    >
+      <span className="red-miniatura">
+        <span className="red-sin-miniatura" aria-hidden="true">
+          ▶
+        </span>
+      </span>
+      <span className="red-datos">
+        <span className="red-titulo">{tx.tuVideoAqui}</span>
+        <span className="red-autor">{tx.publicaElTuyo}</span>
+      </span>
+    </a>
+  );
+}
+
+/** Rellena con espacios vacíos hasta «total» (cuando todavía hay pocos videos). */
+function relleno(n: number, total: number): number[] {
+  return Array.from({ length: Math.max(0, total - n) }, (_, i) => i);
+}
+
+/** El banner de la red de videos de Pantalay (neón, con la marca). */
+export function BannerRed({ chico = false }: { chico?: boolean }) {
+  const { idioma, enlace } = useIdioma();
+  const tx = TEXTOS_RED[idioma];
+  return (
+    <a className={`red-banner${chico ? ' chico' : ''}`} href={enlace('/videos')} onClick={alClicEnlace}>
+      <span className="red-banner-logo" aria-hidden="true">
+        ▶
+      </span>
+      <span className="red-banner-texto">
+        <b>{tx.bannerTitulo}</b>
+        {!chico && <span>{tx.bannerLema}</span>}
+      </span>
+    </a>
+  );
+}
+
 /** «Videos»: la cuadrícula de todos los videos publicados, lo más nuevo primero. */
 export function PaginaRed() {
   const { idioma } = useIdioma();
@@ -74,6 +121,7 @@ export function PaginaRed() {
 
   return (
     <div className="red">
+      <BannerRed />
       <header className="red-cabeza">
         <h1>{tx.tituloRed}</h1>
         <p>{tx.introRed}</p>
@@ -84,18 +132,22 @@ export function PaginaRed() {
             <span key={i} className="red-tarjeta cargando" />
           ))}
         </div>
-      ) : videos.length === 0 ? (
-        <p className="vacio">
-          {tx.vacio}{' '}
-          <a href={usuario ? '/record' : '/signup'} onClick={alClicEnlace}>
-            {tx.grabar}
-          </a>
-        </p>
       ) : (
         <>
+          {videos.length === 0 && (
+            <p className="vacio">
+              {tx.vacio}{' '}
+              <a href={usuario ? '/record' : '/signup'} onClick={alClicEnlace}>
+                {tx.grabar}
+              </a>
+            </p>
+          )}
           <div className="red-cuadricula">
             {videos.map((v) => (
               <Tarjeta key={v.id} v={v} />
+            ))}
+            {relleno(videos.length, 30).map((i) => (
+              <TarjetaVacia key={`vacio-${i}`} />
             ))}
           </div>
           {hayMas && (
@@ -197,6 +249,9 @@ export function VerVideoRed({ id }: { id: string }) {
 
   return (
     <div className="red-ver">
+      <div className="red-ver-banner">
+        <BannerRed chico />
+      </div>
       <div className="red-ver-principal">
         <div className="red-ver-reproductor">
           {video ? (
@@ -214,7 +269,9 @@ export function VerVideoRed({ id }: { id: string }) {
                   {red.autor.charAt(0).toUpperCase()}
                 </span>
                 <span>
-                  <b>{red.autor}</b>
+                  <a href={`/channel/${red.autor_id}`} onClick={alClicEnlace}>
+                    <b>{red.autor}</b>
+                  </a>
                   <small>
                     {tx.vistas(red.vistas)} · {haceCuanto(red.publicado_en, idioma)}
                   </small>
@@ -252,6 +309,9 @@ export function VerVideoRed({ id }: { id: string }) {
         <h2>{tx.relacionados}</h2>
         {otros.map((v) => (
           <Tarjeta key={v.id} v={v} chica />
+        ))}
+        {relleno(otros.length, 10).map((i) => (
+          <TarjetaVacia key={`vacio-${i}`} chica />
         ))}
         <a className="enlace" href="/videos" onClick={alClicEnlace}>
           {tx.verTodos} →
@@ -323,7 +383,7 @@ function Denunciar({ id, cerrar }: { id: string; cerrar: () => void }) {
 }
 
 /** Carrusel de la portada: los videos publicados pasando solos; al tocar uno se abre en la red. */
-export function CarruselRed() {
+export function CarruselRed({ sinTitulo = false }: { sinTitulo?: boolean }) {
   const { idioma, enlace } = useIdioma();
   const tx = TEXTOS_RED[idioma];
   const [videos, setVideos] = useState<TarjetaRed[]>([]);
@@ -332,13 +392,12 @@ export function CarruselRed() {
       .then((r) => setVideos(r.videos))
       .catch(() => undefined);
   }, []);
-  if (videos.length === 0) return null;
-  // La cinta va dos veces seguida para que dé la vuelta sin cortes (igual que la de las redes sociales).
-  const cinta = videos.length < 6 ? [...videos, ...videos, ...videos] : videos;
+  // Con pocos videos, la cinta se completa con espacios vacíos («Tu video aquí») en vez de repetir el mismo.
+  const cinta: (TarjetaRed | null)[] = [...videos, ...relleno(videos.length, 12).map(() => null)];
   return (
     <section className="red-carrusel" aria-label={tx.comunidad}>
       <div className="red-carrusel-cabeza">
-        <h2>{tx.comunidad}</h2>
+        {sinTitulo ? <span /> : <h2>{tx.comunidad}</h2>}
         <a className="enlace" href={enlace('/videos')} onClick={alClicEnlace}>
           {tx.verTodos} →
         </a>
@@ -346,12 +405,65 @@ export function CarruselRed() {
       <div className="red-carrusel-ventana">
         <div className="red-carrusel-cinta">
           {[...cinta, ...cinta].map((v, i) => (
-            <span key={`${v.id}-${i}`} aria-hidden={i >= cinta.length}>
-              <Tarjeta v={v} chica />
+            <span key={`${v?.id ?? 'vacio'}-${i}`} aria-hidden={i >= cinta.length}>
+              {v ? <Tarjeta v={v} chica /> : <TarjetaVacia chica />}
             </span>
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+/** El perfil de un creador: banner, su inicial, su nombre, sus números y sus videos publicados. */
+export function PaginaCanal({ id }: { id: string }) {
+  const { idioma } = useIdioma();
+  const tx = TEXTOS_RED[idioma];
+  const [canal, setCanal] = useState<{ nombre: string; videos: number; me_gusta: number } | null>(null);
+  const [videos, setVideos] = useState<TarjetaRed[]>([]);
+  const [noExiste, setNoExiste] = useState(false);
+  useEffect(() => {
+    void Promise.all([
+      pedir<{ canal: { nombre: string; videos: number; me_gusta: number } }>(`/datos/red-canal/${id}`),
+      pedir<{ videos: TarjetaRed[] }>(`/datos/red?limite=48&autor=${id}`),
+    ])
+      .then(([c, v]) => {
+        setCanal(c.canal);
+        setVideos(v.videos);
+        document.title = `${c.canal.nombre} · Pantalay`;
+      })
+      .catch(() => setNoExiste(true));
+  }, [id]);
+  if (noExiste)
+    return (
+      <section className="vacio pagina-angosta">
+        <p>{tx.canalNoExiste}</p>
+        <a className="boton" href="/videos" onClick={alClicEnlace}>
+          {tx.videos}
+        </a>
+      </section>
+    );
+  return (
+    <div className="red">
+      <div className="red-canal-portada" aria-hidden="true" />
+      {canal && (
+        <header className="red-canal-cabeza">
+          <span className="avatar red-canal-avatar" aria-hidden="true">
+            {canal.nombre.charAt(0).toUpperCase()}
+          </span>
+          <div>
+            <h1>{canal.nombre}</h1>
+            <p>
+              {tx.canalVideos(canal.videos)} · {tx.canalGustas(canal.me_gusta)}
+            </p>
+          </div>
+        </header>
+      )}
+      <div className="red-cuadricula">
+        {videos.map((v) => (
+          <Tarjeta key={v.id} v={v} />
+        ))}
+      </div>
+    </div>
   );
 }

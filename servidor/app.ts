@@ -2454,6 +2454,7 @@ app.delete('/datos/videos/:id', requiereSesion, async (c) => {
 
 type FilaRed = {
   id: string;
+  usuario_id: string;
   titulo: string;
   duracion: number;
   creado: number;
@@ -2466,7 +2467,7 @@ type FilaRed = {
   vistas: number;
 };
 
-const SQL_RED = `SELECT v.id, v.titulo, v.duracion, v.creado, v.tiene_miniatura, v.ancho, v.alto, u.nombre AS autor,
+const SQL_RED = `SELECT v.id, v.usuario_id, v.titulo, v.duracion, v.creado, v.tiene_miniatura, v.ancho, v.alto, u.nombre AS autor,
     r.me_gusta, r.publicado_en,
     (SELECT COUNT(*) FROM vistas x WHERE x.video_id = v.id) AS vistas
   FROM red_publicaciones r
@@ -2478,6 +2479,7 @@ const tarjetaRed = (f: FilaRed) => ({
   id: f.id,
   titulo: f.titulo,
   autor: f.autor,
+  autor_id: f.usuario_id,
   duracion: f.duracion,
   vertical: f.alto > f.ancho,
   miniatura: f.tiene_miniatura === 1 ? `/media/${f.id}/miniatura` : null,
@@ -2491,16 +2493,33 @@ app.get('/datos/red', async (c) => {
   const limite = Math.min(48, Math.max(1, Number(c.req.query('limite')) || 24));
   const antes = Number(c.req.query('antes')) || Number.MAX_SAFE_INTEGER;
   const excepto = (c.req.query('excepto') ?? '').slice(0, 40);
+  // «autor»: solo los videos de un creador (su perfil).
+  const autor = (c.req.query('autor') ?? '').slice(0, 40);
   const orden =
     c.req.query('orden') === 'gustados' ? 'r.me_gusta DESC, r.publicado_en DESC' : 'r.publicado_en DESC';
   const filas = await c.env.DB.prepare(
-    `${SQL_RED} AND r.publicado_en < ? AND v.id != ? ORDER BY ${orden} LIMIT ?`,
+    `${SQL_RED} AND r.publicado_en < ? AND v.id != ?${autor ? ' AND v.usuario_id = ?' : ''} ORDER BY ${orden} LIMIT ?`,
   )
-    .bind(antes, excepto, limite)
+    .bind(...(autor ? [antes, excepto, autor, limite] : [antes, excepto, limite]))
     .all<FilaRed>();
   return c.json({ videos: (filas.results ?? []).map(tarjetaRed) }, 200, {
     'Cache-Control': 'public, max-age=60',
   });
+});
+
+/** El perfil público de un creador: nombre y cuántos videos tiene publicados (solo si tiene alguno). */
+app.get('/datos/red-canal/:id', async (c) => {
+  const f = await c.env.DB.prepare(
+    `SELECT u.nombre, COUNT(*) AS videos, COALESCE(SUM(r.me_gusta), 0) AS me_gusta
+     FROM red_publicaciones r JOIN videos v ON v.id = r.video_id JOIN usuarios u ON u.id = v.usuario_id
+     WHERE v.usuario_id = ? AND r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace'
+       AND v.archivado = 0
+     GROUP BY u.nombre`,
+  )
+    .bind(c.req.param('id'))
+    .first<{ nombre: string; videos: number; me_gusta: number }>();
+  if (!f) return err(c, 404, 'no_existe');
+  return c.json({ canal: { id: c.req.param('id'), ...f } }, 200, { 'Cache-Control': 'public, max-age=60' });
 });
 
 /** Un video de la red (para su página pública), con si la persona ya le dio me gusta. */

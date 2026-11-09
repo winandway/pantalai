@@ -268,6 +268,8 @@ export function Inicio() {
 
       <section className="portada-redes" aria-label={es ? 'Comparte en tus redes' : 'Share anywhere'}>
         <p>{es ? 'Tu video, donde ya está tu gente' : 'Your video, wherever your people are'}</p>
+        {/* Primero los videos de la red de Pantalay (prioridad), después los logos de las redes. */}
+        <CarruselRed sinTitulo />
         <div className="portada-logos">
           {/* La cinta va dos veces seguida para que dé la vuelta sin cortes. */}
           <div className="portada-logos-cinta">
@@ -308,9 +310,6 @@ export function Inicio() {
           </li>
         </ol>
       </section>
-
-      {/* Los videos publicados en la red de Pantalay, pasando solos (al tocar uno se abre en «Videos»). */}
-      <CarruselRed />
 
       {/* El Estudio de reacciones, en grande: es la función que más se vende (pedido de Richard, 9 nov 2026). */}
       <section className="portada-estudio" id="estudio-de-reacciones">

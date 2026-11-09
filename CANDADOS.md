@@ -818,3 +818,8 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Prueba: `pruebas/servidor.test.ts` › C-RED-VIDEOS y `e2e/red.spec.ts` (publicar con reglas, Videos, me gusta,
   denunciar, VideoObject, mapa del sitio, carrusel de la portada sin sesión, quitar). Comprobadas en ROJO el 9 nov 2026.
 - Ojo en las pruebas: el carrusel se mueve; se pasa el mouse por la ventana para detenerlo antes de tocar una tarjeta.
+- Red más viva (9 nov 2026, Richard: «que no se vea tan pálida»): banner de Pantalay en «Videos» y en cada video,
+  espacios vacíos «Tu video aquí» hasta 30 en Videos, 10 en «Más videos» y 12 en el carrusel (el carrusel ya no repite
+  el mismo video), perfil del creador en «/channel/<id>» (banner, inicial, videos y me gusta; `/datos/red-canal/<id>`
+  y `/datos/red?autor=`), y en la portada el carrusel de videos va primero, bajo «Tu video, donde ya está tu gente»,
+  antes de los logos. Prueba: `e2e/red.spec.ts` (banner, 30 y 10 espacios, perfil). En ROJO el 9 nov 2026.

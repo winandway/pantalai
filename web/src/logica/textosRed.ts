@@ -45,6 +45,13 @@ const en = {
   oculto: 'Our team hid this video from Videos after a report. Write to us if you think it is a mistake.',
   comunidad: 'Made with Pantalay',
   verTodos: 'See all videos',
+  bannerTitulo: 'Pantalay Videos',
+  bannerLema: 'Reactions, tutorials and stories, recorded in the browser.',
+  tuVideoAqui: 'Your video here',
+  publicaElTuyo: 'Record and publish yours',
+  canalVideos: (n: number) => (n === 1 ? '1 video' : `${n} videos`),
+  canalGustas: (n: number) => (n === 1 ? '1 like' : `${n} likes`),
+  canalNoExiste: 'This creator has no published videos yet.',
 };
 
 const es: typeof en = {
@@ -91,6 +98,13 @@ const es: typeof en = {
   oculto: 'Nuestro equipo ocultó este video de Videos por una denuncia. Escríbenos si crees que es un error.',
   comunidad: 'Hecho con Pantalay',
   verTodos: 'Ver todos los videos',
+  bannerTitulo: 'Videos de Pantalay',
+  bannerLema: 'Reacciones, tutoriales e historias, grabados en el navegador.',
+  tuVideoAqui: 'Tu video aquí',
+  publicaElTuyo: 'Graba y publica el tuyo',
+  canalVideos: (n: number) => (n === 1 ? '1 video' : `${n} videos`),
+  canalGustas: (n: number) => (n === 1 ? '1 me gusta' : `${n} me gusta`),
+  canalNoExiste: 'Este creador todavía no tiene videos publicados.',
 };
 
 export const TEXTOS_RED: Record<Idioma, typeof en> = { en, es };
