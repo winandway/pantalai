@@ -734,3 +734,10 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   derecha, sin cartel encima; cámara, carteles y tema a la izquierda. TikTok y Shorts la eligen solos
   (`disenoPara`). Las otras tres posiciones NO se tocaron (Richard: «a alguien le puede gustar chiquito»).
   Prueba: e2e › TikTok (alto del video > 85 % del escenario). Comprobadas en ROJO el 9 nov 2026.
+- Short 9:16 «video protagonista» (9 nov 2026, Richard: «el protagonismo principal lo tiene el video… me molesta
+  cuando el que reacciona tiene mucho protagonismo»): posición `vertical-protagonista` — cámara pequeña arriba (16:9,
+  55 % del ancho) con los dos carteles al lado, el video ocupa el resto entero (sin recortar) y se esconden el nombre
+  del programa y el tema. Un video vertical la elige solo (`disenoVerticalPara`); la de «cámara grande arriba»
+  (`vertical-mitades`) sigue, ahora con menos letras (sin la píldora, cabecera y tema de una línea, chicos).
+  Prueba: `e2e/estudio-vertical.spec.ts` (video > 70 % del alto, cámara < 22 %, sin programa ni tema). Comprobada
+  en ROJO el 9 nov 2026.

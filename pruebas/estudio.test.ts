@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISENOS,
+  disenoVerticalPara,
   volumenDelVideo,
   FORMATOS,
   claseEscenario,
@@ -288,8 +289,10 @@ describe('estudio: formato vertical 9:16', () => {
   it('arma las clases del escenario', () => {
     expect(claseEscenario('horizontal', 'iguales', false)).toBe('escenario diseno-iguales');
     expect(claseEscenario('horizontal', 'vertical', true)).toBe('escenario diseno-vertical');
-    expect(claseEscenario('vertical', 'clasico', false)).toBe('escenario formato-vertical');
-    expect(claseEscenario('vertical', 'iguales', true)).toBe('escenario formato-vertical video-es-vertical');
+    expect(claseEscenario('vertical', 'clasico', false)).toBe('escenario formato-vertical vertical-mitades');
+    expect(claseEscenario('vertical', 'iguales', true)).toBe(
+      'escenario formato-vertical vertical-mitades video-es-vertical',
+    );
     expect(FORMATOS).toEqual(['horizontal', 'vertical']);
   });
 });
@@ -310,5 +313,15 @@ describe('estudio: volumen del video aparte del micrófono', () => {
     expect(volumenDelVideo('tiktok', 250).enGrabacion).toBe(1);
     expect(volumenDelVideo('youtube', -5).ordenes).toEqual(['mute']);
     expect(volumenDelVideo('tiktok', Number.NaN).enGrabacion).toBe(1);
+  });
+});
+
+describe('estudio: posiciones del Short 9:16', () => {
+  it('un video vertical va de protagonista; uno horizontal, en mitades', () => {
+    expect(disenoVerticalPara(true)).toBe('protagonista');
+    expect(disenoVerticalPara(false)).toBe('mitades');
+    expect(claseEscenario('vertical', 'clasico', true, 'protagonista')).toBe(
+      'escenario formato-vertical vertical-protagonista video-es-vertical',
+    );
   });
 });

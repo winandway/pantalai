@@ -37,6 +37,10 @@ const en = {
     vertical: 'Small vertical video',
     grande: 'Big vertical video (TikTok, Shorts)',
   },
+  disenosV: {
+    protagonista: 'Video in the spotlight (small camera on top)',
+    mitades: 'Big camera on top',
+  },
   noInsertable:
     'The owner of this video does not allow it to play outside YouTube. Use Record → “Choose area” and share the YouTube tab instead.',
   irGrabar: 'Open Record',
@@ -109,6 +113,10 @@ const es: typeof en = {
     iguales: 'Dos horizontales',
     vertical: 'Video vertical pequeño',
     grande: 'Video vertical grande (TikTok, Shorts)',
+  },
+  disenosV: {
+    protagonista: 'Video protagonista (cámara pequeña arriba)',
+    mitades: 'Cámara grande arriba',
   },
   noInsertable:
     'El dueño de este video no deja reproducirlo fuera de YouTube. Usa Grabar → «Elegir qué parte» y comparte la pestaña de YouTube.',

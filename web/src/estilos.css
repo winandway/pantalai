@@ -5053,3 +5053,104 @@ main {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Short 9:16: menos letras (Richard, 9 nov 2026: «que no salgan tantas letras») ---------- */
+.formato-vertical .escenario-pildora {
+  display: none;
+}
+.formato-vertical .escenario-cabeza {
+  font-size: calc(1.25 * var(--u));
+  gap: calc(0.8 * var(--u));
+}
+.formato-vertical .escenario-logo {
+  width: calc(2.4 * var(--u));
+  height: calc(2.4 * var(--u));
+  font-size: calc(1 * var(--u));
+}
+.formato-vertical .escenario-programa {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.formato-vertical > .escenario-cabeza {
+  padding: 4cqw 5cqw 2.5cqw;
+}
+.formato-vertical > .escenario-pie {
+  flex-direction: row;
+  align-items: center;
+  min-height: 0;
+  margin: 3cqw 5cqw 5cqw;
+  padding: calc(0.6 * var(--u)) calc(1 * var(--u));
+}
+.formato-vertical .escenario-etiqueta {
+  font-size: calc(0.9 * var(--u));
+}
+.formato-vertical .escenario-tema {
+  font-size: calc(1.3 * var(--u));
+  -webkit-line-clamp: 1;
+}
+
+/* ---------- Short 9:16 «video protagonista»: cámara pequeña arriba, el video grande ocupa el resto ---------- */
+.formato-vertical.vertical-protagonista {
+  grid-template-rows: minmax(0, 1fr);
+}
+.vertical-protagonista > .escenario-cabeza,
+.vertical-protagonista > .escenario-pie {
+  display: none;
+}
+.vertical-protagonista > .escenario-centro {
+  margin: 4cqw;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 3cqw;
+}
+.vertical-protagonista .escenario-camara {
+  grid-template-columns: 55% minmax(0, 1fr);
+  grid-template-rows: auto;
+  gap: 3cqw;
+  align-items: center;
+}
+.formato-vertical.vertical-protagonista .escenario-camara .escenario-caja {
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+.vertical-protagonista .carteles-juntos {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5cqw;
+}
+.vertical-protagonista .cartel {
+  font-size: calc(1.15 * var(--u));
+  max-width: 100%;
+}
+.formato-vertical.vertical-protagonista .escenario-video {
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+}
+.formato-vertical.vertical-protagonista.video-es-vertical .escenario-video .escenario-caja {
+  aspect-ratio: 9 / 16;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+/* Entero, sin recortar (en «mitades» se recorta al centro). */
+.formato-vertical.vertical-protagonista.video-es-vertical .escenario-video iframe {
+  top: 0;
+  height: 100%;
+  aspect-ratio: auto;
+  transform: none;
+}
+.formato-vertical.vertical-protagonista:not(.video-es-vertical) .escenario-video .escenario-caja {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+.miniatura-v-protagonista i:first-child {
+  width: 7px;
+  height: 4px;
+}
+.miniatura-v-protagonista i:last-child {
+  width: 9px;
+  height: 14px;
+}

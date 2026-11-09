@@ -9,6 +9,8 @@ import { ErrorApi, enlaceVideo, pedir } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import {
   DISENOS,
+  DISENOS_VERTICALES,
+  disenoVerticalPara,
   FORMATOS,
   claseEscenario,
   ESCUCHAR_YOUTUBE,
@@ -31,6 +33,7 @@ import {
   videoDeEnlace,
   zonaRelativa,
   type Diseno,
+  type DisenoVertical,
   type Formato,
   type VideoPegado,
 } from '../logica/estudio';
@@ -70,6 +73,7 @@ export function Estudio() {
     programa: '',
     diseno: 'clasico' as Diseno,
     formato: 'horizontal' as Formato,
+    disenoV: 'mitades' as DisenoVertical,
     volVideo: 100,
     volMicro: 100,
   });
@@ -77,7 +81,11 @@ export function Estudio() {
   const volMicro = Number.isFinite(b.valor.volMicro) ? b.valor.volMicro : 100;
   const formato: Formato = FORMATOS.includes(b.valor.formato) ? b.valor.formato : 'horizontal';
   const diseno: Diseno = DISENOS.includes(b.valor.diseno) ? b.valor.diseno : 'clasico';
-  const grande = formato === 'horizontal' && diseno === 'grande';
+  const disenoV: DisenoVertical = DISENOS_VERTICALES.includes(b.valor.disenoV) ? b.valor.disenoV : 'mitades';
+  // Los dos carteles juntos (bajo la cámara) en las posiciones donde el video manda.
+  const grande =
+    (formato === 'horizontal' && diseno === 'grande') ||
+    (formato === 'vertical' && disenoV === 'protagonista');
   const [video, setVideo] = useState<VideoPegado | null>(null);
   const [error, setError] = useState<{ texto: string; grabar?: boolean; abrir?: boolean } | null>(null);
   const [estado, setEstado] = useState<Estado>('listo');
@@ -161,7 +169,13 @@ export function Estudio() {
       tiempo.current = v.inicio;
       duracion.current = 0;
       if (rellenar)
-        b.setValor((x) => ({ ...x, diseno: disenoPara(v.vertical), creador: v.creador || '', tema: '' }));
+        b.setValor((x) => ({
+          ...x,
+          diseno: disenoPara(v.vertical),
+          disenoV: disenoVerticalPara(v.vertical),
+          creador: v.creador || '',
+          tema: '',
+        }));
       try {
         const d = await pedir<Oembed>(`/datos/oembed?url=${encodeURIComponent(texto.trim())}`);
         if (!d.insertable) {
@@ -618,11 +632,33 @@ export function Estudio() {
         </fieldset>
       )}
 
+      {formato === 'vertical' && (
+        <fieldset className="selector-modo estudio-posiciones-v">
+          <legend>{tx.posicion}</legend>
+          {DISENOS_VERTICALES.map((d) => (
+            <label key={d} className={disenoV === d ? 'activo' : ''}>
+              <input
+                type="radio"
+                name="estudio-diseno-v"
+                checked={disenoV === d}
+                disabled={enCurso}
+                onChange={() => b.cambiar('disenoV', d)}
+              />
+              <span className={`miniatura-formato miniatura-f-vertical miniatura-v-${d}`} aria-hidden="true">
+                <i />
+                <i />
+              </span>
+              {tx.disenosV[d]}
+            </label>
+          ))}
+        </fieldset>
+      )}
+
       {/* El escenario: lo ÚNICO que se graba. Nada de botones aquí adentro. */}
       <div className="escenario-marco">
         <div
           ref={escenario}
-          className={claseEscenario(formato, diseno, Boolean(video?.vertical))}
+          className={claseEscenario(formato, diseno, Boolean(video?.vertical), disenoV)}
           data-escenario
         >
           <div className="escenario-cabeza">

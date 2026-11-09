@@ -236,9 +236,28 @@ export const FORMATOS: Formato[] = ['horizontal', 'vertical'];
  * Las clases del escenario. En vertical la posición es fija (cámara arriba, video abajo, tema al pie) y un video
  * vertical se recorta al centro (4:5) para que quepa sin quedar como una tira finita.
  */
-export function claseEscenario(formato: Formato, diseno: Diseno, videoVertical: boolean): string {
-  if (formato === 'vertical') return `escenario formato-vertical${videoVertical ? ' video-es-vertical' : ''}`;
+export function claseEscenario(
+  formato: Formato,
+  diseno: Diseno,
+  videoVertical: boolean,
+  disenoV: DisenoVertical = 'mitades',
+): string {
+  if (formato === 'vertical')
+    return `escenario formato-vertical vertical-${disenoV}${videoVertical ? ' video-es-vertical' : ''}`;
   return `escenario diseno-${diseno}`;
+}
+
+/**
+ * Posiciones del Short 9:16. «protagonista» (9 nov 2026, Richard: «el protagonismo principal lo tiene el video que uno
+ * está mostrando»): tu cámara pequeña arriba con los carteles al lado y el video grande ocupando el resto, sin más
+ * letras. «mitades»: tu cámara grande arriba, el video abajo y el tema al pie.
+ */
+export type DisenoVertical = 'protagonista' | 'mitades';
+export const DISENOS_VERTICALES: DisenoVertical[] = ['protagonista', 'mitades'];
+
+/** Un video vertical (TikTok, Short) va de protagonista; uno horizontal, en mitades. */
+export function disenoVerticalPara(videoVertical: boolean): DisenoVertical {
+  return videoVertical ? 'protagonista' : 'mitades';
 }
 
 /**
