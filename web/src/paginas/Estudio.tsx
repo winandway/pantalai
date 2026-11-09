@@ -77,8 +77,8 @@ export function Estudio() {
   // El reproductor ya respondió (TikTok solo responde después de un toque dentro del video).
   const [listo, setListo] = useState(false);
   const [avisoVideo, setAvisoVideo] = useState<'no_arranco' | null>(null);
-  const reproduciendoRef = useRef(false);
-  reproduciendoRef.current = reproduciendo;
+  // true solo cuando el PROPIO reproductor confirma que arrancó (el botón cambia antes, por rapidez).
+  const confirmado = useRef(false);
   const vigilante = useRef<number | null>(null);
   const [camara, setCamara] = useState<MediaStream | null>(null);
   const [sinCamara, setSinCamara] = useState(false);
@@ -196,6 +196,7 @@ export function Estudio() {
         if (m.estado !== undefined) {
           const anda = m.estado === 1 || m.estado === 3;
           setReproduciendo(anda);
+          confirmado.current = anda;
           if (anda) setAvisoVideo(null);
         }
       } else if (m.tipo === 'error') {
@@ -248,9 +249,12 @@ export function Estudio() {
         setReproduciendo(arrancar);
         if (vigilante.current) window.clearTimeout(vigilante.current);
         // Si en 4 segundos no arrancó, se dice claro y se ofrece tocarlo o abrirlo en su página. Nunca una portada muerta.
+        confirmado.current = false;
         if (arrancar)
           vigilante.current = window.setTimeout(() => {
-            if (!reproduciendoRef.current) setAvisoVideo('no_arranco');
+            if (confirmado.current) return;
+            setReproduciendo(false);
+            setAvisoVideo('no_arranco');
           }, 4000);
       } else {
         const s = saltar(tiempo.current, a === 'atras' ? -5 : 5, duracion.current);

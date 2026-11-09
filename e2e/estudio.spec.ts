@@ -242,6 +242,47 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
   expect((r.afuera as number[]).every((n) => n < 90)).toBe(true);
 });
 
+// Plan B: un video que no obedece al play nunca deja la portada muerta: aviso claro, botón de vuelta y «Abrir».
+test('si el video no arranca, se avisa y se ofrece abrirlo', async ({ page }) => {
+  await page.route('https://www.youtube-nocookie.com/embed/**', (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><body style="background:#111"></body>',
+    }),
+  );
+  await page.route('**/datos/oembed?**', (r) =>
+    r.fulfill({
+      json: {
+        plataforma: 'youtube',
+        id: 'dQw4w9WgXcQ',
+        vertical: false,
+        insertable: true,
+        titulo: 'T',
+        autor: '',
+        creador: '@c',
+      },
+    }),
+  );
+  await page.goto('/signup');
+  await page.getByLabel('Your name').fill('Soporte E2E');
+  await page.getByLabel('Email').fill(`e2e.estudio.muerto.${Date.now()}@example.com`);
+  await page.getByLabel('Password', { exact: true }).fill(`Prueba-${Date.now()}`);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page).toHaveURL(/\/library/);
+  await page.goto('/studio');
+  await page.getByLabel('YouTube or TikTok link').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  await page.getByRole('button', { name: 'Load video' }).click();
+  await expect(page.locator('.escenario iframe')).toBeVisible();
+  await page.getByRole('button', { name: /Play/ }).click();
+  await expect(page.getByText('The video did not start')).toBeVisible({ timeout: 8000 });
+  await expect(page.getByRole('button', { name: /Play/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open on YouTube' })).toHaveAttribute(
+    'href',
+    'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  );
+});
+
 test('el estudio pide sesión y no se indexa', async ({ page, request }) => {
   await page.goto('/studio');
   await expect(page).toHaveURL(/\/login/);
