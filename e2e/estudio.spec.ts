@@ -114,25 +114,28 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   await page.locator('.reproductor video').waitFor();
   const id = new URL(page.url()).pathname.split('/')[2]!;
   // Primero se espera a que el sitio termine de reordenar el MP4 por detrás (C-INDICE-MP4): leerlo a mitad del
-  // reemplazo daba cuadros negros en la prueba.
-  await expect
-    .poll(
-      async () => {
-        const b = await (
-          await page.request.get(`/media/${id}/video`, { headers: { range: 'bytes=0-65535' } })
-        ).body();
-        const cajas: string[] = [];
-        for (let i = 0; i + 8 <= b.length && cajas.length < 4;) {
-          const t = b.readUInt32BE(i);
-          cajas.push(b.subarray(i + 4, i + 8).toString());
-          if (t < 8) break;
-          i += t;
-        }
-        return cajas.join(',');
-      },
-      { timeout: 60_000 },
-    )
-    .toMatch(/^ftyp,(free,)?moov/);
+  // reemplazo daba cuadros negros en la prueba. Solo si Chrome grabó en MP4 (en la compuerta de GitHub graba WebM).
+  const tipo = ((await (await page.request.get(`/datos/videos/${id}`)).json()) as { video: { tipo: string } })
+    .video.tipo;
+  if (tipo.startsWith('video/mp4'))
+    await expect
+      .poll(
+        async () => {
+          const b = await (
+            await page.request.get(`/media/${id}/video`, { headers: { range: 'bytes=0-65535' } })
+          ).body();
+          const cajas: string[] = [];
+          for (let i = 0; i + 8 <= b.length && cajas.length < 4;) {
+            const t = b.readUInt32BE(i);
+            cajas.push(b.subarray(i + 4, i + 8).toString());
+            if (t < 8) break;
+            i += t;
+          }
+          return cajas.join(',');
+        },
+        { timeout: 60_000 },
+      )
+      .toMatch(/^ftyp,(free,)?moov/);
   const archivo = await (await page.request.get(`/media/${id}/video?descargar=1`)).body();
   writeFileSync(test.info().outputPath('estudio-grabado.mp4'), archivo);
   const examen = await examinarVideo(archivo);
