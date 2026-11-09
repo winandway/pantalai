@@ -21,6 +21,10 @@ const en = {
     'YouTube plays without an account. TikTok asks you to be signed in to TikTok in this same browser.',
   entrarTiktok: 'Sign in to TikTok',
   volumenVideo: 'Video volume',
+  elegirMicrofono: 'Microphone',
+  elegirCamara: 'Camera',
+  predeterminado: 'Browser default',
+  predeterminada: 'Browser default',
   volumenMicro: 'Microphone in the recording',
   volumenAyuda:
     'The video volume changes only the video (what you hear and what is recorded), not your computer or your microphone. The microphone volume changes only how loud you sound in the recording.',
@@ -98,6 +102,10 @@ const es: typeof en = {
     'YouTube se reproduce sin cuenta. TikTok pide que tengas tu sesión de TikTok iniciada en este mismo navegador.',
   entrarTiktok: 'Iniciar sesión en TikTok',
   volumenVideo: 'Volumen del video',
+  elegirMicrofono: 'Micrófono',
+  elegirCamara: 'Cámara',
+  predeterminado: 'El predeterminado del navegador',
+  predeterminada: 'La predeterminada del navegador',
   volumenMicro: 'Micrófono en la grabación',
   volumenAyuda:
     'El volumen del video cambia solo el video (lo que oyes y lo que se graba), no el de tu computadora ni el de tu micrófono. El del micrófono cambia solo qué tan fuerte sales tú en la grabación.',

@@ -619,7 +619,13 @@ export function Grabar() {
                 <option value="">{t('sinMicrofono')}</option>
               </select>
               {/* Probador: dice claro si no llega señal (micrófono apagado o sin batería). */}
-              {a.microfonoId && <ProbadorMicrofono microfonoId={a.microfonoId} />}
+              {a.microfonoId && (
+                <ProbadorMicrofono
+                  microfonoId={a.microfonoId}
+                  microfonos={microfonos}
+                  elegir={(id) => cambiar('microfonoId', id)}
+                />
+              )}
             </div>
             {a.modo !== 'camara' && (
               <label className="interruptor">

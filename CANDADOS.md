@@ -741,3 +741,8 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   (`vertical-mitades`) sigue, ahora con menos letras (sin la píldora, cabecera y tema de una línea, chicos).
   Prueba: `e2e/estudio-vertical.spec.ts` (video > 70 % del alto, cámara < 22 %, sin programa ni tema). Comprobada
   en ROJO el 9 nov 2026.
+- Elegir el micrófono (9 nov 2026): el Estudio usaba SIEMPRE el micrófono «predeterminado» del navegador; a Richard
+  le tomaba el de la Mac y su micrófono de estudio no entraba, sin forma de cambiarlo. Ahora el Estudio tiene
+  «Micrófono» y «Cámara» (guardados con el borrador) y la grabadora usa el elegido. Si no llega señal, el probador
+  escucha 1,3 s cada uno de los otros micrófonos y ofrece «Usar este micrófono» con el primero que suena (también en
+  Grabar). Prueba: `e2e/microfono.spec.ts` › «encuentra el micrófono que sí tiene sonido».

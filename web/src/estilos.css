@@ -5154,3 +5154,24 @@ main {
   width: 9px;
   height: 14px;
 }
+.estudio-dispositivos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 1.4rem;
+}
+.estudio-dispositivos .campo {
+  margin: 0;
+}
+@media (max-width: 700px) {
+  .estudio-dispositivos {
+    grid-template-columns: 1fr;
+  }
+}
+.probador-micro-busqueda {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--tinta);
+}

@@ -37,7 +37,7 @@ import {
   type Formato,
   type VideoPegado,
 } from '../logica/estudio';
-import { AJUSTES_INICIALES, Grabadora } from '../logica/grabadora';
+import { AJUSTES_INICIALES, Grabadora, dispositivos } from '../logica/grabadora';
 import { textoError, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
@@ -76,7 +76,15 @@ export function Estudio() {
     disenoV: 'mitades' as DisenoVertical,
     volVideo: 100,
     volMicro: 100,
+    // Micrófono y cámara elegidos (antes el Estudio usaba siempre el «predeterminado» del navegador, y si ese era otra
+    // entrada sin sonido no había cómo cambiarlo: le pasó a Richard el 9 nov 2026).
+    micId: 'default',
+    camId: '',
   });
+  const micId = typeof b.valor.micId === 'string' && b.valor.micId ? b.valor.micId : 'default';
+  const camId = typeof b.valor.camId === 'string' ? b.valor.camId : '';
+  const [microfonos, setMicrofonos] = useState<MediaDeviceInfo[]>([]);
+  const [camaras, setCamaras] = useState<MediaDeviceInfo[]>([]);
   const volVideo = Number.isFinite(b.valor.volVideo) ? b.valor.volVideo : 100;
   const volMicro = Number.isFinite(b.valor.volMicro) ? b.valor.volMicro : 100;
   const formato: Formato = FORMATOS.includes(b.valor.formato) ? b.valor.formato : 'horizontal';
@@ -129,11 +137,19 @@ export function Estudio() {
     let vivo = true;
     let flujo: MediaStream | null = null;
     navigator.mediaDevices
-      ?.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+      ?.getUserMedia({
+        video: {
+          deviceId: camId ? { exact: camId } : undefined,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      })
       .then((f) => {
         if (!vivo) return f.getTracks().forEach((p) => p.stop());
         flujo = f;
         setCamara(f);
+        setSinCamara(false);
       })
       .catch((e) => {
         console.error('estudio: sin cámara', e);
@@ -142,6 +158,25 @@ export function Estudio() {
     return () => {
       vivo = false;
       flujo?.getTracks().forEach((p) => p.stop());
+    };
+  }, [usuario, camId]);
+
+  // La lista de micrófonos y cámaras (con sus nombres, ya con permiso); se refresca si se conecta otro.
+  useEffect(() => {
+    if (!usuario || !navigator.mediaDevices?.enumerateDevices) return;
+    const leer = () =>
+      void dispositivos()
+        .then((d) => {
+          setMicrofonos(d.microfonos);
+          setCamaras(d.camaras);
+        })
+        .catch(() => undefined);
+    leer();
+    const t = window.setTimeout(leer, 1500); // los nombres aparecen recién con el permiso
+    navigator.mediaDevices.addEventListener('devicechange', leer);
+    return () => {
+      window.clearTimeout(t);
+      navigator.mediaDevices.removeEventListener('devicechange', leer);
     };
   }, [usuario]);
 
@@ -351,7 +386,7 @@ export function Estudio() {
       {
         ...AJUSTES_INICIALES,
         modo: 'pantalla',
-        microfonoId: 'default',
+        microfonoId: micId,
         audioSistema: true,
         flotante: false,
         transcribir: true,
@@ -885,7 +920,49 @@ export function Estudio() {
         {video?.plataforma === 'tiktok' ? tx.volumenAyudaTiktok : tx.volumenAyuda}
       </p>
       {sinSonido && enCurso && <p className="estudio-aviso">{tx.sinSonido}</p>}
-      <ProbadorMicrofono />
+      <div className="estudio-dispositivos">
+        <div className="campo">
+          <label htmlFor="estudio-mic">🎤 {tx.elegirMicrofono}</label>
+          <select
+            id="estudio-mic"
+            value={micId}
+            disabled={enCurso}
+            onChange={(e) => b.cambiar('micId', e.target.value)}
+          >
+            <option value="default">
+              {microfonos.find((d) => d.deviceId === 'default')?.label || tx.predeterminado}
+            </option>
+            {microfonos
+              .filter((d) => d.deviceId !== 'default')
+              .map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label || d.deviceId.slice(0, 8)}
+                </option>
+              ))}
+          </select>
+        </div>
+        <div className="campo">
+          <label htmlFor="estudio-cam">📷 {tx.elegirCamara}</label>
+          <select
+            id="estudio-cam"
+            value={camId}
+            disabled={enCurso}
+            onChange={(e) => b.cambiar('camId', e.target.value)}
+          >
+            <option value="">{tx.predeterminada}</option>
+            {camaras.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || d.deviceId.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <ProbadorMicrofono
+        microfonoId={micId}
+        microfonos={microfonos}
+        elegir={enCurso ? undefined : (id) => b.cambiar('micId', id)}
+      />
       <p className="estudio-ayuda">{tx.atajos}</p>
       <p className="estudio-ayuda">{tx.consejo}</p>
       <p className="estudio-ayuda">{tx.derechos}</p>
