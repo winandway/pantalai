@@ -218,7 +218,37 @@ export type Plataforma = 'youtube' | 'tiktok' | 'archivo';
 export type VideoPegado =
   | { plataforma: 'youtube'; id: string; vertical: boolean; inicio: number; creador: string }
   | { plataforma: 'tiktok'; id: string; vertical: true; inicio: 0; creador: string; corto?: string }
-  | { plataforma: 'archivo'; id: string; vertical: boolean; inicio: 0; creador: string; nombre: string };
+  | {
+      plataforma: 'archivo';
+      id: string;
+      vertical: boolean;
+      inicio: 0;
+      creador: string;
+      nombre: string;
+      /** true si viene de la biblioteca de Pantalay (un enlace pantalay.com/v/…), no de la computadora. */
+      deBiblioteca?: boolean;
+    };
+
+const HOSTS_PANTALAY = new Set(['pantalay.com', 'www.pantalay.com', 'pantalai.sitios.dev']);
+
+/**
+ * Reconoce el enlace de un video de Pantalay (pantalay.com/v/… o /embed/…), para reaccionar a un video de la propia
+ * biblioteca (por ejemplo, uno que se subió desde la computadora). Devuelve su id o null.
+ */
+export function videoDePantalay(texto: string, hostActual = ''): string | null {
+  const limpio = texto.trim();
+  if (!limpio) return null;
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(limpio) ? limpio : `https://${limpio}`);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+  if (!HOSTS_PANTALAY.has(host) && host !== hostActual.toLowerCase()) return null;
+  const m = /^\/(?:v|embed)\/([a-z0-9]{20})\/?$/.exec(url.pathname);
+  return m ? m[1]! : null;
+}
 
 /** El tema que se propone para un archivo: su nombre sin extensión ni guiones bajos. */
 export function temaDeArchivo(nombre: string): string {

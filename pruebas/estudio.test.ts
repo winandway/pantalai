@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISENOS,
+  videoDePantalay,
   esVertical,
   temaDeArchivo,
   medidaGrabacionEstudio,
@@ -350,5 +351,18 @@ describe('estudio: video de la computadora', () => {
   it('el volumen lo pone el propio reproductor y no hay página que abrir', () => {
     expect(volumenDelVideo('archivo', 30)).toEqual({ ordenes: [], enGrabacion: 1 });
     expect(enlaceOriginal({ plataforma: 'archivo', id: 'blob:x' })).toBe('');
+  });
+});
+
+describe('estudio: enlaces de la propia biblioteca de Pantalay', () => {
+  it('reconoce pantalay.com/v/… y /embed/…', () => {
+    expect(videoDePantalay('https://pantalay.com/v/2n66xa7ztx51799afu7a')).toBe('2n66xa7ztx51799afu7a');
+    expect(videoDePantalay('pantalay.com/embed/2n66xa7ztx51799afu7a')).toBe('2n66xa7ztx51799afu7a');
+    expect(videoDePantalay('http://127.0.0.1:8787/v/2n66xa7ztx51799afu7a', '127.0.0.1')).toBe(
+      '2n66xa7ztx51799afu7a',
+    );
+    expect(videoDePantalay('https://evil.com/v/2n66xa7ztx51799afu7a')).toBeNull();
+    expect(videoDePantalay('https://pantalay.com/v/corto')).toBeNull();
+    expect(videoDePantalay('https://pantalay.com/v/2n66xa7ztx51799afu7a/edit')).toBeNull();
   });
 });

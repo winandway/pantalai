@@ -5,10 +5,11 @@ const en = {
   titulo: 'Reaction Studio',
   intro:
     'Paste a YouTube or TikTok link, react with your camera and record only the stage: no browser bar, no tabs, no desktop.',
-  enlace: 'YouTube or TikTok link',
+  enlace: 'YouTube, TikTok or Pantalay link',
   enlacePlaceholder: 'https://www.youtube.com/watch?v=… or https://www.tiktok.com/@…/video/…',
   cargar: 'Load video',
-  enlaceMalo: 'That does not look like a YouTube or TikTok video link. Paste the full link of the video.',
+  enlaceMalo:
+    'That does not look like a YouTube, TikTok or Pantalay video link. Paste the full link of the video, or upload it from your computer.',
   noExiste: 'We could not find that video. Check the link.',
   ocupado:
     'TikTok is not letting this video play here. It almost always means you are not signed in to TikTok in this browser: sign in at tiktok.com, then load the video again.',
@@ -26,6 +27,8 @@ const en = {
   archivoAyuda:
     'It plays from your computer: it is not uploaded anywhere. Write the creator’s @ in “Creator” so the credit shows.',
   archivoMalo: 'That file cannot be played here. Try an MP4.',
+  bibliotecaAyuda:
+    'A video from your Pantalay library. Write the creator’s @ in “Creator” so the credit shows.',
   elegirMicrofono: 'Microphone',
   elegirCamara: 'Camera',
   predeterminado: 'Browser default',
@@ -90,11 +93,11 @@ const es: typeof en = {
   titulo: 'Estudio de reacciones',
   intro:
     'Pega un enlace de YouTube o de TikTok, reacciona con tu cámara y graba solo el escenario: sin barra del navegador, sin pestañas y sin escritorio.',
-  enlace: 'Enlace de YouTube o de TikTok',
+  enlace: 'Enlace de YouTube, TikTok o Pantalay',
   enlacePlaceholder: 'https://www.youtube.com/watch?v=… o https://www.tiktok.com/@…/video/…',
   cargar: 'Cargar video',
   enlaceMalo:
-    'Eso no parece el enlace de un video de YouTube o de TikTok. Pega el enlace completo del video.',
+    'Eso no parece el enlace de un video de YouTube, TikTok o Pantalay. Pega el enlace completo del video, o súbelo desde tu computadora.',
   noExiste: 'No encontramos ese video. Revisa el enlace.',
   ocupado:
     'TikTok no deja reproducir este video aquí. Casi siempre es porque no has iniciado sesión en TikTok en este navegador: entra a tiktok.com, inicia sesión y vuelve a cargar el video.',
@@ -112,6 +115,8 @@ const es: typeof en = {
   archivoAyuda:
     'Se reproduce desde tu computadora: no se sube a ningún lado. Escribe el @ del creador en «Creador» para que el crédito quede a la vista.',
   archivoMalo: 'Ese archivo no se puede reproducir aquí. Prueba con un MP4.',
+  bibliotecaAyuda:
+    'Un video de tu biblioteca de Pantalay. Escribe el @ del creador en «Creador» para que el crédito quede a la vista.',
   elegirMicrofono: 'Micrófono',
   elegirCamara: 'Cámara',
   predeterminado: 'El predeterminado del navegador',

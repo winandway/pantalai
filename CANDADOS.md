@@ -769,3 +769,7 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   vertical elige solo la posición grande. Sin espejo (`.video-local`; el espejo es solo para la cámara).
   Prueba: `e2e/estudio-vertical.spec.ts` › «video de la computadora» (graba y examina el MP4 con FFmpeg: verde en la
   tarjeta del video, 1920×1080). Comprobada en ROJO el 9 nov 2026.
+- Enlaces de Pantalay en el Estudio (9 nov 2026, Richard subió su TikTok a la biblioteca y pegó ese enlace):
+  `videoDePantalay` reconoce `pantalay.com/v/…` y `/embed/…`; se reproduce como un archivo local desde
+  `/media/<id>/video` (mismo sitio, con la sesión). Prueba: el final de la e2e «video de la computadora». En ROJO el
+  9 nov 2026.

@@ -17,6 +17,7 @@ import {
   accionDeTecla,
   armarMascara,
   disenoPara,
+  videoDePantalay,
   esVertical,
   temaDeArchivo,
   volumenDelVideo,
@@ -202,6 +203,32 @@ export function Estudio() {
   const cargar = useCallback(
     async (texto: string, rellenar: boolean) => {
       setError(null);
+      // Un video de la propia biblioteca de Pantalay: se reproduce desde aquí mismo, como uno de la computadora.
+      const propio = videoDePantalay(texto, location.hostname);
+      if (propio) {
+        try {
+          const d = await pedir<{ video: { titulo: string } }>(`/datos/videos/${propio}`);
+          setVideo({
+            plataforma: 'archivo',
+            id: `/media/${propio}/video`,
+            vertical: false,
+            inicio: 0,
+            creador: '',
+            nombre: d.video.titulo,
+            deBiblioteca: true,
+          });
+          setReproduciendo(false);
+          setListo(false);
+          setAvisoVideo(null);
+          tiempo.current = 0;
+          duracion.current = 0;
+          if (rellenar) b.setValor((x) => ({ ...x, tema: x.tema || d.video.titulo }));
+        } catch {
+          setVideo(null);
+          setError({ texto: tx.noExiste });
+        }
+        return;
+      }
       const v = videoDeEnlace(texto);
       if (!v) {
         setVideo(null);
@@ -659,7 +686,8 @@ export function Estudio() {
         </div>
         {video?.plataforma === 'archivo' && (
           <p className="estudio-ayuda estudio-archivo">
-            📁 <b>{video.nombre}</b> · {tx.archivoAyuda}
+            {video.deBiblioteca ? '🎬' : '📁'} <b>{video.nombre}</b> ·{' '}
+            {video.deBiblioteca ? tx.bibliotecaAyuda : tx.archivoAyuda}
           </p>
         )}
         <p className="estudio-ayuda">
