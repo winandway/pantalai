@@ -21,7 +21,7 @@ export async function versionDelSitio(request: {
  * QuickTime y la Mac no lo abren) y una función para leer un píxel de un segundo dado (en fracciones 0 a 1).
  */
 export async function examinarVideo(archivo: Buffer) {
-  const { execFileSync } = await import('node:child_process');
+  const { execFileSync, spawnSync } = await import('node:child_process');
   const { mkdtempSync, writeFileSync } = await import('node:fs');
   const { join } = await import('node:path');
   const { tmpdir } = await import('node:os');
@@ -69,5 +69,13 @@ export async function examinarVideo(archivo: Buffer) {
       return [crudo[i]!, crudo[i + 1]!, crudo[i + 2]!];
     };
   };
-  return { medidas: [...medidas], cuadro };
+  // El pico de sonido de todo el archivo, en dB (0 = el tope; ahí satura).
+  const picoDb = (): number => {
+    const r = spawnSync('ffmpeg', ['-hide_banner', '-i', ruta, '-af', 'volumedetect', '-f', 'null', '-'], {
+      encoding: 'utf8',
+    });
+    const m = /max_volume:\s*(-?[\d.]+) dB/.exec(r.stderr ?? '');
+    return m ? Number(m[1]) : Number.NaN;
+  };
+  return { medidas: [...medidas], cuadro, picoDb };
 }

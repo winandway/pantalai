@@ -91,6 +91,8 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   const escenario = await page.locator('[data-escenario]').boundingBox();
   expect(escenario).not.toBeNull();
 
+  // CANDADO C-MEZCLA-SIN-SATURAR: con el micrófono al doble, la grabación no satura (el limitador la contiene).
+  await page.getByRole('slider', { name: 'Microphone in the recording' }).fill('200');
   await page.getByRole('button', { name: 'Start recording' }).click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await page.waitForTimeout(1500);
@@ -143,6 +145,7 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   const examen = await examinarVideo(archivo);
   // Medida fija y estándar (1920 × 1080) en TODOS los cuadros, también después de achicar la ventana.
   expect(examen.medidas).toEqual(['1920,1080']);
+  expect(examen.picoDb()).toBeLessThanOrEqual(-0.5); // sin el techo llegaba a 0 dB (saturado)
   const px = examen.cuadro(1);
   // La esquina es la máscara oscura (no la página blanca de Pantalay).
   expect(px(0.01, 0.02).every((n) => n < 80)).toBe(true);

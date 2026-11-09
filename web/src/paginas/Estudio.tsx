@@ -471,6 +471,8 @@ export function Estudio() {
         ...AJUSTES_INICIALES,
         modo: 'pantalla',
         microfonoId: micId,
+        // Sin ajuste automático de ganancia: con el micrófono cerca de la boca subía solo y saturaba.
+        autoGanancia: false,
         audioSistema: true,
         flotante: false,
         transcribir: true,

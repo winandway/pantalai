@@ -36,7 +36,45 @@ export type Ajustes = {
   reparto?: number;
   /** Última área elegida para el Short (tiene otra forma que la del video horizontal). */
   areaVertical?: Area | null;
+  /**
+   * Ajuste automático de ganancia del navegador para el micrófono (por defecto sí). En el Estudio va apagado: con el
+   * micrófono cerca de la boca subía solo y saturaba (Richard, 9 nov 2026).
+   */
+  autoGanancia?: boolean;
 };
+
+/**
+ * Limitador al final de la mezcla (micrófono + sonido de la pestaña o la computadora): la suma de los dos ya no pasa
+ * del tope (antes, voz fuerte + video fuerte = sonido saturado). Como el limitador de un estudio de podcast.
+ */
+export const LIMITADOR = { threshold: -10, knee: 6, ratio: 4, attack: 0.003, release: 0.25 } as const;
+
+/** Techo final de la mezcla: −1,5 dB (el compresor del navegador sube el volumen solo después; esto nunca pasa). */
+export const TECHO = 0.84;
+
+/**
+ * Curva del techo suave (WaveShaper): sigue la señal casi igual en lo normal y redondea los picos hasta el techo, sin
+ * poder pasarlo jamás (el navegador recorta la entrada a ±1 y la curva termina en ±TECHO).
+ */
+export function curvaTecho(puntos = 2049, techo = TECHO): Float32Array {
+  const curva = new Float32Array(puntos);
+  const k = 1.4;
+  for (let i = 0; i < puntos; i++) {
+    const x = (i / (puntos - 1)) * 2 - 1;
+    curva[i] = (techo * Math.tanh(k * x)) / Math.tanh(k);
+  }
+  return curva;
+}
+
+/** Cómo se pide el micrófono al navegador. */
+export function restriccionesMicro(microfonoId: string, autoGanancia = true): MediaTrackConstraints {
+  return {
+    deviceId: microfonoId !== 'default' ? { exact: microfonoId } : undefined,
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: autoGanancia,
+  };
+}
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
@@ -382,12 +420,7 @@ export class Grabadora {
     }
     if (this.a.microfonoId) {
       micro = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: this.a.microfonoId !== 'default' ? { exact: this.a.microfonoId } : undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: restriccionesMicro(this.a.microfonoId, this.a.autoGanancia ?? true),
       });
       this.flujos.push(micro);
     }
@@ -400,6 +433,18 @@ export class Grabadora {
       // Un mezclador «suspendido» graba silencio: se despierta siempre.
       if (this.audio.state === 'suspended') await this.audio.resume().catch(() => undefined);
       const destino = this.audio.createMediaStreamDestination();
+      // Limitador: nada de lo que se graba pasa del tope (la voz y el video juntos ya no saturan).
+      const limitador = this.audio.createDynamicsCompressor();
+      limitador.threshold.value = LIMITADOR.threshold;
+      limitador.knee.value = LIMITADOR.knee;
+      limitador.ratio.value = LIMITADOR.ratio;
+      limitador.attack.value = LIMITADOR.attack;
+      limitador.release.value = LIMITADOR.release;
+      const techo = this.audio.createWaveShaper();
+      techo.curve = curvaTecho() as Float32Array<ArrayBuffer>;
+      techo.oversample = '4x';
+      limitador.connect(techo);
+      techo.connect(destino);
       // El medidor tiene que terminar en la salida (en silencio) para que el navegador lo procese siempre.
       const silencio = this.audio.createGain();
       silencio.gain.value = 0;
@@ -414,7 +459,7 @@ export class Grabadora {
         ganancia.gain.value = this.volumenes[cual];
         this.ganancias[cual] = ganancia;
         fuente.connect(ganancia);
-        ganancia.connect(destino);
+        ganancia.connect(limitador);
         ganancia.connect(medidor);
         medidor.connect(silencio);
         this.medidores[cual] = medidor;
