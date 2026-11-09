@@ -248,6 +248,22 @@ export function errorDeVideo(
   return null;
 }
 
+/** La página original del video, para abrirla cuando no se deja reproducir aquí (plan B). */
+export function enlaceOriginal(v: { plataforma: Plataforma; id: string; creador?: string }): string {
+  if (v.plataforma === 'youtube') return `https://www.youtube.com/watch?v=${v.id}`;
+  return v.creador?.startsWith('@')
+    ? `https://www.tiktok.com/${v.creador}/video/${v.id}`
+    : `https://www.tiktok.com/player/v1/${v.id}`;
+}
+
+/**
+ * TikTok muestra primero solo una portada: su reproductor de verdad (y sus mensajes) arranca recién cuando la persona
+ * toca el video por dentro. Hasta ese toque, play/pausa desde afuera no hacen nada (comprobado el 9 nov 2026).
+ */
+export function pideToque(plataforma: Plataforma | undefined, listo: boolean): boolean {
+  return plataforma === 'tiktok' && !listo;
+}
+
 /** Atajos del estudio (los mismos que el reproductor de YouTube). */
 export function accionDeTecla(tecla: string): 'alternar' | 'atras' | 'adelante' | null {
   if (tecla === ' ' || tecla === 'k' || tecla === 'K') return 'alternar';

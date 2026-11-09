@@ -120,12 +120,21 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
 });
 
 // TikTok: se reconoce el enlace, se pone sola la posición vertical y el video vertical sale en su tarjeta.
-const TIKTOK_FALSO = `<!doctype html><html><body style="margin:0;background:#00c853">
+// Se porta como el de verdad (comprobado el 9 nov 2026): muestra una portada y NO responde a nada (ni avisa que está
+// listo) hasta que alguien toca el video por dentro; con ese toque arranca y desde ahí obedece play, pausa y salto.
+const TIKTOK_FALSO = `<!doctype html><html><body style="margin:0;background:#00c853;height:100vh">
 <script>
+let activo = false;
 const decir = (m) => parent.postMessage({ ...m, 'x-tiktok-player': true }, '*');
-setTimeout(() => decir({ type: 'onPlayerReady' }), 100);
+document.body.addEventListener('click', () => {
+  if (activo) return;
+  activo = true;
+  decir({ type: 'onPlayerReady' });
+  decir({ type: 'onStateChange', value: 1 });
+});
 addEventListener('message', (e) => {
   const m = e.data || {};
+  if (!activo) return;
   if (m.type === 'play') decir({ type: 'onStateChange', value: 1 });
   if (m.type === 'pause') decir({ type: 'onStateChange', value: 2 });
   if (m.type === 'seekTo') decir({ type: 'onCurrentTime', value: { currentTime: m.value, duration: 30 } });
@@ -171,6 +180,21 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
   );
   await page.locator('#estudio-tema').fill('Probando TikTok');
   await page.locator('#estudio-tema').blur();
+  // CANDADO del play de TikTok: antes del toque nuestro botón no lo arranca y se pide el toque, con plan B.
+  await expect(page.getByText('TikTok asks for one tap')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open on TikTok' })).toHaveAttribute(
+    'href',
+    'https://www.tiktok.com/@creadora.prueba/video/7691731841765690645',
+  );
+  await page.getByRole('button', { name: /Play/ }).click();
+  await expect(page.getByRole('button', { name: /Play/ })).toBeVisible();
+  // El toque dentro del video tiene que llegarle (antes una capa lo bloqueaba y quedaba la portada muerta).
+  await page.frameLocator('.escenario iframe').locator('body').click();
+  await expect(page.getByRole('button', { name: /Pause$/ })).toBeVisible();
+  await expect(page.getByText('TikTok asks for one tap')).toHaveCount(0);
+  // Desde ahí lo manejan nuestros botones.
+  await page.getByRole('button', { name: /Pause$/ }).click();
+  await expect(page.getByRole('button', { name: /Play/ })).toBeVisible();
   await page.getByRole('button', { name: /Play/ }).click();
   await expect(page.getByRole('button', { name: /Pause$/ })).toBeVisible();
 

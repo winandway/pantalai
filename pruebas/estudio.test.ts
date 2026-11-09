@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISENOS,
+  enlaceOriginal,
+  pideToque,
   disenoPara,
   errorDeVideo,
   leerMensajeTiktok,
@@ -255,5 +257,26 @@ describe('estudio: TikTok y las posiciones', () => {
     expect(errorDeVideo('tiktok', 2005)).toBe('ocupado');
     expect(errorDeVideo('youtube', 150)).toBe('no_insertable');
     expect(errorDeVideo('youtube', 2)).toBeNull();
+  });
+});
+
+describe('estudio: el play de TikTok (portada que pide un toque)', () => {
+  it('pide el toque solo en TikTok y hasta que el reproductor responde', () => {
+    expect(pideToque('tiktok', false)).toBe(true);
+    expect(pideToque('tiktok', true)).toBe(false);
+    expect(pideToque('youtube', false)).toBe(false);
+    expect(pideToque(undefined, false)).toBe(false);
+  });
+
+  it('plan B: abre el video en su página', () => {
+    expect(enlaceOriginal({ plataforma: 'youtube', id: 'dQw4w9WgXcQ' })).toBe(
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    );
+    expect(enlaceOriginal({ plataforma: 'tiktok', id: '7691731841765690645', creador: '@genesis' })).toBe(
+      'https://www.tiktok.com/@genesis/video/7691731841765690645',
+    );
+    expect(enlaceOriginal({ plataforma: 'tiktok', id: '7691731841765690645', creador: '' })).toBe(
+      'https://www.tiktok.com/player/v1/7691731841765690645',
+    );
   });
 });

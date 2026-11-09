@@ -12,6 +12,8 @@ import {
   accionDeTecla,
   armarMascara,
   disenoPara,
+  enlaceOriginal,
+  pideToque,
   errorDeVideo,
   leerMensajeTiktok,
   leerMensajeYoutube,
@@ -64,7 +66,7 @@ export function Estudio() {
   });
   const diseno: Diseno = DISENOS.includes(b.valor.diseno) ? b.valor.diseno : 'clasico';
   const [video, setVideo] = useState<VideoPegado | null>(null);
-  const [error, setError] = useState<{ texto: string; grabar?: boolean } | null>(null);
+  const [error, setError] = useState<{ texto: string; grabar?: boolean; abrir?: boolean } | null>(null);
   const [estado, setEstado] = useState<Estado>('listo');
   const [cuenta, setCuenta] = useState(3);
   const [segundos, setSegundos] = useState(0);
@@ -72,6 +74,12 @@ export function Estudio() {
   const [niveles, setNiveles] = useState({ micro: 0, sistema: 0 });
   const [sinSonido, setSinSonido] = useState(false);
   const [reproduciendo, setReproduciendo] = useState(false);
+  // El reproductor ya respondió (TikTok solo responde después de un toque dentro del video).
+  const [listo, setListo] = useState(false);
+  const [avisoVideo, setAvisoVideo] = useState<'no_arranco' | null>(null);
+  const reproduciendoRef = useRef(false);
+  reproduciendoRef.current = reproduciendo;
+  const vigilante = useRef<number | null>(null);
   const [camara, setCamara] = useState<MediaStream | null>(null);
   const [sinCamara, setSinCamara] = useState(false);
   const [recorte] = useState(() => puedeRecortarPestana());
@@ -135,6 +143,8 @@ export function Estudio() {
       // El enlace corto de TikTok no trae el número del video: hay que esperar al servidor.
       setVideo(v.id ? v : null);
       setReproduciendo(false);
+      setListo(false);
+      setAvisoVideo(null);
       tiempo.current = v.inicio;
       duracion.current = 0;
       if (rellenar)
@@ -179,13 +189,18 @@ export function Estudio() {
             ? leerMensajeTiktok(e.data)
             : null;
       if (!m) return;
+      if (m.tipo === 'listo' || m.tipo === 'info') setListo(true);
       if (m.tipo === 'info') {
         if (m.tiempo !== undefined) tiempo.current = m.tiempo;
         if (m.duracion) duracion.current = m.duracion;
-        if (m.estado !== undefined) setReproduciendo(m.estado === 1 || m.estado === 3);
+        if (m.estado !== undefined) {
+          const anda = m.estado === 1 || m.estado === 3;
+          setReproduciendo(anda);
+          if (anda) setAvisoVideo(null);
+        }
       } else if (m.tipo === 'error') {
         const problema = errorDeVideo(e.origin === ORIGEN_TT ? 'tiktok' : 'youtube', m.codigo);
-        if (problema === 'ocupado') setError({ texto: tx.ocupado });
+        if (problema === 'ocupado') setError({ texto: tx.ocupado, abrir: true });
         else if (problema) {
           setVideo(null);
           setError(
@@ -226,15 +241,24 @@ export function Estudio() {
     (a: 'alternar' | 'atras' | 'adelante') => {
       if (!video) return;
       if (a === 'alternar') {
-        ordenar(reproduciendo ? 'pause' : 'play');
-        setReproduciendo(!reproduciendo);
+        // TikTok todavía en portada: nuestro botón no le llega; se pide el toque (la línea de abajo lo dice).
+        if (pideToque(video.plataforma, listo)) return setAvisoVideo('no_arranco');
+        const arrancar = !reproduciendo;
+        ordenar(arrancar ? 'play' : 'pause');
+        setReproduciendo(arrancar);
+        if (vigilante.current) window.clearTimeout(vigilante.current);
+        // Si en 4 segundos no arrancó, se dice claro y se ofrece tocarlo o abrirlo en su página. Nunca una portada muerta.
+        if (arrancar)
+          vigilante.current = window.setTimeout(() => {
+            if (!reproduciendoRef.current) setAvisoVideo('no_arranco');
+          }, 4000);
       } else {
         const s = saltar(tiempo.current, a === 'atras' ? -5 : 5, duracion.current);
         tiempo.current = s;
         ordenar('seekTo', s);
       }
     },
-    [video, reproduciendo, ordenar],
+    [video, reproduciendo, listo, ordenar],
   );
 
   useEffect(() => {
@@ -480,6 +504,11 @@ export function Estudio() {
               {tx.irGrabar}
             </a>
           )}
+          {error.abrir && video && (
+            <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
+              {video.plataforma === 'tiktok' ? tx.abrirTiktok : tx.abrirYoutube}
+            </a>
+          )}
         </p>
       )}
       {sinCamara && <p className="estudio-aviso">{tx.sinCamara}</p>}
@@ -582,7 +611,7 @@ export function Estudio() {
       </div>
 
       <div className="estudio-controles">
-        <div className="estudio-reproductor" role="group" aria-label="YouTube">
+        <div className="estudio-reproductor" role="group" aria-label="Video">
           <button
             type="button"
             className="boton secundario"
@@ -676,6 +705,14 @@ export function Estudio() {
           )}
         </div>
       </div>
+      {video && (pideToque(video.plataforma, listo) || avisoVideo === 'no_arranco') && (
+        <p className={`estudio-aviso${avisoVideo ? ' estudio-aviso-fuerte' : ''}`} role="status">
+          {pideToque(video.plataforma, listo) ? tx.tocarTiktok : tx.noArranco}{' '}
+          <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
+            {video.plataforma === 'tiktok' ? tx.abrirTiktok : tx.abrirYoutube}
+          </a>
+        </p>
+      )}
       {estado === 'fallo' && (
         <p className="error" role="alert">
           {tx.fallo}{' '}

@@ -10,7 +10,12 @@ const en = {
   cargar: 'Load video',
   enlaceMalo: 'That does not look like a YouTube or TikTok video link. Paste the full link of the video.',
   noExiste: 'We could not find that video. Check the link.',
-  ocupado: 'TikTok is not letting this video play right now. Try again in a minute.',
+  ocupado: 'TikTok is not letting this video play right now. Try again in a minute, or open it on TikTok.',
+  tocarTiktok:
+    'TikTok asks for one tap: tap the video once to start it. After that, use these buttons to play, pause and skip.',
+  noArranco: 'The video did not start. Tap the video directly, or open it on its own page.',
+  abrirTiktok: 'Open on TikTok',
+  abrirYoutube: 'Open on YouTube',
   posicion: 'Layout',
   disenos: {
     clasico: 'Camera + wide video',
@@ -63,7 +68,13 @@ const es: typeof en = {
   enlaceMalo:
     'Eso no parece el enlace de un video de YouTube o de TikTok. Pega el enlace completo del video.',
   noExiste: 'No encontramos ese video. Revisa el enlace.',
-  ocupado: 'TikTok no está dejando reproducir este video en este momento. Inténtalo en un minuto.',
+  ocupado:
+    'TikTok no está dejando reproducir este video en este momento. Inténtalo en un minuto o ábrelo en TikTok.',
+  tocarTiktok:
+    'TikTok pide un toque: toca el video una vez para que arranque. Después lo manejas con estos botones: reproducir, pausar y saltar.',
+  noArranco: 'El video no arrancó. Tócalo directamente o ábrelo en su página.',
+  abrirTiktok: 'Abrir en TikTok',
+  abrirYoutube: 'Abrir en YouTube',
   posicion: 'Posición',
   disenos: {
     clasico: 'Cámara + video ancho',

@@ -683,3 +683,14 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   la e2e y la unitaria).
 - Ojo: TikTok limita su reproductor por dominio; desde un navegador automático respondió «TOO_MANY_REQUESTS» (2005).
   La página lo dice claro («inténtalo en un minuto») en vez de quedarse en negro.
+- Play de TikTok (9 nov 2026, Richard lo probó en vivo: «al tocar play queda congelado en la portada»). Causa real,
+  comprobada con un TikTok de verdad: el reproductor oficial de TikTok muestra primero una PORTADA y no avisa
+  «listo» ni obedece play/pausa desde afuera hasta que alguien toca el video POR DENTRO. Y el estudio tenía
+  `pointer-events: none` sobre el video, así que el toque nunca llegaba. Arreglo: el video se puede tocar (sin esa
+  capa), mientras TikTok no responde se muestra «TikTok pide un toque…» con «Abrir en TikTok», nuestro Play no finge
+  que arrancó, y si cualquier video (YouTube o TikTok) no arranca en 4 s se dice claro y se ofrece abrirlo en su
+  página. Prueba: `e2e/estudio.spec.ts` › TikTok (su reproductor falso se porta igual: no responde hasta el toque).
+  Comprobada en ROJO el 9 nov 2026 volviendo a poner `pointer-events: none`. NO volver a poner capas ni
+  `pointer-events: none` sobre los reproductores. Ojo: TikTok corta con «TOO_MANY_REQUESTS» (2005) si se le prueba
+  muchas veces seguidas desde la misma conexión, y a los navegadores automáticos les muestra «Mira este video en
+  TikTok»: no confundir con un fallo nuestro.

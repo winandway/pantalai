@@ -4530,8 +4530,10 @@ main {
 .escenario-caja video {
   transform: scaleX(-1);
 }
-.escenario-caja iframe {
-  pointer-events: none;
+/* El video se puede tocar: TikTok solo arranca su reproductor con un toque dentro (candado C-ESTUDIO-RECORTE). */
+.estudio-aviso-fuerte {
+  background: #fdecec;
+  border-color: #f2a5a7;
 }
 .escenario-vacio {
   position: absolute;
