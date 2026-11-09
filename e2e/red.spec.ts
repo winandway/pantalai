@@ -32,6 +32,9 @@ test('publicar un video en la red de Pantalay', async ({ page, browser, request 
   await expect(page).toHaveURL(/\/videos$/);
   // La red se ve llena desde el principio: banner y espacios vacíos hasta 30.
   await expect(page.locator('.red-banner')).toBeVisible();
+  // (Se cuenta cuando la lista ya llegó: antes hay tarjetas de «cargando».)
+  await expect(page.locator(`.red-cuadricula a[href="/videos/${id}"]`)).toBeVisible();
+  await expect(page.locator('.red-cuadricula .cargando')).toHaveCount(0);
   const reales = await page.locator('.red-cuadricula .red-tarjeta:not(.red-vacia)').count();
   await expect(page.locator('.red-cuadricula .red-vacia')).toHaveCount(Math.max(0, 30 - reales));
   // El estante de Shorts va entre las filas de videos, con sus 8 espacios.
