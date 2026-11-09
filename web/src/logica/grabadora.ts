@@ -237,6 +237,17 @@ export class Grabadora {
   sinSonidoSistema = false;
   pistaMicro: MediaStreamTrack | null = null;
   private medidores: { micro?: AnalyserNode; sistema?: AnalyserNode } = {};
+  private ganancias: { micro?: GainNode; sistema?: GainNode } = {};
+  /** Volumen de cada sonido EN LA GRABACIÓN (1 = tal cual). Lo que se oye en los parlantes no cambia. */
+  private volumenes = { micro: 1, sistema: 1 };
+
+  /** Sube o baja el micrófono o el sonido de la pestaña/computadora en lo que se graba (0 a 2). */
+  ajustarVolumen(cual: 'micro' | 'sistema', valor: number) {
+    const v = Math.min(2, Math.max(0, Number.isFinite(valor) ? valor : 1));
+    this.volumenes[cual] = v;
+    const g = this.ganancias[cual];
+    if (g) g.gain.value = v;
+  }
   private muestras = new Float32Array(512);
   private ultimos = { micro: 0, sistema: 0 };
 
@@ -397,8 +408,13 @@ export class Grabadora {
         const fuente = this.audio.createMediaStreamSource(new MediaStream([p]));
         const medidor = this.audio.createAnalyser();
         medidor.fftSize = 512;
-        fuente.connect(destino);
-        fuente.connect(medidor);
+        // Cada sonido pasa por su propio volumen antes de mezclarse: la barrita mide lo que de verdad se graba.
+        const ganancia = this.audio.createGain();
+        ganancia.gain.value = this.volumenes[cual];
+        this.ganancias[cual] = ganancia;
+        fuente.connect(ganancia);
+        ganancia.connect(destino);
+        ganancia.connect(medidor);
         medidor.connect(silencio);
         this.medidores[cual] = medidor;
       };

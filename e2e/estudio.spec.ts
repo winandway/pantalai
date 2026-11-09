@@ -14,6 +14,7 @@ let t = 0, estado = 5;
 const decir = (m) => parent.postMessage(JSON.stringify(m), '*');
 addEventListener('message', (e) => {
   const m = JSON.parse(e.data);
+  (window.__ordenes = window.__ordenes || []).push(m);
   if (m.event === 'listening') { decir({ event: 'onReady' }); decir({ event: 'infoDelivery', info: { currentTime: t, playerState: estado, duration: 60 } }); }
   if (m.func === 'playVideo') estado = 1;
   if (m.func === 'pauseVideo') estado = 2;
@@ -60,6 +61,22 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   await page.keyboard.press('k');
   await expect(page.getByRole('button', { name: /Play/ })).toBeVisible();
 
+  // CANDADO C-PROBADOR-MICROFONO: con un micrófono vivo (el de prueba suena) dice que llega sonido.
+  await expect(page.locator('.probador-micro')).toHaveAttribute('data-estado', 'llega', { timeout: 10_000 });
+  // Volumen solo del video: el reproductor recibe su propio volumen (no se toca la computadora ni el micrófono).
+  await page.getByRole('slider', { name: 'Video volume' }).fill('40');
+  const reproductor = page.frames().find((f) => f.url().includes('youtube-nocookie.com'))!;
+  await expect
+    .poll(() =>
+      reproductor.evaluate(() =>
+        ((window as unknown as { __ordenes?: { func?: string; args?: unknown[] }[] }).__ordenes ?? []).some(
+          (o) => o.func === 'setVolume' && o.args?.[0] === 40,
+        ),
+      ),
+    )
+    .toBe(true);
+  await page.getByRole('slider', { name: 'Video volume' }).fill('100');
+
   // Selector de posiciones: «Dos horizontales» deja las dos tarjetas iguales; se vuelve a la clásica para grabar.
   await expect(page.getByRole('radio', { name: 'Camera + wide video' })).toBeChecked();
   await page.getByText('Two side by side').click();
@@ -84,14 +101,13 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   const r = await page.evaluate(async () => {
     const v = document.querySelector('.reproductor video') as HTMLVideoElement;
     v.muted = true;
-    if (v.readyState < 1) await new Promise((ok) => v.addEventListener('loadedmetadata', ok, { once: true }));
+    // Se espera mirando el estado (los avisos del reproductor a veces ya pasaron): como mucho 15 s.
+    const esperar = async (listo: () => boolean) => {
+      for (let i = 0; i < 150 && !listo(); i++) await new Promise((ok) => setTimeout(ok, 100));
+    };
+    await esperar(() => v.readyState >= 1);
     v.currentTime = 1.5;
-    // A veces el navegador no avisa «seeked»: se espera como mucho 5 s y se sigue (el cuadro ya está).
-    await Promise.race([
-      new Promise((ok) => v.addEventListener('seeked', ok, { once: true })),
-      new Promise((ok) => setTimeout(ok, 5000)),
-    ]);
-    if (v.readyState < 2) await new Promise((ok) => v.addEventListener('loadeddata', ok, { once: true }));
+    await esperar(() => !v.seeking && v.readyState >= 2);
     const c = document.createElement('canvas');
     c.width = v.videoWidth;
     c.height = v.videoHeight;
@@ -178,7 +194,8 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
     .fill('https://www.tiktok.com/@creadora.prueba/video/7691731841765690645?_r=1&_t=ZS-9BGPBWAFyug');
   await page.getByRole('button', { name: 'Load video' }).click();
   await expect(page.locator('.cartel-video')).toContainText('@creadora.prueba');
-  await expect(page.getByRole('radio', { name: /Vertical video/ })).toBeChecked();
+  // Un TikTok elige solo la posición «video vertical grande» (pedido de Richard, 9 nov 2026).
+  await expect(page.getByRole('radio', { name: /Big vertical video/ })).toBeChecked();
   await expect(page.locator('.escenario iframe')).toHaveAttribute(
     'src',
     /tiktok\.com\/player\/v1\/7691731841765690645\?controls=0/,
@@ -212,6 +229,8 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
   const total = (await page.locator('[data-escenario]').boundingBox())!;
   const caja = (await page.locator('.escenario-video .escenario-caja').boundingBox())!;
   expect(Math.abs(caja.width / caja.height - 9 / 16)).toBeLessThan(0.02);
+  // El video ocupa el escenario de arriba abajo (no una tarjeta chiquita).
+  expect(caja.height / total.height).toBeGreaterThan(0.85);
   const centro = {
     x: (caja.x + caja.width / 2 - total.x) / total.width,
     y: (caja.y + caja.height / 2 - total.y) / total.height,
@@ -228,15 +247,13 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
     async ({ centro, afuera }) => {
       const v = document.querySelector('.reproductor video') as HTMLVideoElement;
       v.muted = true;
-      if (v.readyState < 1)
-        await new Promise((ok) => v.addEventListener('loadedmetadata', ok, { once: true }));
+      // Se espera mirando el estado (los avisos del reproductor a veces ya pasaron): como mucho 15 s.
+      const esperar = async (listo: () => boolean) => {
+        for (let i = 0; i < 150 && !listo(); i++) await new Promise((ok) => setTimeout(ok, 100));
+      };
+      await esperar(() => v.readyState >= 1);
       v.currentTime = 1.5;
-      // A veces el navegador no avisa «seeked»: se espera como mucho 5 s y se sigue (el cuadro ya está).
-      await Promise.race([
-        new Promise((ok) => v.addEventListener('seeked', ok, { once: true })),
-        new Promise((ok) => setTimeout(ok, 5000)),
-      ]);
-      if (v.readyState < 2) await new Promise((ok) => v.addEventListener('loadeddata', ok, { once: true }));
+      await esperar(() => !v.seeking && v.readyState >= 2);
       const c = document.createElement('canvas');
       c.width = v.videoWidth;
       c.height = v.videoHeight;
@@ -308,14 +325,13 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
   const r = await page.evaluate(async (centro) => {
     const v = document.querySelector('.reproductor video') as HTMLVideoElement;
     v.muted = true;
-    if (v.readyState < 1) await new Promise((ok) => v.addEventListener('loadedmetadata', ok, { once: true }));
+    // Se espera mirando el estado (los avisos del reproductor a veces ya pasaron): como mucho 15 s.
+    const esperar = async (listo: () => boolean) => {
+      for (let i = 0; i < 150 && !listo(); i++) await new Promise((ok) => setTimeout(ok, 100));
+    };
+    await esperar(() => v.readyState >= 1);
     v.currentTime = 1.5;
-    // A veces el navegador no avisa «seeked»: se espera como mucho 5 s y se sigue (el cuadro ya está).
-    await Promise.race([
-      new Promise((ok) => v.addEventListener('seeked', ok, { once: true })),
-      new Promise((ok) => setTimeout(ok, 5000)),
-    ]);
-    if (v.readyState < 2) await new Promise((ok) => v.addEventListener('loadeddata', ok, { once: true }));
+    await esperar(() => !v.seeking && v.readyState >= 2);
     const c = document.createElement('canvas');
     c.width = v.videoWidth;
     c.height = v.videoHeight;

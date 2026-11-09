@@ -20,6 +20,12 @@ const en = {
   ayudaPlataformas:
     'YouTube plays without an account. TikTok asks you to be signed in to TikTok in this same browser.',
   entrarTiktok: 'Sign in to TikTok',
+  volumenVideo: 'Video volume',
+  volumenMicro: 'Microphone in the recording',
+  volumenAyuda:
+    'The video volume changes only the video (what you hear and what is recorded), not your computer or your microphone. The microphone volume changes only how loud you sound in the recording.',
+  volumenAyudaTiktok:
+    'TikTok does not let other sites change its volume: this slider sets how loud the TikTok sounds in your recording (at 0 it is muted). The microphone volume changes only how loud you sound in the recording.',
   abrirTiktok: 'Open on TikTok',
   abrirYoutube: 'Open on YouTube',
   formato: 'Format',
@@ -28,7 +34,8 @@ const en = {
   disenos: {
     clasico: 'Camera + wide video',
     iguales: 'Two side by side',
-    vertical: 'Vertical video (TikTok, Shorts)',
+    vertical: 'Small vertical video',
+    grande: 'Big vertical video (TikTok, Shorts)',
   },
   noInsertable:
     'The owner of this video does not allow it to play outside YouTube. Use Record → “Choose area” and share the YouTube tab instead.',
@@ -86,6 +93,12 @@ const es: typeof en = {
   ayudaPlataformas:
     'YouTube se reproduce sin cuenta. TikTok pide que tengas tu sesión de TikTok iniciada en este mismo navegador.',
   entrarTiktok: 'Iniciar sesión en TikTok',
+  volumenVideo: 'Volumen del video',
+  volumenMicro: 'Micrófono en la grabación',
+  volumenAyuda:
+    'El volumen del video cambia solo el video (lo que oyes y lo que se graba), no el de tu computadora ni el de tu micrófono. El del micrófono cambia solo qué tan fuerte sales tú en la grabación.',
+  volumenAyudaTiktok:
+    'TikTok no deja que otras páginas cambien su volumen: esta barra ajusta qué tan fuerte suena el TikTok en tu grabación (en 0 se silencia). El del micrófono cambia solo qué tan fuerte sales tú en la grabación.',
   abrirTiktok: 'Abrir en TikTok',
   abrirYoutube: 'Abrir en YouTube',
   formato: 'Formato',
@@ -94,7 +107,8 @@ const es: typeof en = {
   disenos: {
     clasico: 'Cámara + video ancho',
     iguales: 'Dos horizontales',
-    vertical: 'Video vertical (TikTok, Shorts)',
+    vertical: 'Video vertical pequeño',
+    grande: 'Video vertical grande (TikTok, Shorts)',
   },
   noInsertable:
     'El dueño de este video no deja reproducirlo fuera de YouTube. Usa Grabar → «Elegir qué parte» y comparte la pestaña de YouTube.',

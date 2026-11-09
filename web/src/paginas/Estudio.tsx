@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
+import { ProbadorMicrofono } from '../componentes/ProbadorMicrofono';
 import { ErrorApi, enlaceVideo, pedir } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import {
@@ -14,6 +15,7 @@ import {
   accionDeTecla,
   armarMascara,
   disenoPara,
+  volumenDelVideo,
   enlaceOriginal,
   pideToque,
   errorDeVideo,
@@ -68,9 +70,14 @@ export function Estudio() {
     programa: '',
     diseno: 'clasico' as Diseno,
     formato: 'horizontal' as Formato,
+    volVideo: 100,
+    volMicro: 100,
   });
+  const volVideo = Number.isFinite(b.valor.volVideo) ? b.valor.volVideo : 100;
+  const volMicro = Number.isFinite(b.valor.volMicro) ? b.valor.volMicro : 100;
   const formato: Formato = FORMATOS.includes(b.valor.formato) ? b.valor.formato : 'horizontal';
   const diseno: Diseno = DISENOS.includes(b.valor.diseno) ? b.valor.diseno : 'clasico';
+  const grande = formato === 'horizontal' && diseno === 'grande';
   const [video, setVideo] = useState<VideoPegado | null>(null);
   const [error, setError] = useState<{ texto: string; grabar?: boolean; abrir?: boolean } | null>(null);
   const [estado, setEstado] = useState<Estado>('listo');
@@ -233,6 +240,23 @@ export function Estudio() {
     [plataforma],
   );
 
+  // Volumen del video (solo el video) y del micrófono en la grabación: se aplican al reproductor y al mezclador.
+  useEffect(() => {
+    if (!video) return;
+    const { ordenes, enGrabacion } = volumenDelVideo(video.plataforma, volVideo);
+    const w = marco.current?.contentWindow;
+    if (w && listo)
+      for (const o of ordenes) {
+        if (video.plataforma === 'tiktok') w.postMessage(ordenTiktok(o as 'mute' | 'unMute'), ORIGEN_TT);
+        else if (typeof o === 'object') w.postMessage(ordenYoutube('setVolume', [o.setVolume]), ORIGEN_YT);
+        else w.postMessage(ordenYoutube(o), ORIGEN_YT);
+      }
+    grabadora.current?.ajustarVolumen('sistema', enGrabacion);
+  }, [video, volVideo, listo]);
+  useEffect(() => {
+    grabadora.current?.ajustarVolumen('micro', volMicro / 100);
+  }, [volMicro]);
+
   const alCargarMarco = useCallback(() => {
     // TikTok avisa solo; a YouTube hay que pedirle que avise su estado.
     if (plataforma === 'tiktok') return;
@@ -333,6 +357,8 @@ export function Estudio() {
       },
     );
     g.recortarA = escenario.current;
+    g.ajustarVolumen('micro', volMicro / 100);
+    g.ajustarVolumen('sistema', volumenDelVideo(video.plataforma, volVideo).enGrabacion);
     // El escenario entero a la vista, justo debajo de la barra de arriba: lo que no se ve, no se graba.
     const barra = document.querySelector('.encabezado')?.getBoundingClientRect().height ?? 0;
     window.scrollTo({ top: escenario.current.getBoundingClientRect().top + window.scrollY - barra - 8 });
@@ -611,9 +637,21 @@ export function Estudio() {
               <div ref={cajaCamara} className="escenario-caja">
                 <video ref={videoCamara} muted playsInline autoPlay aria-hidden="true" />
               </div>
-              <figcaption className="cartel">
-                <b>{m.anfitrion}</b> · {m.rolAnfitrion}
-              </figcaption>
+              {/* En «video vertical grande» los dos carteles van bajo la cámara: el video queda limpio y entero. */}
+              {grande ? (
+                <figcaption className="carteles-juntos">
+                  <span className="cartel">
+                    <b>{m.anfitrion}</b> · {m.rolAnfitrion}
+                  </span>
+                  <span className="cartel cartel-video">
+                    <b>{m.creador}</b> · {m.rolCreador}
+                  </span>
+                </figcaption>
+              ) : (
+                <figcaption className="cartel">
+                  <b>{m.anfitrion}</b> · {m.rolAnfitrion}
+                </figcaption>
+              )}
             </figure>
             <figure className="escenario-tarjeta escenario-video">
               <div className="escenario-caja">
@@ -640,9 +678,11 @@ export function Estudio() {
                   </div>
                 )}
               </div>
-              <figcaption className="cartel cartel-video">
-                <b>{m.creador}</b> · {m.rolCreador}
-              </figcaption>
+              {!grande && (
+                <figcaption className="cartel cartel-video">
+                  <b>{m.creador}</b> · {m.rolCreador}
+                </figcaption>
+              )}
             </figure>
           </div>
           <div className="escenario-pie">
@@ -775,7 +815,41 @@ export function Estudio() {
           </a>
         </p>
       )}
+      <div className="estudio-volumenes">
+        <label>
+          <span>
+            🔊 {tx.volumenVideo} <b>{volVideo}%</b>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={volVideo}
+            aria-label={tx.volumenVideo}
+            onChange={(e) => b.cambiar('volVideo', Number(e.target.value))}
+          />
+        </label>
+        <label>
+          <span>
+            🎤 {tx.volumenMicro} <b>{volMicro}%</b>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={200}
+            step={10}
+            value={volMicro}
+            aria-label={tx.volumenMicro}
+            onChange={(e) => b.cambiar('volMicro', Number(e.target.value))}
+          />
+        </label>
+      </div>
+      <p className="estudio-ayuda">
+        {video?.plataforma === 'tiktok' ? tx.volumenAyudaTiktok : tx.volumenAyuda}
+      </p>
       {sinSonido && enCurso && <p className="estudio-aviso">{tx.sinSonido}</p>}
+      <ProbadorMicrofono />
       <p className="estudio-ayuda">{tx.atajos}</p>
       <p className="estudio-ayuda">{tx.consejo}</p>
       <p className="estudio-ayuda">{tx.derechos}</p>

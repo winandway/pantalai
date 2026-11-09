@@ -4939,3 +4939,117 @@ main {
   color: #c21d7a;
   text-transform: uppercase;
 }
+
+/* ---------- probador de micrófono ---------- */
+.probador-micro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 8px;
+  font-size: 0.86rem;
+  color: var(--tinta-suave);
+}
+.probador-micro-medidor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+.probador-micro[data-estado='llega'] .probador-micro-texto {
+  color: var(--exito);
+  font-weight: 600;
+}
+.probador-micro.con-problema .probador-micro-texto {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fdecec;
+  border: 1px solid #f2a5a7;
+  color: #8a1c20;
+  font-weight: 600;
+}
+
+/* ---------- posición «video vertical grande»: el video de pie ocupa el escenario de arriba abajo ---------- */
+.escenario.diseno-grande {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 13% minmax(0, 1fr) 15%;
+  /* Los márgenes van en los hijos (en el propio escenario «cqw» se mediría contra la ventana). */
+  padding: 0;
+}
+.diseno-grande .escenario-centro {
+  display: contents;
+}
+.diseno-grande > .escenario-cabeza {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 2.2cqw 2.4cqw 0 2.8cqw;
+}
+.diseno-grande .escenario-camara {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+  align-self: stretch;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 1cqw 2.4cqw 1.2cqw 2.8cqw;
+}
+.diseno-grande .escenario-camara .escenario-caja {
+  aspect-ratio: auto;
+  height: 100%;
+  min-height: 0;
+}
+.diseno-grande > .escenario-pie {
+  grid-column: 1;
+  grid-row: 3;
+  margin: 0 2.4cqw 2.2cqw 2.8cqw;
+}
+.diseno-grande .escenario-video {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  padding: 2cqw 2.4cqw 2cqw 0;
+  display: block;
+}
+.diseno-grande .escenario-video .escenario-caja {
+  /* Alto del escenario (56,25) menos los márgenes; el ancho sale del 9:16. */
+  height: 52.25cqw;
+  width: calc(52.25cqw * 9 / 16);
+  aspect-ratio: auto;
+}
+.carteles-juntos {
+  display: flex;
+  gap: 1cqw;
+  min-width: 0;
+}
+.carteles-juntos .cartel {
+  min-width: 0;
+}
+.miniatura-grande i:first-child {
+  width: 24px;
+  height: 13px;
+}
+.miniatura-grande i:last-child {
+  width: 12px;
+  height: 21px;
+}
+
+/* ---------- volúmenes del estudio: el video y el micrófono por separado ---------- */
+.estudio-volumenes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 1.4rem;
+}
+.estudio-volumenes label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.estudio-volumenes input[type='range'] {
+  width: 100%;
+  accent-color: #a78bfa;
+}
+@media (max-width: 700px) {
+  .estudio-volumenes {
+    grid-template-columns: 1fr;
+  }
+}

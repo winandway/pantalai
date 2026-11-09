@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISENOS,
+  volumenDelVideo,
   FORMATOS,
   claseEscenario,
   enlaceOriginal,
@@ -229,9 +230,9 @@ describe('estudio: TikTok y las posiciones', () => {
       creador: '@x',
     });
     expect(videoDeEnlace('https://vimeo.com/1')).toBeNull();
-    expect(disenoPara(true)).toBe('vertical');
+    expect(disenoPara(true)).toBe('grande');
     expect(disenoPara(false)).toBe('clasico');
-    expect(DISENOS).toEqual(['clasico', 'iguales', 'vertical']);
+    expect(DISENOS).toEqual(['clasico', 'iguales', 'vertical', 'grande']);
   });
 
   it('arma el reproductor de TikTok sin sus botones y habla su protocolo', () => {
@@ -290,5 +291,24 @@ describe('estudio: formato vertical 9:16', () => {
     expect(claseEscenario('vertical', 'clasico', false)).toBe('escenario formato-vertical');
     expect(claseEscenario('vertical', 'iguales', true)).toBe('escenario formato-vertical video-es-vertical');
     expect(FORMATOS).toEqual(['horizontal', 'vertical']);
+  });
+});
+
+describe('estudio: volumen del video aparte del micrófono', () => {
+  it('YouTube cambia su propio volumen; en la grabación entra tal cual', () => {
+    expect(volumenDelVideo('youtube', 40)).toEqual({
+      ordenes: ['unMute', { setVolume: 40 }],
+      enGrabacion: 1,
+    });
+    expect(volumenDelVideo('youtube', 0)).toEqual({ ordenes: ['mute'], enGrabacion: 1 });
+  });
+  it('TikTok solo se silencia; su volumen en la grabación lo pone nuestro mezclador', () => {
+    expect(volumenDelVideo('tiktok', 30)).toEqual({ ordenes: ['unMute'], enGrabacion: 0.3 });
+    expect(volumenDelVideo('tiktok', 0)).toEqual({ ordenes: ['mute'], enGrabacion: 0 });
+  });
+  it('valores raros se corrigen', () => {
+    expect(volumenDelVideo('tiktok', 250).enGrabacion).toBe(1);
+    expect(volumenDelVideo('youtube', -5).ordenes).toEqual(['mute']);
+    expect(volumenDelVideo('tiktok', Number.NaN).enGrabacion).toBe(1);
   });
 });

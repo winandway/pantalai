@@ -709,3 +709,28 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   aviso lo explica con amabilidad. No se puede saber desde nuestra página si la persona tiene sesión en TikTok (es
   otro sitio): por eso se dice siempre que falla. Prueba: `e2e/estudio.spec.ts` › «está a la vista…» y › TikTok
   vertical (texto de sesión). Comprobadas en ROJO el 9 nov 2026 quitando el botón del menú y el texto de sesión.
+
+## C-PROBADOR-MICROFONO (9 nov 2026)
+
+- Protege: si no llega señal del micrófono (apagado, sin batería, desconectado o mal elegido), se dice claro con
+  «No llega señal de tu micrófono…» (en el Estudio, en los ajustes de Grabar y, en pequeño, mientras se graba).
+  Antes (Richard, 9 nov 2026) el micrófono se quedó sin batería y lo único que lo delataba era una barrita quieta.
+- Cómo: `web/src/componentes/ProbadorMicrofono.tsx` escucha el micrófono APARTE y SIN filtros de voz (con filtros
+  el silencio sale en cero y daría falsas alarmas); ventana larga (`fftSize` 32768, ~0,7 s) para no perder sonidos
+  cortos; `VigiaMicrofono` (`web/src/logica/microfono.ts`): 3 s seguidos con pico < 0,0008 = sin señal. Mientras
+  el navegador tiene el sonido «dormido» (antes del primer toque) no se juzga.
+- Prueba: `pruebas/microfono.test.ts` y `e2e/microfono.spec.ts` (micrófono que entrega solo ceros → aviso, en el
+  Estudio y en Grabar). El micrófono vivo de prueba → «Llega sonido» en `e2e/estudio.spec.ts`. Comprobadas en ROJO
+  el 9 nov 2026.
+
+## C-ESTUDIO-VOLUMENES y posición grande (9 nov 2026)
+
+- Volumen del video aparte del micrófono (Richard: «si le bajo a la computadora le bajo todo»). YouTube recibe
+  `setVolume` por su API (se oye y se graba así); TikTok solo deja silenciar, así que su volumen en la grabación lo
+  pone el mezclador (`Grabadora.ajustarVolumen('sistema')`). El micrófono en la grabación va de 0 a 200 %
+  (`ajustarVolumen('micro')`); cada sonido tiene su ganancia antes de mezclarse y la barrita mide lo que se graba.
+  Prueba: `e2e/estudio.spec.ts` (el reproductor recibe `setVolume` 40) y `pruebas/estudio.test.ts`.
+- Posición «video vertical grande» (`diseno-grande`): el video de pie ocupa el escenario de arriba abajo a la
+  derecha, sin cartel encima; cámara, carteles y tema a la izquierda. TikTok y Shorts la eligen solos
+  (`disenoPara`). Las otras tres posiciones NO se tocaron (Richard: «a alguien le puede gustar chiquito»).
+  Prueba: e2e › TikTok (alto del video > 85 % del escenario). Comprobadas en ROJO el 9 nov 2026.

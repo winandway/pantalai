@@ -66,7 +66,10 @@ export function urlReproductor(v: VideoYoutube, origen: string): string {
 }
 
 /** Orden para el reproductor insertado (protocolo de mensajes de su API). */
-export function ordenYoutube(func: 'playVideo' | 'pauseVideo' | 'seekTo', args: unknown[] = []): string {
+export function ordenYoutube(
+  func: 'playVideo' | 'pauseVideo' | 'seekTo' | 'setVolume' | 'mute' | 'unMute',
+  args: unknown[] = [],
+): string {
   return JSON.stringify({ event: 'command', func, args });
 }
 
@@ -178,7 +181,7 @@ export function urlReproductorTiktok(id: string): string {
 }
 
 /** Orden para el reproductor de TikTok (su protocolo: type, value y la marca «x-tiktok-player»). */
-export function ordenTiktok(tipo: 'play' | 'pause' | 'seekTo', valor?: number) {
+export function ordenTiktok(tipo: 'play' | 'pause' | 'seekTo' | 'mute' | 'unMute', valor?: number) {
   return valor === undefined
     ? { type: tipo, 'x-tiktok-player': true }
     : { type: tipo, value: valor, 'x-tiktok-player': true };
@@ -242,12 +245,13 @@ export function claseEscenario(formato: Formato, diseno: Diseno, videoVertical: 
  * Las posiciones del escenario (todas en 16:9): cámara cuadrada + video ancho, dos horizontales iguales, o cámara
  * ancha + video vertical (TikTok, Shorts).
  */
-export type Diseno = 'clasico' | 'iguales' | 'vertical';
-export const DISENOS: Diseno[] = ['clasico', 'iguales', 'vertical'];
+export type Diseno = 'clasico' | 'iguales' | 'vertical' | 'grande';
+/** «grande» (9 nov 2026, Richard): el video vertical ocupa el escenario de arriba abajo, sin carteles encima. */
+export const DISENOS: Diseno[] = ['clasico', 'iguales', 'vertical', 'grande'];
 
 /** La posición que conviene para el video: vertical para TikTok y Shorts, la clásica para lo demás. */
 export function disenoPara(vertical: boolean): Diseno {
-  return vertical ? 'vertical' : 'clasico';
+  return vertical ? 'grande' : 'clasico';
 }
 
 /** Errores que significan «este video no se puede reproducir aquí». */
@@ -275,6 +279,21 @@ export function enlaceOriginal(v: { plataforma: Plataforma; id: string; creador?
  */
 export function pideToque(plataforma: Plataforma | undefined, listo: boolean): boolean {
   return plataforma === 'tiktok' && !listo;
+}
+
+/**
+ * Volumen del video (0 a 100) → qué se le dice al reproductor y cuánto entra en la grabación.
+ * YouTube deja cambiar su volumen desde afuera: se oye y se graba igual. TikTok solo deja silenciar: su volumen en la
+ * grabación se ajusta en nuestro mezclador (lo que se oye en los parlantes no cambia).
+ */
+export function volumenDelVideo(
+  plataforma: Plataforma,
+  volumen: number,
+): { ordenes: ('mute' | 'unMute' | { setVolume: number })[]; enGrabacion: number } {
+  const v = Math.round(Math.min(100, Math.max(0, Number.isFinite(volumen) ? volumen : 100)));
+  if (plataforma === 'youtube')
+    return { ordenes: v === 0 ? ['mute'] : ['unMute', { setVolume: v }], enGrabacion: 1 };
+  return { ordenes: [v === 0 ? 'mute' : 'unMute'], enGrabacion: v / 100 };
 }
 
 /** Atajos del estudio (los mismos que el reproductor de YouTube). */

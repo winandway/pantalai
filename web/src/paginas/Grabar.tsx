@@ -22,6 +22,7 @@ import {
   REPARTO_MIN,
 } from '../logica/grabadora';
 import { ElegirArea } from '../componentes/ElegirArea';
+import { ProbadorMicrofono } from '../componentes/ProbadorMicrofono';
 import { COMMIT_PAGINA, recargarSiQuedoVieja } from '../logica/version';
 import { textoError, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
@@ -617,6 +618,8 @@ export function Grabar() {
                   ))}
                 <option value="">{t('sinMicrofono')}</option>
               </select>
+              {/* Probador: dice claro si no llega señal (micrófono apagado o sin batería). */}
+              {a.microfonoId && <ProbadorMicrofono microfonoId={a.microfonoId} />}
             </div>
             {a.modo !== 'camara' && (
               <label className="interruptor">
@@ -952,6 +955,7 @@ export function Grabar() {
                   )}
                 </span>
               )}
+              {enCurso && a.microfonoId && <ProbadorMicrofono compacto microfonoId={a.microfonoId} />}
               {estado === 'grabando' && (
                 <button type="button" className="boton secundario" onClick={() => pausarRef.current()}>
                   ⏸ {t('pausar')}
