@@ -779,7 +779,7 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Qué pasaba (Richard: «el micrófono suena saturado»): el micrófono iba con el ajuste automático de ganancia del
   navegador (con la boca pegada subía solo) y la voz + el sonido del video se sumaban sin tope (pasaban de 0 dB).
 - Arreglo (`web/src/logica/grabadora.ts`): toda la mezcla pasa por un compresor (`LIMITADOR`) y después por un techo
-  suave (`curvaTecho`, WaveShaper con `TECHO` 0,84 = −1,5 dB): matemáticamente no puede pasar del techo (el compresor
+  suave (`curvaTecho`, WaveShaper con `TECHO` 0,71 = −3 dB; antes −1,5 dB y en WebM/Opus el pico subió a −0,2 dB): matemáticamente no puede pasar del techo (el compresor
   del navegador SUBE el volumen solo después de comprimir; por eso solo no alcanzaba). El Estudio pide el micrófono
   con `autoGanancia: false`; Grabar lo deja como estaba (por defecto sí).
 - Prueba: `pruebas/mezcla.test.ts` y `e2e/estudio.spec.ts` (micrófono al 200 % → FFmpeg `volumedetect`: pico ≤ −0,5

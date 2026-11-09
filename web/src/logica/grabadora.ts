@@ -49,8 +49,8 @@ export type Ajustes = {
  */
 export const LIMITADOR = { threshold: -10, knee: 6, ratio: 4, attack: 0.003, release: 0.25 } as const;
 
-/** Techo final de la mezcla: −1,5 dB (el compresor del navegador sube el volumen solo después; esto nunca pasa). */
-export const TECHO = 0.84;
+/** Techo final de la mezcla: −3 dB (margen para lo que suben los picos al comprimir, en MP4 o WebM/Opus). */
+export const TECHO = 0.71;
 
 /**
  * Curva del techo suave (WaveShaper): sigue la señal casi igual en lo normal y redondea los picos hasta el techo, sin
