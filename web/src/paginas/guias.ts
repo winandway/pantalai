@@ -1016,6 +1016,7 @@ export const GUIAS: Guia[] = [
         'The rules: publish only videos you made or have permission to use. If it is a reaction, add your own commentary and credit the creator. Anyone can report a video (for example, for copyright), and our team can hide it.',
         'Every creator has a profile with a banner, their initial, their numbers and all their published videos. Tap the creator’s name under a video to open it.',
         'To take it down, open your video, press the three dots and choose “Remove from Videos”. If you make the video private or archive it, it also leaves Videos on its own.',
+        'Search Videos with the box at the top: suggestions appear while you type (use the arrows and Enter). It finds videos by title, creator, description and even what is said in the video, with or without accents. In the results, filter by All, Videos, Shorts or Recently published. Shorts (vertical videos) have their own shelf right after the first row.',
       ],
     },
     es: {
@@ -1028,6 +1029,7 @@ export const GUIAS: Guia[] = [
         'Las reglas: publica solo videos que hiciste o que tienes permiso de usar. Si es una reacción, ponle tu propio comentario y dale el crédito al creador. Cualquiera puede denunciar un video (por ejemplo, por derechos de autor) y nuestro equipo lo puede ocultar.',
         'Cada creador tiene un perfil con su banner, su inicial, sus números y todos sus videos publicados. Toca el nombre del creador debajo de un video para abrirlo.',
         'Para quitarlo, abre tu video, toca los tres puntos y elige «Quitar de Videos». Si vuelves el video privado o lo archivas, también sale solo de Videos.',
+        'Busca en Videos con la caja de arriba: mientras escribes salen sugerencias (usa las flechas y Enter). Encuentra por título, creador, descripción y hasta por lo que se dice en el video, con o sin tildes. En los resultados filtra por Todo, Videos, Shorts o Subidos recientemente. Los Shorts (videos verticales) tienen su propio estante justo después de la primera fila.',
       ],
     },
   },

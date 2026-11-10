@@ -34,6 +34,11 @@
   en Cloudflare (0,015 USD por GB al mes). Encargo listo en el chat del 20 oct 2026. Cuando esté hecho, aquí: poner la
   variable del sitio `ALMACEN_LIMITE_GB=500` y republicar, para que el superadmin muestre el tope nuevo.
 
+## Videos: siguiente fase (de la ficha de YouTube)
+
+- Suscribirse a un creador, «No me gusta», guardar en listas, comentarios en la red, historial y «Sin mirar».
+- Pantalla del superadmin para revisar denuncias y ocultar videos.
+
 ## Hecho por Richard
 
 - ✅ 20 oct 2026: pantalay.com verificado en Google Search Console y sitemap enviado (Correcto, 25 páginas).

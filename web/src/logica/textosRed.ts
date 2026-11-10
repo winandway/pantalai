@@ -54,6 +54,14 @@ const en = {
   canalNoExiste: 'This creator has no published videos yet.',
   shorts: 'Shorts',
   tuShortAqui: 'Your Short here',
+  buscar: 'Search videos',
+  buscarBoton: 'Search',
+  resultadosDe: (q: string) => `Results for “${q}”`,
+  sinResultados: (q: string) => `No videos found for “${q}”. Try other words.`,
+  filtroTodo: 'All',
+  filtroVideos: 'Videos',
+  filtroShorts: 'Shorts',
+  filtroRecientes: 'Recently published',
 };
 
 const es: typeof en = {
@@ -109,6 +117,14 @@ const es: typeof en = {
   canalNoExiste: 'Este creador todavía no tiene videos publicados.',
   shorts: 'Shorts',
   tuShortAqui: 'Tu Short aquí',
+  buscar: 'Buscar videos',
+  buscarBoton: 'Buscar',
+  resultadosDe: (q: string) => `Resultados de «${q}»`,
+  sinResultados: (q: string) => `No encontramos videos de «${q}». Prueba con otras palabras.`,
+  filtroTodo: 'Todo',
+  filtroVideos: 'Videos',
+  filtroShorts: 'Shorts',
+  filtroRecientes: 'Subidos recientemente',
 };
 
 export const TEXTOS_RED: Record<Idioma, typeof en> = { en, es };

@@ -30,6 +30,7 @@ import {
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
 import { arrobaDe, videoDeTiktok, videoDeYoutube } from '../web/src/logica/estudio';
+import { buscarEnRed, sugerencias, textoDeTranscripcion } from '../web/src/logica/busquedaRed';
 import { REGISTROS_MAX_BYTES, esquemaRegistros, limpiarEnServidor } from './registros';
 import {
   bytesMaximos,
@@ -2530,6 +2531,51 @@ app.get('/datos/red', async (c) => {
   });
 });
 
+/** Los videos de la red con lo que hace falta para buscar (título, creador, descripción y transcripción). */
+async function videosBuscables(c: C) {
+  const filas = await c.env.DB.prepare(
+    `${SQL_RED.replace('SELECT v.id,', 'SELECT v.descripcion, substr(v.transcripcion, 1, 20000) AS transcripcion, v.id,')}
+     ORDER BY r.publicado_en DESC LIMIT 3000`,
+  ).all<FilaRed & { descripcion: string; transcripcion: string }>();
+  return (filas.results ?? []).map((f) => ({
+    ...f,
+    texto: textoDeTranscripcion(f.transcripcion),
+  }));
+}
+
+/**
+ * Buscador de la red (candado C-BUSCADOR): sin importar tildes ni mayúsculas; por título, creador, descripción y lo
+ * que se dice en el video. Filtros: forma (vertical = Shorts, horizontal = videos) y orden (relevancia o recientes).
+ * Solo lee (nunca escribe por buscar).
+ */
+app.get('/datos/red/buscar', async (c) => {
+  const q = (c.req.query('q') ?? '').slice(0, 120);
+  const forma = c.req.query('forma');
+  const limite = Math.min(60, Math.max(1, Number(c.req.query('limite')) || 40));
+  let lista = buscarEnRed(q, await videosBuscables(c));
+  if (forma === 'vertical') lista = lista.filter((r) => r.video.alto > r.video.ancho);
+  if (forma === 'horizontal') lista = lista.filter((r) => r.video.alto <= r.video.ancho);
+  if (c.req.query('orden') === 'recientes')
+    lista = [...lista].sort((a, b) => b.video.publicado_en - a.video.publicado_en);
+  return c.json(
+    {
+      q,
+      resultados: lista.slice(0, limite).map((r) => ({ ...tarjetaRed(r.video), fragmento: r.fragmento })),
+    },
+    200,
+    { 'Cache-Control': 'public, max-age=30' },
+  );
+});
+
+/** Sugerencias mientras se escribe en el buscador. */
+app.get('/datos/red/sugerencias', async (c) => {
+  const q = (c.req.query('q') ?? '').slice(0, 80);
+  if (!q.trim()) return c.json({ sugerencias: [] });
+  return c.json({ sugerencias: sugerencias(q, await videosBuscables(c)) }, 200, {
+    'Cache-Control': 'public, max-age=30',
+  });
+});
+
 /** El perfil público de un creador: nombre y cuántos videos tiene publicados (solo si tiene alguno). */
 app.get('/datos/red-canal/:id', async (c) => {
   const f = await c.env.DB.prepare(
@@ -3516,6 +3562,24 @@ async function paginaApp(c: C): Promise<Response> {
   return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
+// «Videos»: además del texto de la página, los enlaces a los videos publicados escritos en el HTML (Google los recorre).
+for (const ruta of ['/videos', '/es/videos']) {
+  app.get(ruta, async (c) => {
+    const pagina = await paginaApp(c);
+    const filas = await c.env.DB.prepare(`${SQL_RED} ORDER BY r.publicado_en DESC LIMIT 100`)
+      .all<FilaRed>()
+      .catch(() => ({ results: [] as FilaRed[] }));
+    const enlaces = (filas.results ?? [])
+      .map(
+        (f) =>
+          `<li><a href="/videos/${f.id}">${escaparAtributo(f.titulo)}</a> · ${escaparAtributo(f.autor)}</li>`,
+      )
+      .join('');
+    const html = (await pagina.text()).replace('</main>', () => `<ul>${enlaces}</ul></main>`);
+    return new Response(html, { headers: pagina.headers, status: pagina.status });
+  });
+}
+
 // La página de un video en la red: su tarjeta para redes y sus datos de video para Google (VideoObject).
 app.get('/videos/:id', async (c) => {
   const pagina = await paginaApp(c);
@@ -3572,6 +3636,12 @@ app.get('/videos/:id', async (c) => {
       '</head>',
       () =>
         `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>\n  </head>`,
+    )
+    // El título, la descripción, el creador y el enlace escritos en el HTML (para Google sin ejecutar nada).
+    .replace(
+      '<div id="raiz"></div>',
+      () =>
+        `<div id="raiz"><main><article><h1>${escaparAtributo(f.titulo)}</h1><p><a href="/channel/${f.usuario_id}">${escaparAtributo(f.autor)}</a> · ${f.vistas} views</p>${v?.descripcion ? `<p>${escaparAtributo(v.descripcion)}</p>` : ''}<p><a href="${DOMINIO}/videos/${f.id}">${DOMINIO}/videos/${f.id}</a></p></article><p><a href="/videos">Pantalay Videos</a></p></main></div>`,
     );
   return new Response(salida, cabeceras);
 });

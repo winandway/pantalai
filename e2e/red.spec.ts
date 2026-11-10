@@ -37,9 +37,25 @@ test('publicar un video en la red de Pantalay', async ({ page, browser, request 
   await expect(page.locator('.red-cuadricula .cargando')).toHaveCount(0);
   const reales = await page.locator('.red-cuadricula .red-tarjeta:not(.red-vacia)').count();
   await expect(page.locator('.red-cuadricula .red-vacia')).toHaveCount(Math.max(0, 30 - reales));
-  // El estante de Shorts va entre las filas de videos, con sus 8 espacios.
+  // El estante de Shorts va enseguida de la PRIMERA fila de videos (FICHA-YOUTUBE), con sus 8 espacios.
   await expect(page.getByRole('heading', { name: 'Shorts' })).toBeVisible();
   await expect(page.locator('.red-shorts .red-short')).toHaveCount(8);
+  await expect(page.locator('.red-cuadricula').first().locator('.red-tarjeta')).toHaveCount(5);
+
+  // CANDADO C-BUSCADOR: sugerencias mientras se escribe, Enter, resultados resaltados y filtros.
+  const caja = page.getByRole('combobox', { name: 'Search videos' });
+  await caja.fill('VERTICAL ver');
+  await expect(page.getByRole('option', { name: /vertical-verde/ }).first()).toBeVisible();
+  await caja.press('ArrowDown');
+  await caja.press('Enter');
+  await expect(page).toHaveURL(/\/videos\/search\?q=/);
+  await expect(page.locator(`.red-resultados a[href="/videos/${id}"]`)).toBeVisible();
+  await expect(page.locator('.red-resultados mark').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Shorts', exact: true }).click();
+  await expect(page.locator(`.red-resultados a[href="/videos/${id}"]`)).toHaveCount(0);
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(page.locator(`.red-resultados a[href="/videos/${id}"]`)).toBeVisible();
+  await page.goto('/videos');
   await page.locator(`a[href="/videos/${id}"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/videos/${id}$`));
   await expect(page.locator('.red-ver-titulo')).toHaveText('vertical-verde');
@@ -65,6 +81,12 @@ test('publicar un video en la red de Pantalay', async ({ page, browser, request 
   const html = await (await request.get(`/videos/${id}`)).text();
   expect(html).toContain('"@type":"VideoObject"');
   expect(html).toContain('<title>vertical-verde · Pantalay</title>');
+  // Título y enlace escritos en el HTML (Google sin ejecutar nada), y Videos con los enlaces a los videos.
+  expect(html).toContain('<h1>vertical-verde</h1>');
+  expect(html).toContain(`https://pantalay.com/videos/${id}</a>`);
+  expect(await (await request.get('/videos')).text()).toContain(`<a href="/videos/${id}">vertical-verde</a>`);
+  // Los resultados del buscador no se indexan (regla de Google para búsquedas internas).
+  expect(await (await request.get('/videos/search?q=x')).text()).toContain('noindex');
   expect(await (await request.get('/sitemap.xml')).text()).toContain(`/videos/${id}</loc>`);
 
   // El carrusel de la portada (sin sesión) lo muestra y lleva a la red.

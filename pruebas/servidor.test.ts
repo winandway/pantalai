@@ -1344,3 +1344,32 @@ describe('CANDADO C-RED-VIDEOS: Shorts', () => {
     expect(await ids('')).toHaveLength(2);
   });
 });
+
+describe('CANDADO C-BUSCADOR: buscador de la red', () => {
+  it('busca sin tildes, filtra Shorts, sugiere y no muestra lo que no está publicado', async () => {
+    const ana = await registrado('Ana', 'ana.busca@example.com', '7.7.13.1');
+    const a = await videoListo(ana);
+    const b = await videoListo(ana);
+    const privado = await videoListo(ana);
+    await ana(`/datos/videos/${a.id}`, { method: 'PATCH', json: { titulo: 'Reacción a canciones de Rafa' } });
+    await ana(`/datos/videos/${b.id}`, { method: 'PATCH', json: { titulo: 'Tutorial de Excel' } });
+    await ana(`/datos/videos/${privado.id}`, { method: 'PATCH', json: { titulo: 'Reacción secreta' } });
+    await env.DB.prepare('UPDATE videos SET ancho = 1080, alto = 1920 WHERE id = ?').bind(a.id).run();
+    for (const v of [a, b])
+      await ana(`/datos/videos/${v.id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    const anon = cliente('7.7.13.2');
+    const buscar = async (q: string) =>
+      (
+        (await (await anon(`/datos/red/buscar?${q}`)).json()) as {
+          resultados: { id: string; titulo: string }[];
+        }
+      ).resultados;
+    expect((await buscar('q=REACCION')).map((r) => r.id)).toEqual([a.id]); // el privado no sale
+    expect((await buscar('q=reaccion&forma=horizontal')).map((r) => r.id)).toEqual([]);
+    expect((await buscar('q=reaccion&forma=vertical')).map((r) => r.id)).toEqual([a.id]);
+    // «Hello there» está en la transcripción de los videos de prueba.
+    expect((await buscar('q=hello')).map((r) => r.id).sort()).toEqual([a.id, b.id].sort());
+    const sug = (await (await anon('/datos/red/sugerencias?q=tuto')).json()) as { sugerencias: string[] };
+    expect(sug.sugerencias).toEqual(['Tutorial de Excel']);
+  });
+});

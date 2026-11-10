@@ -188,6 +188,7 @@ export function PaginaRed() {
   return (
     <div className="red">
       <BannerRed />
+      <BuscadorRed />
       <header className="red-cabeza">
         <h1>{tx.tituloRed}</h1>
         <p>{tx.introRed}</p>
@@ -208,16 +209,16 @@ export function PaginaRed() {
               </a>
             </p>
           )}
-          {/* Dos filas de videos, el estante de Shorts y después el resto (como en las plataformas grandes). */}
+          {/* Una fila de videos, enseguida el estante de Shorts y después el resto (estudio REA, FICHA-YOUTUBE). */}
           <div className="red-cuadricula">
             {[...videos, ...relleno(videos.length, 30).map(() => null)]
-              .slice(0, 10)
+              .slice(0, 5)
               .map((v, i) => (v ? <Tarjeta key={v.id} v={v} /> : <TarjetaVacia key={`vacio-a-${i}`} />))}
           </div>
           <EstanteShorts shorts={shorts} />
           <div className="red-cuadricula">
             {[...videos, ...relleno(videos.length, 30).map(() => null)]
-              .slice(10)
+              .slice(5)
               .map((v, i) => (v ? <Tarjeta key={v.id} v={v} /> : <TarjetaVacia key={`vacio-b-${i}`} />))}
           </div>
           {hayMas && (
@@ -246,6 +247,12 @@ export function VerVideoRed({ id }: { id: string }) {
   const [red, setRed] = useState<VideoRed | null>(null);
   const [video, setVideo] = useState<Video | null>(null);
   const [otros, setOtros] = useState<TarjetaRed[]>([]);
+  const [shorts, setShorts] = useState<TarjetaRed[]>([]);
+  useEffect(() => {
+    void pedir<{ videos: TarjetaRed[] }>(`/datos/red?limite=6&forma=vertical&excepto=${id}`)
+      .then((r) => setShorts(r.videos))
+      .catch(() => undefined);
+  }, [id]);
   const [noExiste, setNoExiste] = useState(false);
   const [denunciando, setDenunciando] = useState(false);
   const vista = useRef(false);
@@ -321,6 +328,7 @@ export function VerVideoRed({ id }: { id: string }) {
     <div className="red-ver">
       <div className="red-ver-banner">
         <BannerRed chico />
+        <BuscadorRed />
       </div>
       <div className="red-ver-principal">
         <div className={`red-ver-reproductor${red?.vertical ? ' vertical' : ''}`}>
@@ -377,7 +385,22 @@ export function VerVideoRed({ id }: { id: string }) {
       </div>
       <aside className="red-ver-lado" aria-label={tx.relacionados}>
         <h2>{tx.relacionados}</h2>
-        {otros.map((v) => (
+        {otros.slice(0, 2).map((v) => (
+          <Tarjeta key={v.id} v={v} chica />
+        ))}
+        {/* Shorts entre los relacionados, arriba (no al fondo). */}
+        <div className="red-ver-shorts">
+          <h3>{tx.shorts}</h3>
+          <div>
+            {shorts.slice(0, 3).map((v) => (
+              <TarjetaShort key={v.id} v={v} />
+            ))}
+            {relleno(Math.min(3, shorts.length), 3).map((i) => (
+              <TarjetaShort key={`vacio-${i}`} v={null} />
+            ))}
+          </div>
+        </div>
+        {otros.slice(2).map((v) => (
           <Tarjeta key={v.id} v={v} chica />
         ))}
         {relleno(otros.length, 10).map((i) => (
@@ -515,6 +538,7 @@ export function PaginaCanal({ id }: { id: string }) {
     );
   return (
     <div className="red">
+      <BuscadorRed />
       <div className="red-canal-portada" aria-hidden="true" />
       {canal && (
         <header className="red-canal-cabeza">
@@ -534,6 +558,203 @@ export function PaginaCanal({ id }: { id: string }) {
           <Tarjeta key={v.id} v={v} />
         ))}
       </div>
+    </div>
+  );
+}
+
+/** La caja del buscador de la red, con sugerencias mientras se escribe (flechas, Enter y Escape). */
+export function BuscadorRed({ inicial = '' }: { inicial?: string }) {
+  const { idioma } = useIdioma();
+  const tx = TEXTOS_RED[idioma];
+  const [q, setQ] = useState(inicial);
+  const [lista, setLista] = useState<string[]>([]);
+  const [activa, setActiva] = useState(-1);
+  const [abierto, setAbierto] = useState(false);
+  useEffect(() => setQ(inicial), [inicial]);
+  useEffect(() => {
+    if (!q.trim() || !abierto) return setLista([]);
+    const t = window.setTimeout(() => {
+      void pedir<{ sugerencias: string[] }>(`/datos/red/sugerencias?q=${encodeURIComponent(q)}`)
+        .then((r) => {
+          setLista(r.sugerencias);
+          setActiva(-1);
+        })
+        .catch(() => setLista([]));
+    }, 180);
+    return () => window.clearTimeout(t);
+  }, [q, abierto]);
+  const ir = (texto: string) => {
+    const t = texto.trim();
+    if (!t) return;
+    setAbierto(false);
+    navegar(`/videos/search?q=${encodeURIComponent(t)}`);
+  };
+  return (
+    <form
+      className="red-buscador"
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        ir(activa >= 0 && lista[activa] ? lista[activa]! : q);
+      }}
+    >
+      <input
+        type="search"
+        value={q}
+        placeholder={tx.buscar}
+        aria-label={tx.buscar}
+        role="combobox"
+        aria-expanded={abierto && lista.length > 0}
+        aria-controls="red-sugerencias"
+        aria-autocomplete="list"
+        autoComplete="off"
+        onChange={(e) => {
+          setQ(e.target.value);
+          setAbierto(true);
+        }}
+        onFocus={() => setAbierto(true)}
+        onBlur={() => window.setTimeout(() => setAbierto(false), 150)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActiva((i) => Math.min(lista.length - 1, i + 1));
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActiva((i) => Math.max(-1, i - 1));
+          } else if (e.key === 'Escape') setAbierto(false);
+        }}
+      />
+      <button type="submit" className="boton" aria-label={tx.buscarBoton}>
+        🔍
+      </button>
+      {abierto && lista.length > 0 && (
+        <ul id="red-sugerencias" className="red-sugerencias" role="listbox">
+          {lista.map((t, i) => (
+            <li
+              key={t}
+              role="option"
+              aria-selected={i === activa}
+              className={i === activa ? 'activa' : ''}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                ir(t);
+              }}
+            >
+              🔍 {t}
+            </li>
+          ))}
+        </ul>
+      )}
+    </form>
+  );
+}
+
+type ResultadoRed = TarjetaRed & { fragmento: string };
+
+/** Marca las palabras buscadas dentro de un texto (sin importar tildes ni mayúsculas). */
+function Resaltado({ texto, palabras }: { texto: string; palabras: string[] }) {
+  if (!palabras.length) return <>{texto}</>;
+  const sin = (t: string) => t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  const partes = texto.split(/(\s+)/);
+  return (
+    <>
+      {partes.map((p, i) =>
+        palabras.some((w) => sin(p).includes(w)) ? <mark key={i}>{p}</mark> : <span key={i}>{p}</span>,
+      )}
+    </>
+  );
+}
+
+/** Resultados del buscador: filtros arriba y cada video en una fila (miniatura, título, vistas, creador, fragmento). */
+export function PaginaBusqueda() {
+  const { idioma } = useIdioma();
+  const tx = TEXTOS_RED[idioma];
+  const parametros = new URLSearchParams(location.search);
+  const q = parametros.get('q') ?? '';
+  const [filtro, setFiltro] = useState<'todo' | 'horizontal' | 'vertical' | 'recientes'>('todo');
+  const [resultados, setResultados] = useState<ResultadoRed[] | null>(null);
+  useEffect(() => {
+    document.title = `${q} · ${tx.bannerTitulo}`;
+    setResultados(null);
+    const extra =
+      filtro === 'horizontal' || filtro === 'vertical'
+        ? `&forma=${filtro}`
+        : filtro === 'recientes'
+          ? '&orden=recientes'
+          : '';
+    void pedir<{ resultados: ResultadoRed[] }>(`/datos/red/buscar?q=${encodeURIComponent(q)}${extra}`)
+      .then((r) => setResultados(r.resultados))
+      .catch(() => setResultados([]));
+  }, [q, filtro, tx.bannerTitulo]);
+  const palabras = q
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length > 1);
+  const filtros = [
+    ['todo', tx.filtroTodo],
+    ['horizontal', tx.filtroVideos],
+    ['vertical', tx.filtroShorts],
+    ['recientes', tx.filtroRecientes],
+  ] as const;
+  return (
+    <div className="red">
+      <BannerRed chico />
+      <BuscadorRed inicial={q} />
+      <h1 className="red-resultados-titulo">{tx.resultadosDe(q)}</h1>
+      <div className="red-filtros" role="group">
+        {filtros.map(([f, etiqueta]) => (
+          <button
+            key={f}
+            type="button"
+            className={`red-filtro${filtro === f ? ' activo' : ''}`}
+            aria-pressed={filtro === f}
+            onClick={() => setFiltro(f)}
+          >
+            {etiqueta}
+          </button>
+        ))}
+      </div>
+      {resultados === null ? (
+        <span className="red-tarjeta cargando" />
+      ) : resultados.length === 0 ? (
+        <p className="vacio">{tx.sinResultados(q)}</p>
+      ) : (
+        <ol className="red-resultados">
+          {resultados.map((v) => (
+            <li key={v.id}>
+              <a className="red-resultado" href={`/videos/${v.id}`} onClick={alClicEnlace}>
+                <span className={`red-miniatura${v.vertical ? ' es-short' : ''}`}>
+                  {v.miniatura ? (
+                    <img src={v.miniatura} alt="" loading="lazy" className={v.vertical ? 'vertical' : ''} />
+                  ) : (
+                    <span className="red-sin-miniatura" aria-hidden="true">
+                      ▶
+                    </span>
+                  )}
+                  <span className="red-duracion">{formatoTiempo(v.duracion)}</span>
+                </span>
+                <span className="red-datos">
+                  <span className="red-titulo">
+                    <Resaltado texto={v.titulo} palabras={palabras} />
+                  </span>
+                  <span className="red-meta">
+                    {tx.vistas(v.vistas)} · {haceCuanto(v.publicado_en, idioma)}
+                    {v.vertical && <> · {tx.shorts}</>}
+                  </span>
+                  <span className="red-autor">{v.autor}</span>
+                  {v.fragmento && (
+                    <span className="red-fragmento">
+                      <Resaltado texto={v.fragmento} palabras={palabras} />
+                    </span>
+                  )}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

@@ -847,3 +847,21 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   8 espacios con relleno) y el resto. Un Short se abre con el reproductor en vertical.
 - Prueba: `pruebas/seo-idiomas.test.ts` › mapa de videos y robots; `pruebas/servidor.test.ts` › Shorts;
   `e2e/red.spec.ts` › estante de Shorts. Comprobadas en ROJO el 9 nov 2026.
+
+## C-BUSCADOR, Shorts arriba y videos legibles por Google (9 nov 2026)
+
+- Pedido de Richard: «tiene que ser un buen buscador», «los Shorts están muy abajo», «que se indexe el nombre y el
+  link de cada video». Estudio previo con REA de la web pública de YouTube: `docs/investigacion-rea/FICHA-YOUTUBE.md`.
+- Buscador: lo puro en `web/src/logica/busquedaRed.ts` (`normalizar` sin tildes ni mayúsculas, `buscarEnRed` con
+  pesos título > creador > descripción > lo que se dice en el video; pide todas las palabras y, si nadie las tiene,
+  muestra los que tienen alguna; `sugerencias`). Servidor: `/datos/red/buscar?q=&forma=&orden=` y
+  `/datos/red/sugerencias?q=`, solo sobre lo publicado (mismo filtro `SQL_RED`). Pantalla: `BuscadorRed` (combobox
+  con flechas, Enter y Escape) en Videos, en cada video y en cada perfil; resultados en `/videos/search?q=` con
+  filtros Todo, Videos, Shorts y Recientes. Los resultados llevan `noindex` (regla de Google para búsquedas internas).
+- Shorts arriba: el estante va después de la PRIMERA fila (5 tarjetas) y en la página de un video después de 2
+  relacionados.
+- Google: `/videos/<id>` escribe en el HTML el título (`<h1>`), el creador, la descripción y el enlace completo;
+  `/videos` y `/es/videos` escriben la lista de enlaces de los últimos 100 videos.
+- Pruebas: `pruebas/busqueda-red.test.ts`, `pruebas/servidor.test.ts` › C-BUSCADOR y `e2e/red.spec.ts`. Comprobadas
+  en ROJO el 9 nov 2026 (romper `normalizar` pone 5 pruebas en rojo).
+- No tocar: el orden de las rutas (`/videos/search` antes de `/videos/:id`) ni el filtro `SQL_RED`.
