@@ -34,6 +34,11 @@
   en Cloudflare (0,015 USD por GB al mes). Encargo listo en el chat del 20 oct 2026. Cuando esté hecho, aquí: poner la
   variable del sitio `ALMACEN_LIMITE_GB=500` y republicar, para que el superadmin muestre el tope nuevo.
 
+## En la fila (de Richard, 9 nov 2026)
+
+- Botón «Karaoke» en el Estudio: reverb y mezcla voz/música con un punto por defecto y control de más/menos. Estudio
+  previo en `docs/investigacion-rea/FICHA-KARAOKE.md`.
+
 ## Videos: siguiente fase (de la ficha de YouTube)
 
 - Suscribirse a un creador, «No me gusta», guardar en listas, comentarios en la red, historial y «Sin mirar».
@@ -121,3 +126,5 @@
 - [x] Grabar solo una parte de la pantalla y cámara dentro del video al compartir una pestaña (24 oct 2026, C-AREA, C-CAMARA-EN-PESTANA).
 - [x] Short vertical para reacciones: encuadre, cámara arriba o abajo, preparación antes de grabar (24 oct 2026, C-SHORT).
 - [x] Almacenamiento a 500 GB (YaDominios, 24 oct 2026) y `ALMACEN_LIMITE_GB=500` puesto.
+
+- [para: desarrollador] Construir el botón Karaoke del Estudio siguiendo docs/investigacion-rea/FICHA-KARAOKE.md (sección 6, plan de 12 pasos; decisión en sección 7). Motivo: la ficha ya trae cadena, valores y pruebas de aceptación.

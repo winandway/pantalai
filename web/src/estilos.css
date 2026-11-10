@@ -5858,3 +5858,417 @@ html.estudio-sin-scroll {
   color: var(--tinta-suave);
   white-space: pre-wrap;
 }
+
+/* ---------- Celular al 100 % (C-MOVIL): barra de abajo, Shorts a pantalla completa y Videos de borde a borde ---------- */
+.solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.barra-inferior {
+  display: none;
+}
+.red-shorts h2 {
+  flex-wrap: wrap;
+}
+.red-shorts-todos {
+  margin-left: auto;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.pie-instalar {
+  margin-bottom: 8px;
+}
+.menu-instalar {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.menu-instalar:hover {
+  background: var(--fondo-suave);
+}
+
+/* Shorts: un video por pantalla, se desliza hacia arriba. */
+.shorts {
+  position: relative;
+  height: calc(100dvh - 58px);
+  background: #000;
+}
+.shorts-cargando {
+  height: calc(100dvh - 58px);
+  background: #000;
+}
+html.con-shorts,
+html.con-shorts body {
+  background: #000;
+}
+.shorts-caja {
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.shorts-caja::-webkit-scrollbar {
+  display: none;
+}
+.short-pantalla {
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: grid;
+  place-items: center;
+}
+.short-marco {
+  position: relative;
+  height: calc(100% - 24px);
+  aspect-ratio: 9 / 16;
+  max-width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0b0a1a;
+}
+.short-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+}
+.short-sonido {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+.short-pausa {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 4rem;
+  pointer-events: none;
+}
+.short-info {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 60px 80px 16px 14px;
+  display: grid;
+  gap: 6px;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.short-info a {
+  color: #fff;
+  text-decoration: none;
+}
+.short-autor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.short-autor .avatar {
+  width: 30px;
+  height: 30px;
+}
+.short-titulo {
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.short-meta {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+.short-acciones {
+  position: absolute;
+  z-index: 1;
+  right: 8px;
+  bottom: 18px;
+  display: grid;
+  gap: 14px;
+}
+.short-acciones button,
+.short-acciones a {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 56px;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.short-acciones span {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 1.3rem;
+}
+.short-acciones .activo span {
+  background: var(--rojo);
+}
+.short-acciones small {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.shorts-flechas {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 12px;
+}
+.shorts-flechas button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.shorts-flechas button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  /* Barra de abajo, como en las apps de video. */
+  .barra-inferior {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    height: calc(58px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid var(--borde);
+    backdrop-filter: blur(8px);
+  }
+  .barra-inferior a {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 6px 0;
+    color: var(--tinta-suave);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .barra-inferior a.activo {
+    color: var(--tinta);
+  }
+  .barra-inferior a.activo svg {
+    stroke-width: 2.4;
+  }
+  .barra-inferior .barra-grabar span {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--rojo);
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1;
+  }
+  .marco:has(.barra-inferior) {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+  html.con-shorts .barra-inferior {
+    background: #000;
+    border-top-color: #222;
+  }
+  html.con-shorts .barra-inferior a {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  html.con-shorts .barra-inferior a.activo {
+    color: #fff;
+  }
+  html.con-shorts .encabezado {
+    display: none;
+  }
+
+  /* Shorts: pantalla completa entre arriba y la barra. */
+  .shorts,
+  .shorts-cargando {
+    height: calc(100dvh - 58px - env(safe-area-inset-bottom));
+  }
+  .short-marco {
+    height: 100%;
+    width: 100%;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+  .shorts-flechas {
+    display: none;
+  }
+
+  /* Videos: menos adorno arriba, miniaturas de borde a borde, como YouTube en el celular. */
+  .red,
+  .red-ver {
+    padding: 12px 16px 24px;
+  }
+  .red-banner:not(.chico) {
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+  }
+  .red-banner:not(.chico) .red-banner-texto span {
+    display: none;
+  }
+  .red-banner-texto b {
+    font-size: 1.15rem;
+  }
+  .red-cabeza h1 {
+    font-size: 1.25rem;
+  }
+  .red-cabeza p {
+    display: none;
+  }
+  .red-buscador {
+    margin-bottom: 14px;
+  }
+  .red-buscador input {
+    padding: 10px 14px;
+  }
+  .red-buscador .boton {
+    padding: 0 16px;
+  }
+  .red-cuadricula {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .red .red-cuadricula .red-miniatura,
+  .red .red-cuadricula .red-tarjeta.cargando {
+    margin: 0 -16px;
+    border-radius: 0;
+  }
+  .red-tarjeta:hover .red-miniatura img {
+    transform: none;
+  }
+  .red-shorts {
+    margin: 20px 0;
+  }
+  .red-shorts-fila {
+    grid-auto-columns: 42vw;
+    gap: 10px;
+    margin: 0 -16px;
+    padding: 0 16px 8px;
+    scroll-padding: 0 16px;
+  }
+  .red-mas {
+    width: 100%;
+  }
+
+  /* Ver un video: el reproductor de borde a borde, fijo arriba mientras se baja. */
+  .red-ver {
+    gap: 14px;
+  }
+  .red-ver-banner {
+    display: none;
+  }
+  /* El reproductor queda pegado arriba mientras se baja por TODA la página (también por los relacionados). */
+  .red-ver-principal {
+    display: contents;
+  }
+  .red-ver-reproductor {
+    position: sticky;
+    top: 61px;
+    z-index: 20;
+    margin: -12px -16px 0;
+    border-radius: 0;
+  }
+  .red-ver-reproductor.vertical {
+    position: static;
+    width: auto;
+    margin: -12px -16px 0;
+    max-height: 70dvh;
+  }
+  .red-ver-titulo {
+    font-size: 1.1rem;
+    margin: 12px 0 8px;
+  }
+  .red-ver-barra {
+    display: grid;
+    gap: 10px;
+  }
+  .red-ver-acciones {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 0 16px 4px;
+    scrollbar-width: none;
+  }
+  .red-ver-acciones .boton {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 8px 14px;
+  }
+  .red-ver-lado .red-tarjeta.chica {
+    grid-template-columns: 1fr;
+  }
+  .red-ver-shorts > div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* Resultados de búsqueda y perfil. */
+  .red-resultado .red-miniatura {
+    margin: 0 -16px;
+    border-radius: 0;
+  }
+  .red-filtros {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 -16px 14px;
+    padding: 0 16px;
+    scrollbar-width: none;
+  }
+  .red-filtro {
+    flex: 0 0 auto;
+  }
+  .red-canal-portada {
+    margin: 0 -16px;
+    border-radius: 0;
+  }
+  .pie {
+    padding-bottom: 16px;
+  }
+}

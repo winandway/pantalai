@@ -2,6 +2,7 @@
 // título y autor arriba, reproductor, resumen y capítulos debajo, y el panel lateral
 // con Actividad y Transcripción (más Estadísticas para el dueño).
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { EVENTO_ARCHIVO_CAMBIO } from '../logica/indice';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
 import { Confirmar, Modal } from '../componentes/Modal';
@@ -92,6 +93,15 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
     void cargar();
     void cargarActividad();
   }, [cargar, cargarActividad]);
+  // Cuando el archivo del video cambia (se reordenó justo después de grabar), se vuelve a pedir el video para que el
+  // reproductor use la dirección de la versión nueva (C-SONIDO-RECIEN-GRABADO).
+  useEffect(() => {
+    const alCambiar = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === id) void cargar();
+    };
+    window.addEventListener(EVENTO_ARCHIVO_CAMBIO, alCambiar);
+    return () => window.removeEventListener(EVENTO_ARCHIVO_CAMBIO, alCambiar);
+  }, [id, cargar]);
 
   // Vistas: se cuenta lo más lejos que llegó, cada 10 segundos y al salir.
   const visto = useRef({ max: 0, completado: false, cta: false, enviado: 0 });

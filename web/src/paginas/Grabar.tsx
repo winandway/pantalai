@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { medidasDeArchivo } from '../logica/archivoVideo';
 import type { LimitesPlan } from '../logica/api';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
@@ -1085,8 +1086,14 @@ export function Respaldos() {
     setAvance(0);
     try {
       const archivo = await leerRespaldo(r.id, r.tipo);
-      const nuevo = await subirGrabacion(archivo, r.duracion, idioma, (s, total) =>
-        setAvance(Math.round((s / Math.max(1, total)) * 100)),
+      const nuevo = await subirGrabacion(
+        archivo,
+        r.duracion,
+        idioma,
+        (s, total) => setAvance(Math.round((s / Math.max(1, total)) * 100)),
+        undefined,
+        undefined,
+        await medidasDeArchivo(archivo),
       );
       // El video a medias del servidor se cancela y el respaldo local se borra: ya está a salvo arriba.
       await pedir(`/datos/videos/${r.id}/cancelar`, { method: 'POST' }).catch(() => undefined);

@@ -1,4 +1,6 @@
 import { Admin } from './paginas/Admin';
+import { BarraInferior } from './componentes/BarraInferior';
+import { PaginaShorts } from './paginas/Shorts';
 import { Pagar } from './paginas/Pagar';
 import { Precios } from './paginas/Precios';
 import { Cuenta } from './paginas/Cuenta';
@@ -117,6 +119,8 @@ export function App() {
     pagina = <PaginaBusqueda />;
   else if (partes[0] === 'videos' && partes[1] && partes.length === 2)
     pagina = <VerVideoRed id={partes[1]} />;
+  else if (partes[0] === 'shorts' && partes.length <= 2)
+    pagina = <PaginaShorts key="shorts" id={partes[1]} />;
   else if (partes[0] === 'channel' && partes[1] && partes.length === 2)
     pagina = <PaginaCanal id={partes[1]} />;
   else if (partes.length === 1 && landingPorSlug(partes[0]!))
@@ -142,7 +146,8 @@ export function App() {
               <Encabezado />
               {ruta !== '/verify-email' && <FranjaCorreo />}
               <main id="contenido">{pagina}</main>
-              <Pie />
+              {partes[0] !== 'shorts' && <Pie />}
+              <BarraInferior />
             </div>
           )}
         </ProveedorAviso>

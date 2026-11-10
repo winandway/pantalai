@@ -1033,4 +1033,35 @@ export const GUIAS: Guia[] = [
       ],
     },
   },
+  {
+    slug: 'install-app',
+    seccion: 'empezar',
+    icono: '📲',
+    en: {
+      titulo: 'Install the Pantalay app on your phone or computer',
+      resumen:
+        'Add Pantalay to your home screen or dock: it opens full screen like any app, with Videos and Shorts one tap away. Free, no app store needed.',
+      cuerpo: [
+        'Pantalay works as an app straight from the browser. Once installed, it opens in its own window (full screen on your phone), it has its icon on your home screen, and it starts faster.',
+        'On Android and on a computer with Chrome or Edge: tap “Install the app” at the bottom of any Pantalay page (or in your account menu). Confirm, and the icon appears on your home screen or in your apps.',
+        'On iPhone or iPad (Safari): tap the Share button, scroll down and choose “Add to Home Screen”, then tap Add.',
+        'On your phone, Pantalay has a bar at the bottom like the video apps you know: Videos, Shorts, the red button to record, your Library and your account.',
+        'Shorts open full screen: swipe up for the next one. Tap the video to turn the sound on, and tap again to pause. On the right you have Like, Share and More (the full video page). On a computer, use the arrow keys or the arrows on the side.',
+        'If you lose your connection, the app tells you clearly and lets you try again. Recordings in progress stay safe on your device.',
+      ],
+    },
+    es: {
+      titulo: 'Instala la app de Pantalay en tu celular o tu computadora',
+      resumen:
+        'Pon Pantalay en la pantalla de inicio o en tu barra de apps: se abre a pantalla completa como cualquier app, con Videos y Shorts a un toque. Gratis y sin pasar por una tienda de apps.',
+      cuerpo: [
+        'Pantalay funciona como app directo desde el navegador. Al instalarla se abre en su propia ventana (a pantalla completa en el celular), tiene su ícono en la pantalla de inicio y arranca más rápido.',
+        'En Android y en la computadora con Chrome o Edge: toca «Instalar la app» al final de cualquier página de Pantalay (o en el menú de tu cuenta). Confirma y el ícono aparece en tu pantalla de inicio o en tus apps.',
+        'En iPhone o iPad (Safari): toca el botón Compartir, baja y elige «Agregar a inicio», y luego toca Agregar.',
+        'En el celular, Pantalay tiene una barra abajo como las apps de video que ya conoces: Videos, Shorts, el botón rojo para grabar, tu Biblioteca y tu cuenta.',
+        'Los Shorts se abren a pantalla completa: desliza hacia arriba para ver el siguiente. Toca el video para activar el sonido y vuelve a tocar para pausar. A la derecha tienes Me gusta, Compartir y Más (la página completa del video). En la computadora usa las flechas del teclado o las flechas del costado.',
+        'Si se te va la conexión, la app te lo dice claro y te deja intentar otra vez. Las grabaciones en curso siguen guardadas en tu dispositivo.',
+      ],
+    },
+  },
 ];

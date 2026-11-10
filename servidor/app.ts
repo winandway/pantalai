@@ -3573,6 +3573,14 @@ app.get('/media/:id/video', async (c) => {
     if (mp4) h.set('content-type', 'video/mp4');
   }
   if (!('body' in obj)) return new Response(null, { status: 304, headers: h });
+  // Un pedazo que empieza después del final (el archivo cambió de tamaño): 416, nunca el archivo entero con 206
+  // (el reproductor mezclaba versiones y se trababa sin sonido; C-SONIDO-RECIEN-GRABADO).
+  const inicioPedido = /^bytes=(\d+)-/.exec(c.req.header('range') ?? '')?.[1];
+  if (inicioPedido !== undefined && Number(inicioPedido) >= obj.size) {
+    obj.body.cancel().catch(() => undefined);
+    h.set('Content-Range', `bytes */${obj.size}`);
+    return new Response(null, { status: 416, headers: h });
+  }
   const rango = obj.range as { offset?: number; length?: number } | undefined;
   if (c.req.header('range') && rango && rango.offset !== undefined) {
     const largo = rango.length ?? obj.size - rango.offset;
@@ -3653,6 +3661,20 @@ for (const ruta of ['/videos', '/es/videos']) {
 }
 
 // La página de un video en la red: su tarjeta para redes y sus datos de video para Google (VideoObject).
+// Shorts a pantalla completa: la página de Google de cada video es /videos/<id>; aquí se le dice con canonical.
+app.get('/shorts/:id', async (c) => {
+  const pagina = await paginaApp(c);
+  const html = await pagina.text();
+  const id = c.req.param('id').replace(/[^a-z0-9]/gi, '');
+  return new Response(
+    html.replace(
+      /<link rel="canonical"[^>]*>/,
+      () => `<link rel="canonical" href="${DOMINIO}/videos/${id}" />`,
+    ),
+    { headers: pagina.headers, status: pagina.status },
+  );
+});
+
 app.get('/videos/:id', async (c) => {
   const pagina = await paginaApp(c);
   const f = await c.env.DB.prepare(`${SQL_RED} AND v.id = ?`).bind(c.req.param('id')).first<FilaRed>();

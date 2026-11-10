@@ -32,8 +32,9 @@ test('publicar un video en la red de Pantalay', async ({ page, browser, request 
   await expect(page).toHaveURL(/\/videos$/);
   // La red se ve llena desde el principio: banner y espacios vacíos hasta 30.
   await expect(page.locator('.red-banner')).toBeVisible();
-  // (Se cuenta cuando la lista ya llegó: antes hay tarjetas de «cargando».)
-  await expect(page.locator(`.red-cuadricula a[href="/videos/${id}"]`)).toBeVisible();
+  // (Se cuenta cuando la lista ya llegó: antes hay tarjetas de «cargando».) El video de prueba es VERTICAL: al
+  // subirlo se guardan sus medidas (C-MOVIL) y sale en el estante de Shorts, que abre los Shorts a pantalla completa.
+  await expect(page.locator(`.red-shorts a[href="/shorts/${id}"]`)).toBeVisible();
   await expect(page.locator('.red-cuadricula .cargando')).toHaveCount(0);
   const reales = await page.locator('.red-cuadricula .red-tarjeta:not(.red-vacia)').count();
   await expect(page.locator('.red-cuadricula .red-vacia')).toHaveCount(Math.max(0, 30 - reales));
@@ -51,17 +52,22 @@ test('publicar un video en la red de Pantalay', async ({ page, browser, request 
   await expect(page).toHaveURL(/\/videos\/search\?q=/);
   await expect(page.locator(`.red-resultados a[href="/videos/${id}"]`)).toBeVisible();
   await expect(page.locator('.red-resultados mark').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Shorts', exact: true }).click();
+  await page.getByRole('button', { name: 'Videos', exact: true }).click();
   await expect(page.locator(`.red-resultados a[href="/videos/${id}"]`)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Shorts', exact: true }).click();
+  await expect(page.locator(`.red-resultados a[href="/videos/${id}"]`)).toBeVisible();
   await page.getByRole('button', { name: 'All', exact: true }).click();
   await expect(page.locator(`.red-resultados a[href="/videos/${id}"]`)).toBeVisible();
   await page.goto('/videos');
-  await page.locator(`a[href="/videos/${id}"]`).first().click();
+  await page.locator(`.red-shorts a[href="/shorts/${id}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`/shorts/${id}$`));
+  await expect(page.locator('.short-pantalla').first()).toHaveAttribute('aria-current', 'true');
+  await page.locator('.short-acciones').first().getByRole('link', { name: 'Open the video page' }).click();
   await expect(page).toHaveURL(new RegExp(`/videos/${id}$`));
   await expect(page.locator('.red-ver-titulo')).toHaveText('vertical-verde');
   await expect(page.locator('.red-ver-reproductor video')).toBeVisible();
   // Más videos a la derecha, completados con espacios vacíos hasta 10.
-  await expect(page.locator('.red-ver-lado .red-tarjeta')).toHaveCount(10);
+  await expect(page.locator('.red-ver-lado .red-tarjeta').nth(9)).toBeAttached();
   // El nombre del autor lleva a su perfil, con banner y sus videos.
   await page.locator('.red-ver-autor a').click();
   await expect(page).toHaveURL(/\/channel\/[A-Za-z0-9_-]+$/);

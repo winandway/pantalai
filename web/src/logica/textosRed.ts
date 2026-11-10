@@ -62,6 +62,17 @@ const en = {
   filtroVideos: 'Videos',
   filtroShorts: 'Shorts',
   filtroRecientes: 'Recently published',
+  sinShorts: 'No Shorts have been published yet. Record a vertical video and publish it.',
+  activarSonido: 'Tap for sound',
+  verPaginaVideo: 'Open the video page',
+  mas2: 'More',
+  anterior: 'Previous Short',
+  siguiente: 'Next Short',
+  verShorts: 'Watch Shorts',
+  navegacion: 'Main navigation',
+  tu: 'You',
+  instalar: 'Install the app',
+  instalarIos: 'Install the app: tap Share and then “Add to Home Screen”.',
 };
 
 const es: typeof en = {
@@ -125,6 +136,17 @@ const es: typeof en = {
   filtroVideos: 'Videos',
   filtroShorts: 'Shorts',
   filtroRecientes: 'Subidos recientemente',
+  sinShorts: 'Todavía no hay Shorts publicados. Graba un video vertical y publícalo.',
+  activarSonido: 'Toca para el sonido',
+  verPaginaVideo: 'Abrir la página del video',
+  mas2: 'Más',
+  anterior: 'Short anterior',
+  siguiente: 'Short siguiente',
+  verShorts: 'Ver Shorts',
+  navegacion: 'Navegación principal',
+  tu: 'Tú',
+  instalar: 'Instalar la app',
+  instalarIos: 'Instalar la app: toca Compartir y luego «Agregar a inicio».',
 };
 
 export const TEXTOS_RED: Record<Idioma, typeof en> = { en, es };

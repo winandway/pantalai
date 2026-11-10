@@ -879,3 +879,41 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `pruebas/servidor.test.ts` › C-DENUNCIAS (comprobada en ROJO el 9 nov 2026: contar todas las denuncias
   como pendientes la pone en rojo) y `e2e/denuncias.spec.ts` (se salta sin `E2E_PANEL` y `E2E_PANEL_CORREO`; local:
   `wrangler dev --var SUPERADMIN_CORREOS:… --var SUPERADMIN_RUTA:…`).
+
+## C-SONIDO-RECIEN-GRABADO: el video recién grabado suena sin recargar (9 nov 2026)
+
+- Lo que se veía: al terminar de grabar y darle play, el video no sonaba ni avanzaba (se quedaba en 0:00 o se paraba
+  al segundo) hasta recargar con Cmd+Shift+R.
+- Causa real: justo después de grabar, el archivo se reordena en la nube (C-INDICE-MP4) y CAMBIA DE TAMAÑO con la
+  MISMA dirección. El navegador ya tenía guardado el principio de la versión vieja y pedía el resto de la nueva; el
+  servidor además respondía un pedazo fuera del final con el archivo entero (206). Resultado: «PIPELINE_ERROR_READ:
+  data source error» y el reproductor se paraba.
+- Arreglo: (1) cada versión del archivo tiene su propia dirección (`&v=` con `versionArchivo`: tamaño + recorte) y la
+  pieza `<video>` se renueva al cambiar, siguiendo desde el mismo segundo; (2) al terminar el reordenado se avisa
+  (`EVENTO_ARCHIVO_CAMBIO`) y la página del video se pone al día sola; (3) el servidor responde 416 a un pedazo que
+  empieza después del final.
+- Pruebas: `e2e/sonido-recien-grabado.spec.ts` (graba de verdad, espera el proceso y exige que suene y pase de 4 s) y
+  `pruebas/servidor.test.ts` › C-SONIDO-RECIEN-GRABADO. Las dos comprobadas en ROJO el 9 nov 2026.
+- No tocar: el `&v=` de las fuentes del reproductor ni el 416.
+
+## C-MOVIL: Videos al 100 % en el celular (9 nov 2026)
+
+- Barra de abajo (`BarraInferior`, solo en pantallas de 760 px o menos): Videos, Shorts, Grabar (+), Biblioteca o
+  Docs, y Tú o Entrar. No sale en Grabar, Estudio, Editar, panel ni insertados.
+- Videos: menos adorno arriba, miniaturas de borde a borde, estante de Shorts deslizable; en un video, el reproductor
+  de borde a borde y fijo arriba mientras se baja (`.red-ver-principal { display: contents }`).
+- Shorts a pantalla completa en `/shorts` y `/shorts/<id>` (`web/src/paginas/Shorts.tsx`): uno por pantalla con
+  scroll-snap, se reproduce solo el que se ve, la dirección cambia al deslizar, toque para el sonido, me gusta,
+  compartir y Más. En la computadora: flechas. `/shorts/<id>` lleva canonical a `/videos/<id>` (SEO).
+- Videos subidos de un archivo ahora guardan su ancho y alto (`medidasDeArchivo`): antes quedaban en 0 y un video
+  vertical subido nunca salía como Short.
+- Prueba: `e2e/movil.spec.ts` (sin desbordes en 390 px, barra, Shorts, canonical). Comprobada en ROJO el 9 nov 2026.
+
+## C-PWA: Pantalay se instala como app (9 nov 2026)
+
+- `web/public/manifest.webmanifest` (íconos 192, 512 y 512 «maskable», `display: standalone`, atajos), `sw.js` (las
+  páginas van primero a la red y sin internet sale `/offline`; guarda `/assets/`; NUNCA toca `/datos` ni `/media`),
+  `offline.html` + `offline.js` (sin código en línea por la CSP). Registro y botón «Instalar la app» en
+  `web/src/logica/pwa.ts` y `BotonInstalar` (pie y menú de la cuenta; en iPhone lleva a la guía `install-app`).
+- Ojo: `/offline.html` redirige a `/offline` (así sirve los archivos YaDominios): el ayudante usa `/offline`.
+- Prueba: `e2e/movil.spec.ts` › app instalable y página sin conexión. Comprobada en ROJO el 9 nov 2026.

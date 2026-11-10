@@ -22,6 +22,13 @@ export type ManejoReproductor = {
   elemento: () => HTMLVideoElement | null;
 };
 
+/** La versión del archivo: cambia cuando el archivo se reemplaza (tamaño) o se corta (copia MP4 nueva). */
+export function versionArchivo(
+  v: Pick<Video, 'bytes' | 'recorte_inicio' | 'recorte_fin' | 'cortes'>,
+): string {
+  return [v.bytes, v.recorte_inicio, v.recorte_fin, v.cortes.length].join('.');
+}
+
 const VELOCIDADES = [0.5, 0.8, 1, 1.2, 1.5, 1.75, 2, 2.5];
 
 type Props = {
@@ -73,6 +80,17 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
   const [interaccion, setInteraccion] = useState(true);
   // Safari (iPhone) no reproduce WebM: si todavía no hay copia MP4, se avisa en vez de mostrar un reproductor muerto.
   const [noSeVe, setNoSeVe] = useState(false);
+  // Cada versión del archivo tiene su propia dirección (C-SONIDO-RECIEN-GRABADO): justo después de grabar, el archivo
+  // se reordena y cambia de tamaño; con la misma dirección, el navegador mezclaba el principio guardado de la versión
+  // vieja con el resto de la nueva y el video se trababa sin sonido hasta recargar la página.
+  const version = versionArchivo(video);
+  const seguirDesde = useRef<{ t: number; sonando: boolean } | null>(null);
+  const versionAnterior = useRef(version);
+  if (versionAnterior.current !== version) {
+    versionAnterior.current = version;
+    const v = el.current;
+    if (v && v.currentTime > 0) seguirDesde.current = { t: v.currentTime, sonando: !v.paused };
+  }
   useEffect(() => {
     const v = el.current;
     setNoSeVe(Boolean(v && !video.tiene_mp4 && v.canPlayType('video/webm') === ''));
@@ -218,7 +236,7 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
       <div className="reproductor-pantalla" onClick={alternar}>
         <video
           ref={el}
-          key={video.tiene_mp4 ? 'mp4' : 'webm'}
+          key={`${video.tiene_mp4 ? 'mp4' : 'webm'}-${version}`}
           preload="metadata"
           playsInline
           muted={mudo}
@@ -226,8 +244,12 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
             const v = e.currentTarget;
             if (Number.isFinite(v.duration)) setDuracionReal(v.duration);
             v.playbackRate = velocidad;
-            const desde = inicio ?? (saltarOcultos ? video.recorte_inicio : 0);
+            // Si el archivo cambió mientras se veía, se sigue desde el mismo punto (y sonando si sonaba).
+            const seguir = seguirDesde.current;
+            seguirDesde.current = null;
+            const desde = seguir ? seguir.t : (inicio ?? (saltarOcultos ? video.recorte_inicio : 0));
             if (desde > 0) v.currentTime = desde;
+            if (seguir?.sonando) void v.play().catch(() => undefined);
           }}
           onDurationChange={(e) =>
             Number.isFinite(e.currentTarget.duration) && setDuracionReal(e.currentTarget.duration)
@@ -252,8 +274,10 @@ export const Reproductor = forwardRef<ManejoReproductor, Props>(function Reprodu
           onVolumeChange={(e) => setVolumen(e.currentTarget.volume)}
         >
           {/* El MP4 primero: lo reproducen todos, también iPhone. El WebM original queda de respaldo. */}
-          {video.tiene_mp4 && <source src={`${archivoVideo(video.id)}?formato=mp4`} type="video/mp4" />}
-          <source src={`${archivoVideo(video.id)}?formato=webm`} type="video/webm" />
+          {video.tiene_mp4 && (
+            <source src={`${archivoVideo(video.id)}?formato=mp4&v=${version}`} type="video/mp4" />
+          )}
+          <source src={`${archivoVideo(video.id)}?formato=webm&v=${version}`} type="video/webm" />
           {vtt && <track kind="captions" src={vtt} srcLang={video.idioma} label={t('subtitulos')} default />}
         </video>
         {video.superposiciones.filter(visibles).map((s, i) => (

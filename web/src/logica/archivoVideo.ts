@@ -35,3 +35,19 @@ export async function duracionDeArchivo(archivo: Blob): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * Ancho y alto con los que se ve el video (ya girado si el teléfono lo grabó de lado). Sin esto un video vertical
+ * subido de la computadora nunca salía como Short (C-MOVIL). Si no se puede leer: 0 y 0.
+ */
+export async function medidasDeArchivo(archivo: Blob): Promise<{ ancho: number; alto: number }> {
+  try {
+    const input = new Input({ source: new BlobSource(archivo), formats: ALL_FORMATS });
+    const pista = await input.getPrimaryVideoTrack();
+    if (!pista) return { ancho: 0, alto: 0 };
+    return { ancho: Math.round(pista.displayWidth), alto: Math.round(pista.displayHeight) };
+  } catch (e) {
+    console.error('medidas del archivo', e);
+    return { ancho: 0, alto: 0 };
+  }
+}

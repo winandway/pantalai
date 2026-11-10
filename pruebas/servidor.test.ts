@@ -177,6 +177,18 @@ describe('videos', () => {
     expect((await r.arrayBuffer()).byteLength).toBe(100);
   });
 
+  it('CANDADO C-SONIDO-RECIEN-GRABADO: un pedazo después del final responde 416, no el archivo entero', async () => {
+    const c = await registrado();
+    const { id } = await videoListo(c);
+    const total = PARTE_MIN + 1000;
+    const r = await c(`/media/${id}/video`, { headers: { range: `bytes=${total}-` } });
+    expect(r.status).toBe(416);
+    expect(r.headers.get('content-range')).toBe(`bytes */${total}`);
+    const ultimo = await c(`/media/${id}/video`, { headers: { range: `bytes=${total - 10}-` } });
+    expect(ultimo.status).toBe(206);
+    expect((await ultimo.arrayBuffer()).byteLength).toBe(10);
+  });
+
   it('CANDADO privacidad: un video privado no lo ve nadie más, ni sus datos ni el archivo', async () => {
     const c = await registrado();
     const { id } = await videoListo(c);

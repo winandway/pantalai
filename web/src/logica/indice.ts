@@ -117,16 +117,24 @@ export async function ponerIndice(
 }
 
 /** Para llamar sin esperar después de subir: si falla, queda en el registro de errores y el original sigue igual. */
+/** Aviso «el archivo de este video cambió» (detail = id del video). */
+export const EVENTO_ARCHIVO_CAMBIO = 'pantalai:archivo-cambio';
+
 export function ponerIndiceDeFondo(id: string, archivo: Blob): void {
-  void ponerIndice(id, archivo).catch((e: unknown) => {
-    console.error('indice', e);
-    void pedir('/datos/errores', {
-      method: 'POST',
-      json: {
-        donde: 'indice',
-        mensaje: String(e instanceof Error ? e.message : e).slice(0, 500),
-        video_id: id,
-      },
-    }).catch(() => undefined);
-  });
+  void ponerIndice(id, archivo)
+    .then((r) => {
+      // El archivo del video cambió: la página que lo muestra se pone al día (C-SONIDO-RECIEN-GRABADO).
+      if (r === 'hecho') window.dispatchEvent(new CustomEvent(EVENTO_ARCHIVO_CAMBIO, { detail: id }));
+    })
+    .catch((e: unknown) => {
+      console.error('indice', e);
+      void pedir('/datos/errores', {
+        method: 'POST',
+        json: {
+          donde: 'indice',
+          mensaje: String(e instanceof Error ? e.message : e).slice(0, 500),
+          video_id: id,
+        },
+      }).catch(() => undefined);
+    });
 }

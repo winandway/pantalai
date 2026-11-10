@@ -4,7 +4,12 @@ import { useRef, useState } from 'react';
 import { ErrorApi } from '../logica/api';
 import { textoError, useIdioma } from '../logica/idioma';
 import { navegar } from '../logica/ruta';
-import { archivoDeVideoValido, duracionDeArchivo, tituloDeArchivo } from '../logica/archivoVideo';
+import {
+  archivoDeVideoValido,
+  duracionDeArchivo,
+  medidasDeArchivo,
+  tituloDeArchivo,
+} from '../logica/archivoVideo';
 import { subirGrabacion } from '../logica/subida';
 
 export function SubirVideo() {
@@ -20,7 +25,7 @@ export function SubirVideo() {
     if (motivo) return setError(t(motivo));
     setAvance(0);
     try {
-      const duracion = await duracionDeArchivo(archivo);
+      const [duracion, medidas] = await Promise.all([duracionDeArchivo(archivo), medidasDeArchivo(archivo)]);
       const id = await subirGrabacion(
         archivo,
         duracion,
@@ -28,6 +33,7 @@ export function SubirVideo() {
         (s, total) => setAvance(Math.round((s / Math.max(1, total)) * 100)),
         undefined,
         tituloDeArchivo(archivo.name),
+        medidas,
       );
       navegar(`/v/${id}`);
     } catch (e) {

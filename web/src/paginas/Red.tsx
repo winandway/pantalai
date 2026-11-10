@@ -95,7 +95,7 @@ export function TarjetaShort({ v }: { v: TarjetaRed | null }) {
       </a>
     );
   return (
-    <a className="red-short" href={`/videos/${v.id}`} onClick={alClicEnlace}>
+    <a className="red-short" href={`/shorts/${v.id}`} onClick={alClicEnlace}>
       <span className="red-short-imagen">
         {v.miniatura ? (
           <img src={v.miniatura} alt="" loading="lazy" />
@@ -122,6 +122,9 @@ function EstanteShorts({ shorts }: { shorts: TarjetaRed[] }) {
           ▮
         </span>{' '}
         {tx.shorts}
+        <a className="red-shorts-todos" href="/shorts" onClick={alClicEnlace}>
+          {tx.verShorts} →
+        </a>
       </h2>
       <div className="red-shorts-fila">
         {shorts.map((v) => (
@@ -266,7 +269,8 @@ export function VerVideoRed({ id }: { id: string }) {
     void Promise.all([
       pedir<{ video: VideoRed }>(`/datos/red/${id}`),
       pedir<{ video: Video }>(`/datos/videos/${id}`),
-      pedir<{ videos: TarjetaRed[] }>(`/datos/red?limite=20&excepto=${id}`),
+      // Los relacionados son videos normales: los Shorts van en su propia fila (como YouTube).
+      pedir<{ videos: TarjetaRed[] }>(`/datos/red?limite=20&forma=horizontal&excepto=${id}`),
     ])
       .then(([r, v, o]) => {
         if (!vivo) return;

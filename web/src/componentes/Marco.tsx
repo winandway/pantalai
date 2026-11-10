@@ -6,6 +6,7 @@ import { TEXTOS_RED } from '../logica/textosRed';
 import { EVENTO_GRABAR } from '../logica/estadoGrabacion';
 import { alClicEnlace, useRuta } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
+import { useInstalar } from '../logica/pwa';
 import { useEstadoGrabacion } from '../logica/estadoGrabacion';
 import { formatoTiempo } from '../logica/tiempo';
 import { SelectorIdioma } from './SelectorIdioma';
@@ -131,6 +132,7 @@ export function Encabezado() {
                   <a role="menuitem" href="/account" onClick={(e) => (setMenu(false), alClicEnlace(e))}>
                     {t('cta.menu')}
                   </a>
+                  <BotonInstalar clase="menu-instalar" />
                   {usuario.panel && (
                     <a
                       role="menuitem"
@@ -163,10 +165,31 @@ export function Encabezado() {
   );
 }
 
+/** «Instalar la app» (PWA): botón si el navegador lo permite; en iPhone, la guía de cómo agregarla al inicio. */
+export function BotonInstalar({ clase = 'enlace' }: { clase?: string }) {
+  const { idioma, enlace } = useIdioma();
+  const { modo, instalar } = useInstalar();
+  const tx = TEXTOS_RED[idioma];
+  if (modo === 'boton')
+    return (
+      <button type="button" className={clase} onClick={() => void instalar()}>
+        📲 {tx.instalar}
+      </button>
+    );
+  if (modo === 'ios')
+    return (
+      <a className={clase} href={enlace('/docs/install-app')} onClick={alClicEnlace} title={tx.instalarIos}>
+        📲 {tx.instalar}
+      </a>
+    );
+  return null;
+}
+
 export function Pie() {
   const { t, idioma, enlace } = useIdioma();
   return (
     <footer className="pie">
+      <BotonInstalar clase="boton secundario chico pie-instalar" />
       {/* Las páginas de cada búsqueda, enlazadas desde todo el sitio (SEO: enlaces internos). */}
       <nav className="pie-enlaces pie-herramientas" aria-label="Pantalay">
         {LANDINGS.map((l) => (

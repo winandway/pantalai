@@ -144,6 +144,7 @@ export async function subirGrabacion(
   progreso?: (subidos: number, total: number) => void,
   llamar: typeof pedir = pedir,
   titulo?: string,
+  medidas?: { ancho: number; alto: number },
 ): Promise<string> {
   const r = await llamar<{ id: string; parte_minima: number }>('/datos/videos', {
     method: 'POST',
@@ -152,6 +153,9 @@ export async function subirGrabacion(
       idioma,
       respaldo: true,
       ...(titulo ? { titulo } : {}),
+      ...(medidas && medidas.ancho > 0 && medidas.alto > 0
+        ? { ancho: Math.min(8192, medidas.ancho), alto: Math.min(8192, medidas.alto) }
+        : {}),
     },
   });
   const subidor = new Subidor({
