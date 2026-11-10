@@ -36,8 +36,10 @@
 
 ## En la fila (de Richard, 9 nov 2026)
 
-- Botón «Karaoke» en el Estudio: reverb y mezcla voz/música con un punto por defecto y control de más/menos. Estudio
-  previo en `docs/investigacion-rea/FICHA-KARAOKE.md`.
+- ✅ 9 nov 2026: botón «Karaoke» en el Estudio (C-KARAOKE).
+- 👤 Escuchar una grabación con Karaoke (efecto en 50, con audífonos) y decir si el reverb queda bien, si falta o si
+  sobra. Destraba: ajustar el punto por defecto. Siguiente versión posible: bajar la música sola cuando se canta,
+  escucharse con efecto con audífonos, y salas «Sala / Teatro / Estadio».
 
 ## Videos: siguiente fase (de la ficha de YouTube)
 
@@ -127,4 +129,4 @@
 - [x] Short vertical para reacciones: encuadre, cámara arriba o abajo, preparación antes de grabar (24 oct 2026, C-SHORT).
 - [x] Almacenamiento a 500 GB (YaDominios, 24 oct 2026) y `ALMACEN_LIMITE_GB=500` puesto.
 
-- [para: desarrollador] Construir el botón Karaoke del Estudio siguiendo docs/investigacion-rea/FICHA-KARAOKE.md (sección 6, plan de 12 pasos; decisión en sección 7). Motivo: la ficha ya trae cadena, valores y pruebas de aceptación.
+- ✅ (hecho el 9 nov 2026, C-KARAOKE) [para: desarrollador] Construir el botón Karaoke del Estudio siguiendo docs/investigacion-rea/FICHA-KARAOKE.md (sección 6, plan de 12 pasos; decisión en sección 7). Motivo: la ficha ya trae cadena, valores y pruebas de aceptación.

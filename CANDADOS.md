@@ -917,3 +917,18 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   `web/src/logica/pwa.ts` y `BotonInstalar` (pie y menú de la cuenta; en iPhone lleva a la guía `install-app`).
 - Ojo: `/offline.html` redirige a `/offline` (así sirve los archivos YaDominios): el ayudante usa `/offline`.
 - Prueba: `e2e/movil.spec.ts` › app instalable y página sin conexión. Comprobada en ROJO el 9 nov 2026.
+
+## C-KARAOKE: botón Karaoke del Estudio (9 nov 2026)
+
+- Pedido de Richard: voz con reverb bonito como los lives de canto, mezcla equilibrada con la música, un punto por
+  defecto y un control de más o menos. Estudio previo: `docs/investigacion-rea/FICHA-KARAOKE.md`.
+- `web/src/logica/karaoke.ts`: cadena de voz pasa-altos 100 Hz → barro 300 Hz −2 dB → presencia 3 kHz → aire 10 kHz →
+  compresor (−24 dB, 3:1, 10 ms / 200 ms) → seco + reverb (impulso propio de 1,7 s, pre-delay 25 ms, retorno 300 Hz a
+  6 kHz) + eco (120 ms, retorno 300 Hz a 3,5 kHz). Control «Efecto» 0 a 100, por defecto 50 (reverb −14 dB, eco
+  −20 dB, retroalimentación 0,235 con tope duro 0,4). Música −6 dB (0,5) y atrasada lo que tarda la salida (tope
+  0,3 s). Micrófono para cantar: sin supresión de ruido ni ganancia automática; cancelación de eco solo con parlantes.
+- En `grabadora.ts` la cadena entra solo con `karaoke` en los ajustes; sin karaoke el cableado es el de siempre.
+- Sin afinación automática ni «ducking» en esta versión (ver la ficha). La persona no se oye con efecto mientras canta.
+- Pruebas: `pruebas/karaoke.test.ts` (comprobada en ROJO el 9 nov 2026: desconectar el reverb la pone en rojo) y
+  `e2e/karaoke.spec.ts` (graba de verdad con Karaoke, el efecto se mueve en vivo, hay sonido y no satura).
+- Falta la escucha de Richard (pruebas de aceptación de la ficha, sección 6).

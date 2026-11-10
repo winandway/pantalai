@@ -36,6 +36,14 @@ const en = {
   volumenMicro: 'Microphone in the recording',
   volumenAyuda:
     'The video volume changes only the video (what you hear and what is recorded), not your computer or your microphone. The microphone volume changes only how loud you sound in the recording.',
+  karaoke: 'Karaoke',
+  karaokeAyuda:
+    'Karaoke makes your voice sound like a live singing show: a clean EQ, a touch of compression, a warm reverb and a short echo, with the music a little lower so the lyrics come through. The effect is in the recording (you hear yourself dry while singing).',
+  karaokeEfecto: 'Effect',
+  karaokeAudifonos: 'I’m using headphones (best sound)',
+  karaokeParlantes: 'Using speakers? Keep the music low so it doesn’t get into the microphone.',
+  karaokeDuranteGrabacion:
+    'Turn Karaoke on or off before recording. You can move the Effect while recording.',
   volumenAyudaTiktok:
     'TikTok does not let other sites change its volume: this slider sets how loud the TikTok sounds in your recording (at 0 it is muted). The microphone volume changes only how loud you sound in the recording.',
   abrirTiktok: 'Open on TikTok',
@@ -124,6 +132,14 @@ const es: typeof en = {
   volumenMicro: 'Micrófono en la grabación',
   volumenAyuda:
     'El volumen del video cambia solo el video (lo que oyes y lo que se graba), no el de tu computadora ni el de tu micrófono. El del micrófono cambia solo qué tan fuerte sales tú en la grabación.',
+  karaoke: 'Karaoke',
+  karaokeAyuda:
+    'Karaoke hace que tu voz suene como en un show de canto en vivo: ecualizada, un poco comprimida, con un reverb cálido y un eco corto, y la música un poco más baja para que se entienda la letra. El efecto queda en la grabación (mientras cantas te oyes sin efecto).',
+  karaokeEfecto: 'Efecto',
+  karaokeAudifonos: 'Uso audífonos (mejor sonido)',
+  karaokeParlantes: '¿Con parlantes? Deja la música bajita para que no se meta en el micrófono.',
+  karaokeDuranteGrabacion:
+    'Enciende o apaga Karaoke antes de grabar. El Efecto lo puedes mover mientras grabas.',
   volumenAyudaTiktok:
     'TikTok no deja que otras páginas cambien su volumen: esta barra ajusta qué tan fuerte suena el TikTok en tu grabación (en 0 se silencia). El del micrófono cambia solo qué tan fuerte sales tú en la grabación.',
   abrirTiktok: 'Abrir en TikTok',

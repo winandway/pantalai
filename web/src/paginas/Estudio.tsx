@@ -2,6 +2,7 @@
 // graba SOLO el escenario de la máscara «Podcast» (la propia pestaña recortada con Region Capture). Los botones quedan
 // fuera de lo que se graba. Plan: docs/PLAN-ESTUDIO-DE-REACCIONES.md · Candado: C-ESTUDIO-RECORTE.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { efectoValido, KARAOKE_DEFECTO } from '../logica/karaoke';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
 import { fijarEstadoGrabacion, useBotonGrabarDeArriba } from '../logica/estadoGrabacion';
@@ -84,6 +85,10 @@ export function Estudio() {
     // entrada sin sonido no había cómo cambiarlo: le pasó a Richard el 9 nov 2026).
     micId: 'default',
     camId: '',
+    // Karaoke (C-KARAOKE): apagado por defecto; al encenderlo el efecto arranca en el punto medio.
+    karaoke: false,
+    efecto: KARAOKE_DEFECTO.efecto,
+    audifonos: KARAOKE_DEFECTO.audifonos,
   });
   const micId = typeof b.valor.micId === 'string' && b.valor.micId ? b.valor.micId : 'default';
   const camId = typeof b.valor.camId === 'string' ? b.valor.camId : '';
@@ -91,6 +96,9 @@ export function Estudio() {
   const [camaras, setCamaras] = useState<MediaDeviceInfo[]>([]);
   const volVideo = Number.isFinite(b.valor.volVideo) ? b.valor.volVideo : 100;
   const volMicro = Number.isFinite(b.valor.volMicro) ? b.valor.volMicro : 100;
+  const karaoke = b.valor.karaoke === true;
+  const efecto = efectoValido(b.valor.efecto);
+  const audifonos = b.valor.audifonos !== false;
   const formato: Formato = FORMATOS.includes(b.valor.formato) ? b.valor.formato : 'horizontal';
   const diseno: Diseno = DISENOS.includes(b.valor.diseno) ? b.valor.diseno : 'clasico';
   const disenoV: DisenoVertical = DISENOS_VERTICALES.includes(b.valor.disenoV) ? b.valor.disenoV : 'mitades';
@@ -357,6 +365,9 @@ export function Estudio() {
   useEffect(() => {
     grabadora.current?.ajustarVolumen('micro', volMicro / 100);
   }, [volMicro]);
+  useEffect(() => {
+    grabadora.current?.ajustarKaraoke(efecto);
+  }, [efecto]);
 
   // Cargar un video de la computadora (dos caminos: el enlace o el archivo).
   const urlLocal = useRef<string | null>(null);
@@ -487,6 +498,7 @@ export function Estudio() {
         microfonoId: micId,
         // Sin ajuste automático de ganancia: con el micrófono cerca de la boca subía solo y saturaba.
         autoGanancia: false,
+        karaoke: karaoke ? { efecto, audifonos } : null,
         audioSistema: true,
         flotante: false,
         transcribir: true,
@@ -1060,6 +1072,48 @@ export function Estudio() {
               onChange={(e) => b.cambiar('volMicro', Number(e.target.value))}
             />
           </label>
+        </div>
+        <div className={`estudio-karaoke${karaoke ? ' activo' : ''}`}>
+          <button
+            type="button"
+            className="estudio-karaoke-boton"
+            aria-pressed={karaoke}
+            disabled={enCurso}
+            title={enCurso ? tx.karaokeDuranteGrabacion : tx.karaokeAyuda}
+            onClick={() => b.cambiar('karaoke', !karaoke)}
+          >
+            🎤✨ {tx.karaoke}
+          </button>
+          {karaoke && (
+            <>
+              <label className="estudio-karaoke-efecto">
+                <span>
+                  {tx.karaokeEfecto} <b>{efecto}</b>
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={efecto}
+                  aria-label={tx.karaokeEfecto}
+                  onChange={(e) => b.cambiar('efecto', Number(e.target.value))}
+                />
+              </label>
+              <label className="estudio-karaoke-audifonos">
+                <input
+                  type="checkbox"
+                  checked={audifonos}
+                  disabled={enCurso}
+                  onChange={(e) => b.cambiar('audifonos', e.target.checked)}
+                />{' '}
+                🎧 {tx.karaokeAudifonos}
+              </label>
+              <p className="estudio-ayuda">
+                {tx.karaokeAyuda} {!audifonos && tx.karaokeParlantes}
+              </p>
+            </>
+          )}
         </div>
       </div>
       {video && (pideToque(video.plataforma, listo) || avisoVideo === 'no_arranco') && (

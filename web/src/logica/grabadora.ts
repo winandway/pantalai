@@ -2,6 +2,14 @@
 // Pantalla + cámara se componen en un lienzo con un reloj en un Worker: así sigue grabando
 // aunque la pestaña de PANTALAI quede en segundo plano mientras grabas otra ventana.
 import { pintar, Pizarra } from './dibujo';
+import {
+  atrasoMusica,
+  crearCadenaKaraoke,
+  MUSICA_KARAOKE,
+  restriccionesKaraoke,
+  type AjustesKaraoke,
+  type CadenaKaraoke,
+} from './karaoke';
 import { medidaGrabacionEstudio } from './estudio';
 import type { Segmento } from './tiempo';
 
@@ -41,6 +49,8 @@ export type Ajustes = {
    * micrófono cerca de la boca subía solo y saturaba (Richard, 9 nov 2026).
    */
   autoGanancia?: boolean;
+  /** Karaoke del Estudio (C-KARAOKE): la voz con EQ, compresor, reverb y eco, y la música −6 dB. Nada = como siempre. */
+  karaoke?: AjustesKaraoke | null;
 };
 
 /**
@@ -67,12 +77,17 @@ export function curvaTecho(puntos = 2049, techo = TECHO): Float32Array {
 }
 
 /** Cómo se pide el micrófono al navegador. */
-export function restriccionesMicro(microfonoId: string, autoGanancia = true): MediaTrackConstraints {
+export function restriccionesMicro(
+  microfonoId: string,
+  autoGanancia = true,
+  karaoke?: AjustesKaraoke | null,
+): MediaTrackConstraints {
   return {
     deviceId: microfonoId !== 'default' ? { exact: microfonoId } : undefined,
     echoCancellation: true,
     noiseSuppression: true,
     autoGainControl: autoGanancia,
+    ...(karaoke ? restriccionesKaraoke(karaoke.audifonos) : {}),
   };
 }
 
@@ -280,6 +295,12 @@ export class Grabadora {
   /** Volumen de cada sonido EN LA GRABACIÓN (1 = tal cual). Lo que se oye en los parlantes no cambia. */
   private volumenes = { micro: 1, sistema: 1 };
 
+  private cadenaKaraoke: CadenaKaraoke | null = null;
+  /** Cambia el efecto del karaoke en vivo (0 a 100), mientras se graba. */
+  ajustarKaraoke(efecto: number) {
+    this.cadenaKaraoke?.ajustar(efecto);
+  }
+
   /** Sube o baja el micrófono o el sonido de la pestaña/computadora en lo que se graba (0 a 2). */
   ajustarVolumen(cual: 'micro' | 'sistema', valor: number) {
     const v = Math.min(2, Math.max(0, Number.isFinite(valor) ? valor : 1));
@@ -420,7 +441,7 @@ export class Grabadora {
     }
     if (this.a.microfonoId) {
       micro = await navigator.mediaDevices.getUserMedia({
-        audio: restriccionesMicro(this.a.microfonoId, this.a.autoGanancia ?? true),
+        audio: restriccionesMicro(this.a.microfonoId, this.a.autoGanancia ?? true, this.a.karaoke),
       });
       this.flujos.push(micro);
     }
@@ -458,7 +479,22 @@ export class Grabadora {
         const ganancia = this.audio.createGain();
         ganancia.gain.value = this.volumenes[cual];
         this.ganancias[cual] = ganancia;
-        fuente.connect(ganancia);
+        // Karaoke: la voz pasa por su cadena (EQ, compresor, reverb, eco) y la música va −6 dB y un poco atrasada para
+        // quedar a tiempo con la voz. Sin karaoke el cableado es el de siempre.
+        const karaoke = this.a.karaoke;
+        if (karaoke && cual === 'micro') {
+          this.cadenaKaraoke = crearCadenaKaraoke(this.audio, karaoke.efecto);
+          fuente.connect(this.cadenaKaraoke.entrada);
+          this.cadenaKaraoke.salida.connect(ganancia);
+        } else if (karaoke && cual === 'sistema') {
+          const atraso = this.audio.createDelay(0.5);
+          atraso.delayTime.value = atrasoMusica(this.audio.outputLatency, this.audio.baseLatency);
+          const musica = this.audio.createGain();
+          musica.gain.value = MUSICA_KARAOKE;
+          fuente.connect(atraso);
+          atraso.connect(musica);
+          musica.connect(ganancia);
+        } else fuente.connect(ganancia);
         ganancia.connect(limitador);
         ganancia.connect(medidor);
         medidor.connect(silencio);

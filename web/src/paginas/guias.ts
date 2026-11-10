@@ -1064,4 +1064,35 @@ export const GUIAS: Guia[] = [
       ],
     },
   },
+  {
+    slug: 'karaoke',
+    seccion: 'grabar',
+    icono: '🎤',
+    en: {
+      titulo: 'Karaoke: sing over any song with a live-show voice',
+      resumen:
+        'Turn on Karaoke in the Reaction Studio and your voice comes out with a warm reverb, a short echo and a clean mix with the music. One tap, one Effect slider.',
+      cuerpo: [
+        'Open the Reaction Studio, paste a karaoke video from YouTube or TikTok (or upload one from your computer) and tap the Karaoke button under the volumes. It turns pink when it is on.',
+        'Karaoke polishes your voice the way live singing shows do: it cleans the low rumble, adds a bit of presence and air, evens out loud and soft parts, and adds a warm reverb with a short echo. The music goes a little lower in the recording so your lyrics come through.',
+        'The Effect slider starts at 50, a balanced point that sounds good without touching anything. Move it up for a bigger, more “stage” sound or down for a drier voice. At 0 there is no reverb or echo. You can move it while you record.',
+        'Use headphones for the best result: check “I’m using headphones” and the music will not get into your microphone. With speakers, uncheck it and keep the music low.',
+        'While you sing you hear your own voice dry (without effect): the effect is added to the recording. Press Finish and play your video to hear it.',
+        'Turn Karaoke on or off before you start recording. Your choice is saved for next time.',
+      ],
+    },
+    es: {
+      titulo: 'Karaoke: canta encima de cualquier canción con voz de show en vivo',
+      resumen:
+        'Enciende Karaoke en el Estudio de reacciones y tu voz sale con un reverb cálido, un eco corto y una mezcla limpia con la música. Un toque y un solo control de Efecto.',
+      cuerpo: [
+        'Abre el Estudio de reacciones, pega un video de karaoke de YouTube o TikTok (o sube uno de tu computadora) y toca el botón Karaoke debajo de los volúmenes. Se pone rosado cuando está encendido.',
+        'Karaoke pule tu voz como en los shows de canto en vivo: limpia el retumbe de abajo, le da un poco de presencia y brillo, empareja las partes fuertes y suaves, y le pone un reverb cálido con un eco corto. La música queda un poco más baja en la grabación para que se entienda la letra.',
+        'El control Efecto arranca en 50, un punto equilibrado que suena bien sin tocar nada. Súbelo para un sonido más grande, de escenario, o bájalo para una voz más seca. En 0 no hay reverb ni eco. Lo puedes mover mientras grabas.',
+        'Usa audífonos para el mejor resultado: marca «Uso audífonos» y la música no se mete en tu micrófono. Con parlantes, desmárcalo y deja la música bajita.',
+        'Mientras cantas te oyes sin efecto: el efecto queda en la grabación. Toca Terminar y reproduce tu video para oírlo.',
+        'Enciende o apaga Karaoke antes de empezar a grabar. Tu elección queda guardada para la próxima vez.',
+      ],
+    },
+  },
 ];
