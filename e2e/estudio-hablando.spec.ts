@@ -7,6 +7,35 @@ test.use({ extraHTTPHeaders: cabecerasDePrueba(), viewport: { width: 1280, heigh
 // con el micrófono (el de prueba de Chrome suena a pitidos) y sale verde en el MP4 grabado.
 test('el cartel «Hablando» se enciende con el micrófono y sale en la grabación', async ({ page }) => {
   test.setTimeout(180_000);
+  // Una «voz» de mentira con sílabas y pausas, como alguien hablando. El micrófono de prueba de Chrome es un pitido
+  // FIJO y, en Linux (la compuerta de GitHub), la supresión de ruido que el cartel pide (noiseSuppression) lo
+  // aprende y lo apaga al segundo: el cartel se encendía antes de grabar y ya estaba apagado durante la grabación
+  // (fallaba siempre en GitHub y nunca en la Mac). Una pista hecha con WebAudio no pasa por ese filtro.
+  await page.addInitScript(() => {
+    const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (c?: MediaStreamConstraints) => {
+      if (!c?.audio || c.video) return original(c);
+      const ctx = new AudioContext();
+      const tono = ctx.createOscillator();
+      tono.type = 'sawtooth';
+      tono.frequency.value = 180;
+      const volumen = ctx.createGain();
+      volumen.gain.value = 0;
+      const salida = ctx.createMediaStreamDestination();
+      tono.connect(volumen).connect(salida);
+      tono.start();
+      // Sílabas de 150 a 300 ms con pausas cortas (menos que lo que el cartel sostiene encendido).
+      let prendido = false;
+      const hablar = () => {
+        prendido = !prendido;
+        volumen.gain.setValueAtTime(prendido ? 0.6 : 0, ctx.currentTime);
+        setTimeout(hablar, prendido ? 150 + Math.random() * 150 : 60 + Math.random() * 80);
+      };
+      hablar();
+      void ctx.resume();
+      return salida.stream;
+    };
+  });
   await page.goto('/signup');
   const puede = await page.evaluate(() => 'CropTarget' in window);
   test.skip(!puede, 'Este navegador no tiene Region Capture.');
@@ -22,8 +51,7 @@ test('el cartel «Hablando» se enciende con el micrófono y sale en la grabaci�
   const cartel = page.locator('[data-escenario] [data-voz=anfitrion]');
   await expect(cartel).toBeVisible();
   await page.mouse.click(5, 5); // despierta el sonido de la página, como el primer toque de una persona
-  // El micrófono de prueba suena: el cartel se enciende (que se apague en el silencio lo cubre pruebas/voz.test.ts:
-  // el sonido de prueba de Chrome no hace pausas largas).
+  // La voz de prueba suena: el cartel se enciende (que se apague en el silencio lo cubre pruebas/voz.test.ts).
   await expect(cartel).toHaveAttribute('data-hablando', '1', { timeout: 15_000 });
   await expect(cartel).toHaveText('Speaking');
   // Apagado con su casilla, el cartel no sale; encendido, vuelve.

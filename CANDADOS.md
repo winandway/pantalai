@@ -1063,6 +1063,11 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   video está «Original video by @…»). Comprobadas en ROJO el 10 nov 2026: sin sostener la voz falla la unitaria; con
   el cartel gris en vez de verde falla la e2e «cuadros con el cartel Hablando en verde»; y el primer intento devolvía el
   crédito fuera de `video` (la unitaria lo atrapó).
+- 10 nov 2026 (tarde): la e2e fallaba SIEMPRE en GitHub (Linux) y nunca en la Mac. Causa: el micrófono de prueba de
+  Chrome es un pitido fijo y la supresión de ruido que pide el cartel (`noiseSuppression: true`) lo aprende y lo apaga
+  en Linux al segundo: antes de grabar se veía «Speaking», durante la grabación ya «Listening» (lo mostraban los cuadros
+  de la grabación de GitHub). La prueba ahora le da al cartel una voz de mentira con sílabas y pausas hecha con WebAudio
+  (no pasa por ese filtro). El producto no cambia: una voz real no es un tono fijo.
 - Fuera de esta fase: transmitir en vivo a YouTube (no estaba en la línea de PENDIENTES; gastaría y pide decisión de Richard).
 
 ## C-REVISION-10NOV: arreglos de la revisión de calidad del Estudio (10 nov 2026)
