@@ -1,3 +1,4 @@
+2026-11-10 · desarrollador · Fase 1 invitado remoto en el Estudio (enlace /join, WebRTC directo, señalización en /datos, TURN listo y apagado, guía bilingüe, candado C-INVITADO) · ok en local (verify y e2e en verde); en vivo, ver informe · 05fca1e
 2026-11-10 · investigador · ficha INVITADOS-EN-VIVO (REA sobre StreamYard, Riverside, Restream + precios de infraestructura) · ok, con puntos [NV] anotados · sin commit
 
 # Bitácora de los agentes
