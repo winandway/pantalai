@@ -1113,3 +1113,32 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
    clic en «Start» + 3 s de cuenta hasta que vuelve el clic en «Finish», menos la pausa medida (5 s, más que el
    arranque); mínimo = lo grabado antes y después de la pausa. Rojo: con una grabadora que cuenta la pausa, falla
    (14,2 s contra un máximo de 9,9 s).
+
+## C-MINIATURA: miniatura para YouTube desde el video (10 nov 2026)
+
+- Qué hace: en «Para YouTube» (`web/src/componentes/Youtube.tsx` → `MiniaturaYoutube.tsx`), el dueño elige un
+  cuadro del video (deslizador sobre el tiempo) o una foto propia (`SubirImagen`, con «Tomar foto»), escribe pocas
+  palabras (por defecto el título impactante del kit o el título del video, cortado con `textoCorto`), elige estilo
+  (franja amarilla, contorno blanco, franja roja o «Mi máscara del Estudio» con sus colores y su logo) y posición, y
+  descarga un JPG de 1280 × 720 por debajo de 2 MB (`bajoElLimite` baja la calidad hasta que cabe; si no cabe, error
+  en pantalla, nunca un archivo de más). Todo en el navegador: sin IA, sin costo y SIN escrituras (no se guarda en el
+  servidor; las máscaras solo se leen). Lo elegido queda en el borrador (`miniatura-<id>`).
+- «Para YouTube» ahora sale SIEMPRE para el dueño (antes solo con IA o crédito): la miniatura no necesita IA. La
+  ayuda «Lo escribe la IA…» solo se muestra si hay kit o IA.
+- Cuadros: `LectorCuadros` en `web/src/logica/cuadros.ts` (mediabunny `CanvasSink.getCanvas`, abre el archivo una
+  vez). Sin WebCodecs o si falla, plan B con un elemento `<video>` que salta al segundo; si también falla, aviso en
+  palabras y queda «Mi foto». El lienzo nunca queda en blanco (fondo oscuro con el texto).
+- Vertical: «Entero, con fondo desenfocado» (la misma imagen agrandada, borrosa y oscurecida detrás) o «Recortado
+  para llenar» (`encuadrar` en `web/src/logica/miniatura.ts`).
+- Marca de agua: la MISMA regla del video (`video.marca`, que el servidor saca de `llevaMarca`). Se pinta con
+  `pintarPildoraMarca` (sacada de la grabadora, misma píldora de C-MARCA-GRABADA) ARRIBA a la derecha: abajo la tapa
+  la duración que pone YouTube.
+- Pruebas: `pruebas/miniatura.test.ts` (medidas, peso, encuadre, texto, dibujo con lienzo de mentira, marca) y
+  `e2e/miniatura.spec.ts` (descarga real: 1280 × 720 leído del JPG, menos de 2 MB, franja amarilla con letras
+  oscuras en los píxeles, borrador al recargar; y plan B sin `VideoDecoder` con video vertical desenfocado y
+  recortado). Comprobadas en ROJO el 10 nov 2026: sin pintar el texto, sin el tope de peso y con la marca al revés
+  fallan 4 de vitest y la e2e (cero letras oscuras en la franja).
+- De paso (celular): la fila de botones del video (`.video-acciones`) se salía de la pantalla a 375 px y la página se
+  arrastraba de lado; ahora baja de línea. La e2e del plan B exige `scrollWidth` ≤ 375 (rojo sin el arreglo).
+- Capturas de Docs: `node scripts/capturas-miniatura.mjs <video.mp4>` con el sitio local (guía `youtube-thumbnail`).
+- No tocar: el tope de 2 MB, la medida 1280 × 720, que no se guarde en el servidor y que la marca siga `video.marca`.

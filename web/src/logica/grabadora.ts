@@ -110,6 +110,41 @@ export function marcaEn(zona: Rect, ladoCorto: number) {
   };
 }
 
+/**
+ * La píldora gris «pantalay.com» con el logo (C-MARCA-GRABADA). La usan la grabadora (dentro del video) y la miniatura
+ * para YouTube (C-MINIATURA). «arriba» = arriba a la derecha de la zona; si no, abajo a la derecha.
+ */
+export function pintarPildoraMarca(
+  ctx: CanvasRenderingContext2D,
+  zona: Rect,
+  ladoCorto: number,
+  logo: HTMLImageElement | null,
+  arriba: boolean,
+) {
+  const m = marcaEn(zona, ladoCorto);
+  ctx.save();
+  ctx.font = `700 ${m.letra}px Inter, system-ui, sans-serif`;
+  const texto = 'pantalay.com';
+  const ancho = m.icono + m.espacio + ctx.measureText(texto).width + m.relleno * 2;
+  const alto = m.icono + m.relleno;
+  const x = zona.x + zona.w - m.margen - ancho;
+  const y = arriba ? zona.y + m.margen : zona.y + zona.h - m.margen - alto;
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.roundRect(x, y, ancho, alto, alto / 2);
+  ctx.fill();
+  if (logo?.complete && logo.naturalWidth) {
+    ctx.filter = 'grayscale(1) brightness(1.6)';
+    ctx.drawImage(logo, x + m.relleno, y + m.relleno / 2, m.icono, m.icono);
+    ctx.filter = 'none';
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(texto, x + m.relleno + m.icono + m.espacio, y + alto / 2);
+  ctx.restore();
+}
+
 export const REPARTO_MIN = 0.3;
 export const REPARTO_MAX = 0.6;
 export const REPARTO_INICIAL = 0.45;
@@ -712,29 +747,13 @@ export class Grabadora {
       : vertical
         ? partesVertical(W, H, this.a.camaraArriba ?? true, this.a.reparto ?? REPARTO_INICIAL).camara
         : { x: 0, y: 0, w: W, h: H };
-    const m = marcaEn(zona, z ? Math.min(zona.w, zona.h) * 1.6 : Math.min(W, H));
-    ctx.save();
-    ctx.font = `700 ${m.letra}px Inter, system-ui, sans-serif`;
-    const texto = 'pantalay.com';
-    const ancho = m.icono + m.espacio + ctx.measureText(texto).width + m.relleno * 2;
-    const alto = m.icono + m.relleno;
-    const x = zona.x + zona.w - m.margen - ancho;
-    // En el Short va ARRIBA a la derecha de la cámara (se ve más y tapa menos); en lo demás, abajo a la derecha.
-    const y = vertical || z ? zona.y + m.margen : zona.y + zona.h - m.margen - alto;
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.roundRect(x, y, ancho, alto, alto / 2);
-    ctx.fill();
-    if (this.logo.complete && this.logo.naturalWidth) {
-      ctx.filter = 'grayscale(1) brightness(1.6)';
-      ctx.drawImage(this.logo, x + m.relleno, y + m.relleno / 2, m.icono, m.icono);
-      ctx.filter = 'none';
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.88)';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(texto, x + m.relleno + m.icono + m.espacio, y + alto / 2);
-    ctx.restore();
+    pintarPildoraMarca(
+      ctx,
+      zona,
+      z ? Math.min(zona.w, zona.h) * 1.6 : Math.min(W, H),
+      this.logo,
+      vertical || Boolean(z),
+    );
   }
 
   /** En la preparación del Short: cámara arriba o abajo y cuánto ocupa (se ve al instante). */

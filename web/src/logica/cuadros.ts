@@ -112,3 +112,115 @@ export async function prepararCuadros(
     input.dispose();
   }
 }
+
+/** Un cuadro listo para dibujar en otro lienzo, con sus medidas. */
+export type CuadroSuelto = { imagen: HTMLCanvasElement; ancho: number; alto: number };
+
+function copiar(origen: CanvasImageSource, ancho: number, alto: number): CuadroSuelto {
+  const c = document.createElement('canvas');
+  c.width = ancho;
+  c.height = alto;
+  c.getContext('2d')!.drawImage(origen, 0, 0, ancho, alto);
+  return { imagen: c, ancho, alto };
+}
+
+/** ¿Este navegador decodifica con WebCodecs? (Sin eso, el plan B: el elemento de video.) */
+export const hayWebCodecs = (): boolean => typeof VideoDecoder !== 'undefined';
+
+/**
+ * Saca cuadros sueltos de un video en la nube (miniatura para YouTube, C-MINIATURA). Primero con mediabunny y
+ * WebCodecs (lee solo los pedazos que hacen falta); si el navegador no puede, plan B con un elemento de video que
+ * salta al segundo pedido. Nunca devuelve un cuadro vacío: si todo falla, lanza error y la pantalla lo dice.
+ */
+export class LectorCuadros {
+  private input: Input | null = null;
+  private sink: CanvasSink | null = null;
+  private video: HTMLVideoElement | null = null;
+  /** Por dónde salió el último cuadro (para las pruebas y el registro). */
+  modo: 'webcodecs' | 'video' | null = null;
+
+  constructor(
+    private readonly url: string,
+    /** Dirección para el plan B (la copia MP4 si existe: Safari no abre WebM). */
+    private readonly urlRespaldo: string,
+    private readonly sinWebCodecs = !hayWebCodecs(),
+  ) {}
+
+  async cuadro(segundo: number): Promise<CuadroSuelto> {
+    if (!this.sinWebCodecs) {
+      try {
+        const c = await this.conWebCodecs(segundo);
+        this.modo = 'webcodecs';
+        return c;
+      } catch (e) {
+        console.warn('miniatura: WebCodecs no pudo, sigue el plan B', e);
+      }
+    }
+    const c = await this.conVideo(segundo);
+    this.modo = 'video';
+    return c;
+  }
+
+  private async conWebCodecs(segundo: number): Promise<CuadroSuelto> {
+    if (!this.sink) {
+      this.input = new Input({
+        source: new UrlSource(this.url, { requestInit: { credentials: 'same-origin' } }),
+        formats: ALL_FORMATS,
+      });
+      const pista = await this.input.getPrimaryVideoTrack();
+      if (!pista || !(await pista.canDecode())) throw new Error('no se puede decodificar el video aquí');
+      this.sink = new CanvasSink(pista, { poolSize: 0 });
+    }
+    const r = await this.sink.getCanvas(Math.max(0, segundo));
+    if (!r) throw new Error('sin cuadro en ese segundo');
+    return copiar(r.canvas, r.canvas.width, r.canvas.height);
+  }
+
+  private async conVideo(segundo: number): Promise<CuadroSuelto> {
+    const v = this.video ?? document.createElement('video');
+    if (!this.video) {
+      this.video = v;
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = 'auto';
+      v.src = this.urlRespaldo;
+    }
+    const esperar = (evento: string) =>
+      new Promise<void>((ok, mal) => {
+        const t = setTimeout(() => mal(new Error(`el video no respondió (${evento})`)), 20_000);
+        const listo = () => {
+          clearTimeout(t);
+          v.removeEventListener('error', fallo);
+          ok();
+        };
+        const fallo = () => {
+          clearTimeout(t);
+          v.removeEventListener(evento, listo);
+          mal(new Error('el video no se pudo abrir'));
+        };
+        v.addEventListener(evento, listo, { once: true });
+        v.addEventListener('error', fallo, { once: true });
+      });
+    if (v.readyState < 1) await esperar('loadedmetadata');
+    const fin = Number.isFinite(v.duration) ? Math.max(0, v.duration - 0.05) : segundo;
+    const destino = Math.min(Math.max(0, segundo), fin);
+    if (Math.abs(v.currentTime - destino) > 0.01 || v.readyState < 2) {
+      const saltado = esperar('seeked');
+      v.currentTime = destino;
+      await saltado;
+    }
+    if (!v.videoWidth) throw new Error('el video no tiene imagen');
+    return copiar(v, v.videoWidth, v.videoHeight);
+  }
+
+  cerrar(): void {
+    this.input?.dispose();
+    this.input = null;
+    this.sink = null;
+    if (this.video) {
+      this.video.removeAttribute('src');
+      this.video.load();
+      this.video = null;
+    }
+  }
+}

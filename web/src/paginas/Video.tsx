@@ -355,7 +355,8 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
             {video.es_dueno && ia && <Tareas tareas={ia.tareas} />}
           </section>
         )}
-        {video.es_dueno && ((ia?.cerebro && (video.descripcion || ia.youtube)) || video.credito) && (
+        {/* «Para YouTube» siempre para el dueño: la miniatura no necesita IA (C-MINIATURA). */}
+        {video.es_dueno && (
           <ParaYoutube
             video={video}
             kit={ia?.youtube}

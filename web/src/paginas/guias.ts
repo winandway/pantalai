@@ -887,7 +887,7 @@ export const GUIAS: Guia[] = [
       resumen:
         'Three titles to choose from, the description, keywords and hashtags, each with its own Copy button.',
       cuerpo: [
-        'When AI finishes your summary, a “For YouTube” card appears under it, only for you. It is written from what you actually say in the video, following what helps a video get found on YouTube today.',
+        'Under your video there is a “For YouTube” card, only for you. When AI finishes your summary, the texts appear in it, written from what you actually say in the video and following what helps a video get found on YouTube today. The same card has the thumbnail maker (see “Make a YouTube thumbnail from your video”).',
         'Titles: pick one. You get three different styles: descriptive (says exactly what the viewer will see, with the main topic first), direct (short and punchy) and bold (creates curiosity, without promising anything the video does not have). Each one shows its length: YouTube allows 100 characters, but only the first 60 to 70 show in search.',
         'Description. It starts with a one-line hook that shows before “Show more”, then your summary, your chapters (only when they follow YouTube’s rule: first at 0:00, at least three, 10 seconds or longer) and three hashtags.',
         'Keywords (tags). Up to 35 search phrases, separated by commas, that always fit YouTube’s 500-character limit. Copy them and paste them in Tags in YouTube Studio: no errors.',
@@ -900,12 +900,48 @@ export const GUIAS: Guia[] = [
       resumen:
         'Tres títulos para elegir, la descripción, las palabras clave y los hashtags, cada uno con su botón de copiar.',
       cuerpo: [
-        'Cuando la IA termina tu resumen, debajo aparece la tarjeta «Para YouTube», que solo ves tú. Se escribe con lo que de verdad dices en el video, siguiendo lo que hoy ayuda a que un video se encuentre en YouTube.',
+        'Debajo de tu video está la tarjeta «Para YouTube», que solo ves tú. Cuando la IA termina tu resumen, ahí aparecen los textos, escritos con lo que de verdad dices en el video y siguiendo lo que hoy ayuda a que un video se encuentre en YouTube. En la misma tarjeta está el creador de miniaturas (mira «Crea la miniatura de YouTube desde tu video»).',
         'Títulos: elige uno. Recibes tres estilos distintos: descriptivo (dice exactamente lo que se va a ver, con el tema al principio), directo (corto y al grano) e impactante (despierta curiosidad, sin prometer nada que el video no tenga). Cada uno muestra su largo: YouTube permite 100 caracteres, pero en la búsqueda solo se ven los primeros 60 a 70.',
         'Descripción. Empieza con una línea gancho que se ve antes de «Mostrar más», sigue tu resumen, tus capítulos (solo cuando cumplen la regla de YouTube: el primero en 0:00, al menos tres y de 10 segundos o más) y tres hashtags.',
         'Palabras clave (etiquetas). Hasta 35 frases de búsqueda separadas por coma que siempre caben en el límite de 500 caracteres de YouTube. Cópialas y pégalas en Etiquetas de YouTube Studio: sin errores.',
         'Hashtags. Tres: uno general, uno de nicho y uno de tu tema. YouTube muestra hasta tres encima de tu título.',
         'Toca Copiar al lado de cada parte, o «Copiar todo» para llevártelo de una vez. ¿Quieres otras opciones? Toca «Escribir otra vez». El resumen también tiene su propio botón de copiar.',
+      ],
+    },
+  },
+  {
+    slug: 'youtube-thumbnail',
+    seccion: 'editar',
+    icono: '🖼️',
+    imagen: 'miniatura',
+    en: {
+      titulo: 'Make a YouTube thumbnail from your video',
+      resumen:
+        'Pick a moment of your video or your own photo, add big bold text and download a 1280 × 720 thumbnail under 2 MB.',
+      cuerpo: [
+        'The thumbnail and the title are what make people click. Pantalay builds one for you right in your browser: no extra app, no AI and no cost.',
+        'Open your video and scroll to the “For YouTube” card. You will find “Thumbnail” at the bottom, with a live preview on the left.',
+        'Choose the picture. “From the video” lets you slide through your video and stop on the best moment, like a clear face or the key screen. “My photo” lets you upload a picture from your files or take one with your camera.',
+        'Write the text. It starts with the bold title Pantalay suggested for the video (or your video’s title), cut to a few words. Change it to whatever you like: 3 to 5 big words read best on a phone.',
+        'Pick a style and a position. Yellow band, white outline or red band, all high contrast so they stand out in YouTube’s feed. If you saved a mask in the Reaction Studio, “My Studio mask” uses its colors and logo, so every thumbnail matches your show. Put the text at the top, in the middle or at the bottom.',
+        'Vertical videos and Shorts work too. Choose “Whole, with blurred background” to show the full vertical picture over a soft blurred copy of itself, or “Cropped to fill” to fill the whole thumbnail.',
+        'Press “Download thumbnail”. You get a JPG at 1280 × 720, always under YouTube’s 2 MB limit, ready to upload in YouTube Studio under Thumbnail. Your choices stay saved if you leave and come back.',
+        'On the free plan the thumbnail carries the same small pantalay.com mark as your video, at the top right so YouTube’s time label never covers it. Paid plans download it clean.',
+      ],
+    },
+    es: {
+      titulo: 'Crea la miniatura de YouTube desde tu video',
+      resumen:
+        'Elige un momento de tu video o tu propia foto, ponle texto grande y descarga una miniatura de 1280 × 720 de menos de 2 MB.',
+      cuerpo: [
+        'La miniatura y el título son lo que hace que la gente toque tu video. Pantalay te la arma ahí mismo, en tu navegador: sin otra app, sin IA y sin costo.',
+        'Abre tu video y baja hasta la tarjeta «Para YouTube». Al final está «Miniatura», con la vista previa a la izquierda.',
+        'Elige la imagen. «Del video» te deja recorrer tu video con el deslizador y quedarte con el mejor momento, como una cara clara o la pantalla clave. «Mi foto» te deja subir una imagen desde tus archivos o tomarla con tu cámara.',
+        'Escribe el texto. Empieza con el título impactante que Pantalay sugirió para el video (o el título de tu video), cortado a pocas palabras. Cámbialo por lo que quieras: de 3 a 5 palabras grandes se leen mejor en el celular.',
+        'Elige un estilo y una posición. Franja amarilla, contorno blanco o franja roja, todos de alto contraste para que resalten entre los videos de YouTube. Si guardaste una máscara en el Estudio de reacciones, «Mi máscara del Estudio» usa sus colores y su logo, así todas tus miniaturas combinan con tu programa. Pon el texto arriba, al centro o abajo.',
+        'También sirve con videos verticales y Shorts. Elige «Entero, con fondo desenfocado» para ver la imagen vertical completa sobre una copia suave y borrosa, o «Recortado para llenar» para que ocupe toda la miniatura.',
+        'Toca «Descargar miniatura». Recibes un JPG de 1280 × 720, siempre por debajo del límite de 2 MB de YouTube, listo para subirlo en YouTube Studio, en Miniatura. Lo que elegiste queda guardado si sales y vuelves.',
+        'En el plan gratis la miniatura lleva la misma pequeña marca pantalay.com que tu video, arriba a la derecha para que la duración que pone YouTube nunca la tape. Con un plan pago se descarga limpia.',
       ],
     },
   },

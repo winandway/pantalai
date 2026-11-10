@@ -353,7 +353,7 @@ export const LANDINGS: Landing[] = [
     slug: 'vertical-video-recorder',
     icono: '📱',
     destino: '/record',
-    guias: ['record-a-vertical-short', 'reaction-studio', 'youtube-texts'],
+    guias: ['record-a-vertical-short', 'reaction-studio', 'youtube-texts', 'youtube-thumbnail'],
     en: {
       titulo: 'Vertical Video Recorder for Shorts, TikTok & Reels | Pantalay',
       descripcion:

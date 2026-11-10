@@ -12,6 +12,7 @@ import {
   type KitYoutube,
 } from '../logica/youtube';
 import { useAviso } from './Aviso';
+import { MiniaturaYoutube } from './MiniaturaYoutube';
 
 function Copiar({ texto, etiqueta }: { texto: string; etiqueta?: string }) {
   const { t } = useIdioma();
@@ -115,7 +116,7 @@ export function ParaYoutube({
           )}
         </div>
       </div>
-      <p className="ayuda">{t('ytAyuda')}</p>
+      {(kit || puedeEscribir) && <p className="ayuda">{t('ytAyuda')}</p>}
       {credito && (
         <div className="yt-fila yt-credito" data-credito>
           <p>
@@ -173,6 +174,10 @@ export function ParaYoutube({
           )}
         </>
       )}
+      <MiniaturaYoutube
+        video={video}
+        tituloSugerido={kit?.titulos.find((x) => x.estilo === 'impactante')?.texto ?? video.titulo}
+      />
     </section>
   );
 }

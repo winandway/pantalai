@@ -111,11 +111,15 @@ export async function esperarArchivoFinal(page: Page, id: string): Promise<void>
       .toMatch(/^ftyp,(free,)?moov(,mdat)?$/);
   const v = await datos();
   const version = encodeURIComponent(v.version_archivo ?? String(v.bytes));
-  await expect(page.locator('.reproductor video source').first()).toHaveAttribute(
-    'src',
-    new RegExp(`[?&]v=${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
-    { timeout: 30_000 },
-  );
+  await expect
+    .poll(
+      async () =>
+        (await page.locator('.reproductor video source').first().getAttribute('src'))?.endsWith(
+          `v=${version}`,
+        ),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
 }
 
 /** Correo de prueba que no choca aunque dos pruebas arranquen en el mismo milisegundo (--repeat-each en paralelo). */

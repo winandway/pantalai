@@ -39,6 +39,10 @@ export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
       'Title, summary, chapters and tasks appear on their own. Remove filler words in one click.',
     ],
     [
+      'YouTube thumbnail maker',
+      'Pick any moment of your video or your own photo, add big bold text and download a 1280 × 720 thumbnail ready for YouTube.',
+    ],
+    [
       'Video to document',
       'Turn any video into a step-by-step guide or bug report, with a screenshot per step.',
     ],
@@ -80,6 +84,10 @@ export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
     [
       'La IA escribe lo demás',
       'Título, resumen, capítulos y tareas aparecen solos. Quita las muletillas con un clic.',
+    ],
+    [
+      'Miniaturas para YouTube',
+      'Elige cualquier momento de tu video o tu propia foto, ponle texto grande y descarga una miniatura de 1280 × 720 lista para YouTube.',
     ],
     [
       'De video a documento',

@@ -6866,3 +6866,63 @@ html.con-shorts body {
 .estudio.grabando .estudio-cartel-voz {
   display: none;
 }
+
+/* Miniatura para YouTube (C-MINIATURA) */
+.miniatura-yt {
+  margin-top: 22px;
+  border-top: 1px solid var(--borde);
+  padding-top: 6px;
+}
+.miniatura-yt-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 18px;
+  align-items: start;
+}
+.miniatura-yt-vista canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: #111;
+}
+.miniatura-yt-ajustes .campo {
+  display: block;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.miniatura-yt-ajustes .campo input[type='text'],
+.miniatura-yt-ajustes .campo input[type='range'],
+.miniatura-yt-ajustes select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+.miniatura-yt-ajustes .campo .ayuda {
+  display: block;
+  font-weight: 400;
+  margin-top: 4px;
+}
+.miniatura-yt-opciones select {
+  grid-column: 1 / -1;
+}
+.miniatura-yt-ajustes .fila-botones {
+  align-items: center;
+}
+@media (max-width: 760px) {
+  .miniatura-yt-cuerpo {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* En el celular, los botones del video (Compartir, Descargar, Publicar, ⋮) bajan de línea en vez de salirse de la
+   pantalla (la página se podía arrastrar de lado). */
+@media (max-width: 600px) {
+  .video-acciones {
+    flex-wrap: wrap;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+}

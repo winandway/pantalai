@@ -140,7 +140,7 @@
 - [x] Raíz para quien MIRA: el MP4 grabado (y el subido) queda con el índice al principio, reemplazando el original
       después de comprobar la copia (8 nov 2026, C-INDICE-MP4).
 - [x] «Para YouTube»: tres títulos, descripción, palabras clave y hashtags con botones de copiar (23 oct 2026, C-YOUTUBE).
-- [ ] Miniatura para YouTube generada desde el video (Richard la hace aparte por ahora).
+- [x] Miniatura para YouTube generada desde el video: cuadro del video o foto propia, texto grande, 1280 × 720 JPG de menos de 2 MB, sin IA y sin costo (10 nov 2026, C-MINIATURA).
 - [x] Marca de agua gris «Pantalay» en el reproductor para el plan gratis, aunque el cobro siga apagado (23 oct 2026, C-MARCA-AGUA).
 - [x] Marca «pantalay.com» grabada dentro de los videos nuevos del plan gratis: sale en el MP4 descargado (24 oct 2026, C-MARCA-GRABADA).
 - [ ] Los videos grabados ANTES del 24 oct no la tienen dentro (solo en el reproductor).
