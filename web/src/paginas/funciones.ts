@@ -3,7 +3,7 @@ export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
   en: [
     [
       'Reaction Studio',
-      'Paste a YouTube or TikTok link and react in a podcast frame with your name, the creator and the topic. Horizontal or vertical 9:16.',
+      'Paste a YouTube or TikTok link and react in a podcast, newscast or minimal frame with your show name, logo and colors. Horizontal or vertical 9:16.',
     ],
     [
       'Remote guest interviews',
@@ -42,7 +42,7 @@ export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
   es: [
     [
       'Estudio de reacciones',
-      'Pega un enlace de YouTube o de TikTok y reacciona en un marco de podcast con tu nombre, el creador y el tema. Horizontal o vertical 9:16.',
+      'Pega un enlace de YouTube o de TikTok y reacciona en un marco de podcast, noticiero o minimalista con el nombre de tu programa, tu logo y tus colores. Horizontal o vertical 9:16.',
     ],
     [
       'Entrevistas a distancia',

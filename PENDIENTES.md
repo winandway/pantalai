@@ -75,7 +75,10 @@
 - [x] Estudio, fase 2: escenario vertical 9:16 para Shorts, TikTok y Reels (cámara arriba, video abajo) (9 nov 2026).
 - [x] Estudio a la vista (9 nov 2026): botón «Reacciones» en el menú, opción en Grabar, tarjeta grande en la portada y
       aviso amable de que TikTok pide la sesión iniciada en el navegador.
-- [ ] Estudio, fase 3: personalizar nombre del programa, logo y colores guardados por cuenta; varias máscaras.
+- [x] Estudio, fase 3 (10 nov 2026): máscaras Podcast, Noticiero y Minimalista; personalizar nombre del programa,
+      cartel, logo (con «Tomar foto») y colores, guardadas por cuenta (C-MASCARAS, C-CAMARA-FOTO). Guía en Docs.
+- [ ] [para: revisor-calidad] Revisar el paquete del Estudio fases 3 y 4 (máscaras, cámara para imágenes, cartel
+      «Hablando», crédito en «Para YouTube»). Motivo: se publicó por orden de la meta; falta la revisión del paquete.
 - [ ] Estudio, fase 4: cartel «Hablando/Escuchando» con el micrófono, barras de sonido, «Para YouTube» con el
       creador ya puesto.
 

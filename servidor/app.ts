@@ -42,6 +42,16 @@ import {
   turnConfigurado,
   type EnvTurn,
 } from './invitado';
+import {
+  ID_MASCARA,
+  LOGO_MAX,
+  MAX_MASCARAS,
+  claveLogo,
+  esquemaMascara,
+  mascaraPublica,
+  tipoDeImagen,
+  type FilaMascara,
+} from './mascaras';
 import { arrobaDe, videoDeTiktok, videoDeYoutube } from '../web/src/logica/estudio';
 import { buscarEnRed, sugerencias, textoDeTranscripcion } from '../web/src/logica/busquedaRed';
 import { REGISTROS_MAX_BYTES, esquemaRegistros, limpiarEnServidor } from './registros';
@@ -919,6 +929,13 @@ app.post('/datos/cuenta/borrar', requiereSesion, async (c) => {
     .bind(u.id)
     .all<{ id: string }>();
   for (const e of suyos) await borrarEquipo(c, e.id);
+  // Los logos de sus máscaras del Estudio.
+  const { results: logos } = await c.env.DB.prepare(
+    'SELECT id FROM mascaras_estudio WHERE usuario_id = ? AND tiene_logo = 1',
+  )
+    .bind(u.id)
+    .all<{ id: string }>();
+  if (logos.length) await c.env.BUCKET.delete(logos.map((m) => claveLogo(u.id, m.id)));
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM miembros_equipo WHERE usuario_id = ?').bind(u.id),
     ...[
@@ -932,6 +949,7 @@ app.post('/datos/cuenta/borrar', requiereSesion, async (c) => {
       'accesos',
       'errores_cliente',
       'ajustes_cuenta',
+      'mascaras_estudio',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} WHERE usuario_id = ?`).bind(u.id)),
     c.env.DB.prepare('UPDATE comentarios SET usuario_id = NULL WHERE usuario_id = ?').bind(u.id),
     c.env.DB.prepare('DELETE FROM usuarios WHERE id = ?').bind(u.id),
@@ -1465,6 +1483,7 @@ async function borrarVideo(c: C, v: FilaVideo) {
       'red_publicaciones WHERE video_id',
       'red_me_gusta WHERE video_id',
       'registros_video WHERE video_id',
+      'video_credito WHERE video_id',
     ].map((t) => c.env.DB.prepare(`DELETE FROM ${t} = ?`).bind(v.id)),
   );
 }
@@ -2252,6 +2271,20 @@ const esquemaCompletar = z.object({
     .max(24 * 3600),
   transcripcion: z.array(esquemaSegmento).max(5000).default([]),
   titulo: z.string().trim().max(200).optional(),
+  /** Reacción del Estudio: el creador del video original y su enlace («Para YouTube» lo pone solo, C-CREDITO). */
+  credito: z
+    .object({
+      creador: z.string().trim().min(1).max(61),
+      enlace: z.union([
+        z.literal(''),
+        z
+          .string()
+          .url()
+          .max(300)
+          .regex(/^https:\/\/(www\.)?(youtube\.com|tiktok\.com)\//),
+      ]),
+    })
+    .optional(),
 });
 
 app.post('/datos/videos/:id/completar', requiereSesion, async (c) => {
@@ -2293,6 +2326,12 @@ app.post('/datos/videos/:id/completar', requiereSesion, async (c) => {
   )
     .bind(obj.size, d.duracion, JSON.stringify(d.transcripcion), d.titulo || null, ahora, v.id)
     .run();
+  if (d.credito)
+    await c.env.DB.prepare(
+      'INSERT OR REPLACE INTO video_credito (video_id, creador, enlace) VALUES (?, ?, ?)',
+    )
+      .bind(v.id, d.credito.creador, d.credito.enlace)
+      .run();
   return c.json({ ok: true, id: v.id, bytes: obj.size });
 });
 
@@ -2367,6 +2406,13 @@ app.get('/datos/videos/:id', async (c) => {
         await llevaMarca(c, v.usuario_id, autor?.correo ?? ''),
         Boolean(await c.env.DB.prepare('SELECT 1 FROM video_marca WHERE video_id = ?').bind(v.id).first()),
       ),
+      // Solo el dueño lo necesita («Para YouTube»): a los demás no se les gasta una lectura.
+      credito:
+        u?.id === v.usuario_id
+          ? await c.env.DB.prepare('SELECT creador, enlace FROM video_credito WHERE video_id = ?')
+              .bind(v.id)
+              .first<{ creador: string; enlace: string }>()
+          : null,
     },
     200,
     {
@@ -2476,6 +2522,11 @@ app.post('/datos/videos/:id/duplicar', requiereSesion, async (c) => {
   // La copia es el mismo archivo: si el original trae la marca grabada, la copia también.
   await c.env.DB.prepare(
     'INSERT OR IGNORE INTO video_marca (video_id) SELECT ? FROM video_marca WHERE video_id = ?',
+  )
+    .bind(id, v.id)
+    .run();
+  await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO video_credito (video_id, creador, enlace) SELECT ?, creador, enlace FROM video_credito WHERE video_id = ?',
   )
     .bind(id, v.id)
     .run();
@@ -3426,6 +3477,139 @@ app.get('/datos/invitado/:codigo/respuesta', async (c) => {
   return c.json({ respuesta: s.intento === intento ? s.respuesta : null, intento: s.intento }, 200, {
     'Cache-Control': 'no-store',
   });
+});
+
+// ---------- máscaras del Estudio (CANDADO C-MASCARAS) ----------
+
+async function mascaraDelDueno(c: C): Promise<FilaMascara | null> {
+  const id = c.req.param('id') ?? '';
+  if (!ID_MASCARA.test(id)) return null;
+  return c.env.DB.prepare('SELECT * FROM mascaras_estudio WHERE id = ? AND usuario_id = ?')
+    .bind(id, c.get('usuario')!.id)
+    .first<FilaMascara>();
+}
+
+// Mirar la lista no escribe nada.
+app.get('/datos/estudio/mascaras', requiereSesion, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT * FROM mascaras_estudio WHERE usuario_id = ? ORDER BY creada',
+  )
+    .bind(c.get('usuario')!.id)
+    .all<FilaMascara>();
+  return c.json({ mascaras: results.map(mascaraPublica), maximo: MAX_MASCARAS }, 200, {
+    'Cache-Control': 'no-store',
+  });
+});
+
+app.post('/datos/estudio/mascaras', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  const d = await cuerpo(c, esquemaMascara);
+  if (!d) return err(c, 400, 'datos');
+  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM mascaras_estudio WHERE usuario_id = ?')
+    .bind(u.id)
+    .first<{ n: number }>();
+  if ((n?.n ?? 0) >= MAX_MASCARAS) return err(c, 409, 'demasiadas_mascaras');
+  if (!(await dentroDelLimite(c.env.DB, 'mascara', u.id, 30, 3600 * 1000))) return err(c, 429, 'demasiados');
+  const id = nuevoId(12);
+  const ahora = Date.now();
+  await c.env.DB.prepare(
+    `INSERT INTO mascaras_estudio (id, usuario_id, nombre, estilo, programa, anfitrion, rol, principal, secundario,
+       fondo, tiene_logo, creada, actualizado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+  )
+    .bind(
+      id,
+      u.id,
+      d.nombre,
+      d.estilo,
+      d.programa,
+      d.anfitrion,
+      d.rol,
+      d.principal,
+      d.secundario,
+      d.fondo,
+      ahora,
+      ahora,
+    )
+    .run();
+  return c.json(
+    { mascara: mascaraPublica({ ...d, id, usuario_id: u.id, tiene_logo: 0, actualizado: ahora }) },
+    201,
+  );
+});
+
+app.put('/datos/estudio/mascaras/:id', requiereSesion, async (c) => {
+  const m = await mascaraDelDueno(c);
+  if (!m) return err(c, 404, 'no_existe');
+  const d = await cuerpo(c, esquemaMascara);
+  if (!d) return err(c, 400, 'datos');
+  const ahora = Date.now();
+  await c.env.DB.prepare(
+    `UPDATE mascaras_estudio SET nombre = ?, estilo = ?, programa = ?, anfitrion = ?, rol = ?, principal = ?,
+       secundario = ?, fondo = ?, actualizado = ? WHERE id = ?`,
+  )
+    .bind(d.nombre, d.estilo, d.programa, d.anfitrion, d.rol, d.principal, d.secundario, d.fondo, ahora, m.id)
+    .run();
+  return c.json({ mascara: mascaraPublica({ ...m, ...d, actualizado: ahora }) });
+});
+
+app.delete('/datos/estudio/mascaras/:id', requiereSesion, async (c) => {
+  const m = await mascaraDelDueno(c);
+  if (!m) return err(c, 404, 'no_existe');
+  if (m.tiene_logo) await c.env.BUCKET.delete(claveLogo(m.usuario_id, m.id));
+  await c.env.DB.prepare('DELETE FROM mascaras_estudio WHERE id = ?').bind(m.id).run();
+  return c.json({ ok: true });
+});
+
+// El logo: PNG, JPEG o WebP de verdad (se miran sus primeros bytes, no la cabecera), hasta LOGO_MAX.
+app.put('/datos/estudio/mascaras/:id/logo', requiereSesion, async (c) => {
+  const m = await mascaraDelDueno(c);
+  if (!m) return err(c, 404, 'no_existe');
+  const largo = Number(c.req.header('content-length') ?? '0');
+  if (largo > LOGO_MAX) return err(c, 413, 'logo');
+  const datos = new Uint8Array(await c.req.arrayBuffer());
+  if (datos.byteLength === 0 || datos.byteLength > LOGO_MAX) return err(c, 413, 'logo');
+  const tipo = tipoDeImagen(datos);
+  if (!tipo) return err(c, 400, 'tipo');
+  if (!(await dentroDelLimite(c.env.DB, 'logo_mascara', m.usuario_id, 30, 3600 * 1000)))
+    return err(c, 429, 'demasiados');
+  await c.env.BUCKET.put(claveLogo(m.usuario_id, m.id), datos, { httpMetadata: { contentType: tipo } });
+  const ahora = Date.now();
+  await c.env.DB.prepare('UPDATE mascaras_estudio SET tiene_logo = 1, actualizado = ? WHERE id = ?')
+    .bind(ahora, m.id)
+    .run();
+  return c.json({ mascara: mascaraPublica({ ...m, tiene_logo: 1, actualizado: ahora }) });
+});
+
+app.delete('/datos/estudio/mascaras/:id/logo', requiereSesion, async (c) => {
+  const m = await mascaraDelDueno(c);
+  if (!m) return err(c, 404, 'no_existe');
+  if (!m.tiene_logo) return c.json({ mascara: mascaraPublica(m) });
+  await c.env.BUCKET.delete(claveLogo(m.usuario_id, m.id));
+  const ahora = Date.now();
+  await c.env.DB.prepare('UPDATE mascaras_estudio SET tiene_logo = 0, actualizado = ? WHERE id = ?')
+    .bind(ahora, m.id)
+    .run();
+  return c.json({ mascara: mascaraPublica({ ...m, tiene_logo: 0, actualizado: ahora }) });
+});
+
+// El logo solo lo ve su dueño (sale dentro de SU escenario). La dirección lleva la versión: se guarda en caché.
+app.get('/media/mascaras/:id/logo', async (c) => {
+  const u = c.get('usuario');
+  const id = c.req.param('id');
+  if (!u || !ID_MASCARA.test(id)) return c.notFound();
+  const m = await c.env.DB.prepare(
+    'SELECT usuario_id, tiene_logo FROM mascaras_estudio WHERE id = ? AND usuario_id = ?',
+  )
+    .bind(id, u.id)
+    .first<{ usuario_id: string; tiene_logo: number }>();
+  if (!m?.tiene_logo) return c.notFound();
+  const obj = await c.env.BUCKET.get(claveLogo(m.usuario_id, id));
+  if (!obj) return c.notFound();
+  const h = new Headers();
+  obj.writeHttpMetadata(h);
+  h.set('Cache-Control', 'private, max-age=86400');
+  h.set('X-Content-Type-Options', 'nosniff');
+  return new Response(obj.body, { headers: h });
 });
 
 // ---------- errores que pasan en la computadora del cliente ----------

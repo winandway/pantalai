@@ -372,3 +372,30 @@ CREATE TABLE IF NOT EXISTS salas_invitado (
   oferta TEXT,
   respuesta TEXT
 );
+
+-- Máscaras del Estudio (C-MASCARAS, fase 3, 10 nov 2026): nombre del programa, logo y colores guardados por cuenta.
+-- Hasta 12 por cuenta. El logo vive en el almacén (mascaras/<usuario>/<id>/logo); aquí solo si lo tiene. Sin índices
+-- extra: la clave primaria y el filtro por usuario alcanzan para tan pocas filas.
+CREATE TABLE IF NOT EXISTS mascaras_estudio (
+  id TEXT PRIMARY KEY,
+  usuario_id TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  estilo TEXT NOT NULL,
+  programa TEXT NOT NULL DEFAULT '',
+  anfitrion TEXT NOT NULL DEFAULT '',
+  rol TEXT NOT NULL DEFAULT '',
+  principal TEXT NOT NULL,
+  secundario TEXT NOT NULL,
+  fondo TEXT NOT NULL,
+  tiene_logo INTEGER NOT NULL DEFAULT 0,
+  creada INTEGER NOT NULL,
+  actualizado INTEGER NOT NULL
+);
+
+-- Crédito del video original de una reacción (C-CREDITO, fase 4): «Para YouTube» lo pone solo en la descripción.
+-- Tabla aparte para no tocar «videos» (columna nueva = migración).
+CREATE TABLE IF NOT EXISTS video_credito (
+  video_id TEXT PRIMARY KEY,
+  creador TEXT NOT NULL,
+  enlace TEXT NOT NULL DEFAULT ''
+);

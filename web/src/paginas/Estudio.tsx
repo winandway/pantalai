@@ -1,7 +1,7 @@
 // Estudio de reacciones: se pega un enlace de YouTube o de TikTok, se reproduce con su reproductor oficial insertado y se
 // graba SOLO el escenario de la máscara «Podcast» (la propia pestaña recortada con Region Capture). Los botones quedan
 // fuera de lo que se graba. Plan: docs/PLAN-ESTUDIO-DE-REACCIONES.md · Candado: C-ESTUDIO-RECORTE.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { efectoValido, KARAOKE_DEFECTO } from '../logica/karaoke';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
@@ -53,6 +53,14 @@ import { COMMIT_PAGINA, recargarSiQuedoVieja } from '../logica/version';
 import { SalaAnfitrion, VOZ, enlaceInvitado, type EstadoLlamada } from '../logica/llamada';
 import { TEXTOS_INVITADO } from '../logica/textosInvitado';
 import { copiar } from './Biblioteca';
+import { MascarasEstudio } from '../componentes/MascarasEstudio';
+import {
+  ELECCION_DEFECTO,
+  claseMascara,
+  vistaDePlantilla,
+  variablesEscenario,
+  type MascaraVista,
+} from '../logica/mascaras';
 
 const ORIGEN_YT = 'https://www.youtube-nocookie.com';
 const ORIGEN_TT = 'https://www.tiktok.com';
@@ -96,7 +104,10 @@ export function Estudio() {
     // se recarga la página).
     segunda: 'video' as 'video' | 'invitado',
     sala: '',
+    // Máscara elegida (C-MASCARAS): «plantilla:podcast|noticiero|minimal» o el id de una máscara guardada.
+    mascara: ELECCION_DEFECTO,
   });
+  const [vistaMascara, setVistaMascara] = useState<MascaraVista>(() => vistaDePlantilla('podcast'));
   const modoInvitado = b.valor.segunda === 'invitado';
   const codigoSala = typeof b.valor.sala === 'string' ? b.valor.sala : '';
   const micId = typeof b.valor.micId === 'string' && b.valor.micId ? b.valor.micId : 'default';
@@ -772,8 +783,10 @@ export function Estudio() {
   if (!usuario) return null;
   const m = armarMascara({
     idioma,
-    programa: b.valor.programa,
+    programa: b.valor.programa.trim() || vistaMascara.programa,
     anfitrion: usuario.nombre,
+    nombreCartel: vistaMascara.anfitrion,
+    rolAnfitrion: vistaMascara.rol,
     creador: modoInvitado ? (llamada.nombre ?? '') : b.valor.creador,
     tema: b.valor.tema,
     invitado: modoInvitado,
@@ -957,6 +970,14 @@ export function Estudio() {
       )}
       {sinCamara && <p className="estudio-aviso">{tx.sinCamara}</p>}
 
+      <MascarasEstudio
+        usuarioId={usuario.id}
+        eleccion={typeof b.valor.mascara === 'string' ? b.valor.mascara : ELECCION_DEFECTO}
+        elegir={(e) => b.cambiar('mascara', e)}
+        deshabilitado={enCurso}
+        alCambiarVista={setVistaMascara}
+      />
+
       <div className="estudio-campos">
         {(
           [
@@ -1048,13 +1069,23 @@ export function Estudio() {
       <div className="escenario-marco">
         <div
           ref={escenario}
-          className={claseEscenario(formato, diseno, Boolean(video?.vertical), disenoV)}
+          className={
+            claseEscenario(formato, diseno, Boolean(video?.vertical), disenoV) + claseMascara(vistaMascara)
+          }
+          style={variablesEscenario(vistaMascara) as CSSProperties}
           data-escenario
+          data-mascara={vistaMascara.propia ? vistaMascara.estilo : undefined}
         >
           <div className="escenario-cabeza">
-            <span className="escenario-logo" aria-hidden="true">
-              ▶
-            </span>
+            {vistaMascara.logo ? (
+              <span className="escenario-logo con-logo" aria-hidden="true">
+                <img src={vistaMascara.logo} alt="" />
+              </span>
+            ) : (
+              <span className="escenario-logo" aria-hidden="true">
+                ▶
+              </span>
+            )}
             <span className="escenario-programa">{m.programa}</span>
             <span className="escenario-pildora">{m.rolCreador}</span>
           </div>

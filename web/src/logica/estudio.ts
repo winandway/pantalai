@@ -421,6 +421,9 @@ export function armarMascara(d: {
   tema?: string;
   /** Segunda tarjeta = un invitado remoto (C-INVITADO): su nombre y «Invitado» en vez de «@creador · Reaccionando». */
   invitado?: boolean;
+  /** De la máscara guardada (C-MASCARAS): el nombre y el rol del cartel del anfitrión, si los puso. */
+  nombreCartel?: string;
+  rolAnfitrion?: string;
 }): Mascara {
   const es = d.idioma === 'es';
   if (d.invitado) {
@@ -432,12 +435,12 @@ export function armarMascara(d: {
       tema: cortar(d.tema?.trim() || (es ? 'Entrevista en vivo' : 'Live interview'), 90),
     };
   }
-  const primerNombre = cortar(d.anfitrion.split(/\s+/)[0] ?? '', 24);
+  const primerNombre = cortar(d.nombreCartel?.trim() || (d.anfitrion.split(/\s+/)[0] ?? ''), 24);
   const programa = cortar(d.programa?.trim() || (es ? 'Estudio de reacciones' : 'Reaction Studio'), 40);
   return {
     programa,
     anfitrion: primerNombre || (es ? 'Anfitrión' : 'Host'),
-    rolAnfitrion: es ? 'Anfitrión' : 'Host',
+    rolAnfitrion: cortar(d.rolAnfitrion?.trim() || (es ? 'Anfitrión' : 'Host'), 20),
     creador: cortar(d.creador?.trim() || (es ? 'Video' : 'Video'), 32),
     rolCreador: es ? 'Reaccionando' : 'Reacting',
     tema: cortar(d.tema?.trim() || (es ? 'Pega un enlace para empezar' : 'Paste a link to start'), 90),

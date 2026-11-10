@@ -960,3 +960,39 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - No tocar: no mezclar además la pista del invitado directo en el mezclador (ya entra por el sonido de la pestaña:
   saldría doble); no volver al goteo de candidatos (multiplica las escrituras); no poner `transform: scaleX(-1)` al
   video del invitado.
+
+## C-MASCARAS: máscaras del Estudio con nombre, logo y colores (10 nov 2026, fase 3)
+
+- Protege: en el Estudio, «Máscara» deja elegir Podcast (neón de siempre), Noticiero o Minimalista, y «Personalizar»
+  crea máscaras propias (nombre de la máscara, estilo, nombre del programa, nombre y papel del cartel del anfitrión,
+  color principal, segundo color, fondo y logo). Se guardan POR CUENTA (hasta 12) y se eligen con un toque; la elegida
+  queda en el borrador del Estudio. Lo que se ve en el escenario es lo que se graba (la pestaña recortada de siempre:
+  no hay otro lienzo), en 16:9, en 9:16 y con invitado remoto.
+- Cómo: tabla `mascaras_estudio` (nueva, `CREATE IF NOT EXISTS`; sin índices extra). Rutas `GET/POST
+/datos/estudio/mascaras`, `PUT/DELETE /datos/estudio/mascaras/:id`, `PUT/DELETE …/:id/logo` (zod en todo; logo PNG,
+  JPEG o WebP mirando sus BYTES, hasta 300 KB, en `env.BUCKET` bajo `mascaras/<usuario>/<id>/logo`) y
+  `GET /media/mascaras/:id/logo` (solo el dueño, `nosniff`). Borrar la cuenta se lleva máscaras y logos.
+  Lo puro en `web/src/logica/mascaras.ts`: el podcast de siempre NO lleva variables ni clases (el escenario queda
+  idéntico a antes); las demás llevan `mascara-propia estilo-<x>` y las variables `--neon-a`, `--neon-b`,
+  `--fondo-mascara`, `--texto`, `--sobre-a`, `--sobre-b` (letras claras u oscuras según el color). El editor
+  (`MascarasEstudio.tsx`) usa borrador (el logo elegido viaja como «data:» y vuelve al recargar).
+- Presupuesto: crear ≤ 2 filas, cambiar 1, logo ≤ 2, quitar logo 1, borrar 1; mirar 0 (`PRESUPUESTO_FILAS_MASCARA`).
+- Marca de agua: no se toca. El plan gratis la sigue llevando grabada sobre la cámara con cualquier máscara (se ve en
+  los MP4 de la e2e).
+- Pruebas: `pruebas/mascaras.test.ts` (rutas, dueño, zod, tope, logo por bytes y peso, borrar cuenta, presupuesto,
+  lo puro) y `e2e/estudio-mascara.spec.ts` (crea un Noticiero naranja con fondo azul y logo amarillo, recarga a mitad
+  y no pierde nada, lo guarda, recarga y sigue elegido; graba 16:9, 9:16 y con invitado y mira en el MP4 con FFmpeg el
+  logo amarillo, la franja naranja y el fondo azul). Comprobadas en ROJO el 10 nov 2026: sin las variables de la
+  máscara la e2e falla «franja naranja»; aceptando cualquier archivo como logo falla la unitaria.
+- No tocar: la franja del Noticiero se pinta con `background: content-box` (respeta los márgenes de cada posición; con
+  padding propio se pegaba al borde en 9:16). El logo va en bloque (en grilla salía del tamaño de la imagen y tapaba la
+  cámara). Capturas: `scripts/capturas-mascara.mjs`.
+
+## C-CAMARA-FOTO: toda casilla de imagen ofrece «Tomar foto» (10 nov 2026)
+
+- Pieza única `web/src/componentes/SubirImagen.tsx` + `web/src/logica/imagen.ts`: «Subir desde archivos» y «Tomar
+  foto» (celular: cámara trasera del sistema con `capture="environment"`; computadora: la cámara web en una ventanita
+  con «Tomar la foto»). Sin cámara o sin permiso lo dice en palabras y queda subir desde archivos. Todo pasa por
+  `imagenAceptable` + `achicarImagen` (lado largo 512, PNG o WebP).
+- Prueba: `pruebas/subir-imagen.test.tsx` revisa TODAS las pantallas de `web/src`: un `<input type="file">` que acepte
+  imágenes fuera de SubirImagen la pone en rojo. Comprobada en ROJO el 10 nov 2026 con una casilla suelta de prueba.
