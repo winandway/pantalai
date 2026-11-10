@@ -17,9 +17,13 @@ const navegador = await chromium.launch({
   args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
 });
 const ctx = await navegador.newContext({
-  viewport: { width: 1440, height: 1500 },
+  viewport: { width: 1440, height: 1800 },
   deviceScaleFactor: 2,
   permissions: ['camera', 'microphone'],
+  // Dirección de mentira, solo en local: así las cuentas de las capturas no gastan el límite de registros.
+  extraHTTPHeaders: /127\.0\.0\.1|localhost/.test(BASE)
+    ? { 'cf-connecting-ip': `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` }
+    : {},
 });
 // La cámara del anfitrión: una ilustración neutra (no el patrón verde de la cámara de prueba).
 await ctx.addInitScript(() => {
@@ -63,7 +67,7 @@ await ctx.route('**/datos/oembed?**', (r) =>
 );
 const p = await ctx.newPage();
 await p.goto(`${BASE}/signup`);
-await p.getByLabel('Your name').fill('Alex');
+await p.getByLabel('Your name').fill('Soporte');
 await p.getByLabel('Email').fill(`capturas.estudio.${Date.now()}@example.com`);
 await p.getByLabel('Password', { exact: true }).fill(`Capturas-${Date.now()}`);
 await p.getByRole('button', { name: 'Create account' }).click();

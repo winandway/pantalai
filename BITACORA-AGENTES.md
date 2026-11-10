@@ -1,3 +1,4 @@
+2026-11-10 · desarrollador · rehice capturas del Estudio (portada, escenario, vertical; es/en) con máscaras y cartel Hablando · ok
 2026-11-10 · desarrollador · Estudio fases 3 (máscaras con programa, logo y colores por cuenta; SubirImagen con «Tomar foto») y 4 (cartel «Hablando» con barras; crédito al creador en «Para YouTube»), guías en/es, candados C-MASCARAS, C-CAMARA-FOTO, C-HABLANDO, C-CREDITO · ok (verify y e2e en verde, en vivo comprobado) · 43ccd3b, 6b25ec0
 2026-11-10 · desarrollador · Fase 1 invitado remoto en el Estudio (enlace /join, WebRTC directo, señalización en /datos, TURN listo y apagado, guía bilingüe, candado C-INVITADO) · ok en local (verify y e2e en verde); en vivo, ver informe · 05fca1e
 2026-11-10 · investigador · ficha INVITADOS-EN-VIVO (REA sobre StreamYard, Riverside, Restream + precios de infraestructura) · ok, con puntos [NV] anotados · sin commit
