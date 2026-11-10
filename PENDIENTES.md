@@ -1,5 +1,10 @@
 # Pendientes de PANTALAI
 
+## Para otros puestos
+
+- [para: revisor-calidad] Segunda mirada al paquete 0e9cd13 (arreglos de su revisión del 10 nov; detalle en
+  CANDADOS.md, C-REVISION-10NOV). Publicado porque la regla global manda publicar; revisar una vez, no por arreglo.
+
 ## 👤 Depende de Richard
 
 - ✅ 9 nov 2026: mapa de videos enviado en Search Console (Correcto, 5 videos descubiertos).
