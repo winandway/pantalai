@@ -22,6 +22,7 @@ import { FranjaCorreo, VerificarCorreo } from './componentes/VerificarCorreo';
 import { PaginaEquipo, UnirseEquipo } from './paginas/Equipo';
 import { Grabar } from './paginas/Grabar';
 import { Estudio } from './paginas/Estudio';
+import { PaginaInvitado } from './paginas/Invitado';
 import { Inicio } from './paginas/Inicio';
 import { PaginaLanding } from './paginas/Landing';
 import { PaginaBusqueda, PaginaCanal, PaginaRed, VerVideoRed } from './paginas/Red';
@@ -110,6 +111,8 @@ export function App() {
   else if (ruta === '/verify-email') pagina = <VerificarCorreo />;
   else if (ruta === '/library') pagina = <Biblioteca />;
   else if (partes[0] === 'team' && partes[1] && partes.length === 2) pagina = <PaginaEquipo id={partes[1]} />;
+  else if (partes[0] === 'join' && partes[1] && partes.length === 2)
+    pagina = <PaginaInvitado codigo={partes[1]} />;
   else if (ruta === '/join') pagina = <UnirseEquipo />;
   else if (ruta === '/record') pagina = <Grabar />;
   else if (ruta === '/studio') pagina = <Estudio />;

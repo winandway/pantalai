@@ -50,6 +50,8 @@ import { Subidor, borrarRespaldo, respaldarPedazo, type Respaldo } from '../logi
 import { TEXTOS_ESTUDIO } from '../logica/textosEstudio';
 import { formatoTiempo, tituloAutomatico } from '../logica/tiempo';
 import { COMMIT_PAGINA, recargarSiQuedoVieja } from '../logica/version';
+import { SalaAnfitrion, VOZ, enlaceInvitado, type EstadoLlamada } from '../logica/llamada';
+import { TEXTOS_INVITADO } from '../logica/textosInvitado';
 import { copiar } from './Biblioteca';
 
 const ORIGEN_YT = 'https://www.youtube-nocookie.com';
@@ -69,6 +71,7 @@ type Oembed = {
 export function Estudio() {
   const { idioma, t } = useIdioma();
   const tx = TEXTOS_ESTUDIO[idioma];
+  const ti = TEXTOS_INVITADO[idioma];
   const { usuario, cargando } = useSesion();
   const avisar = useAviso();
   const b = useBorrador(llaveBorrador('estudio', usuario?.id), {
@@ -89,7 +92,13 @@ export function Estudio() {
     karaoke: false,
     efecto: KARAOKE_DEFECTO.efecto,
     audifonos: KARAOKE_DEFECTO.audifonos,
+    // Invitado remoto (C-INVITADO): qué va en la segunda tarjeta y el código del enlace vigente (para retomarlo si
+    // se recarga la página).
+    segunda: 'video' as 'video' | 'invitado',
+    sala: '',
   });
+  const modoInvitado = b.valor.segunda === 'invitado';
+  const codigoSala = typeof b.valor.sala === 'string' ? b.valor.sala : '';
   const micId = typeof b.valor.micId === 'string' && b.valor.micId ? b.valor.micId : 'default';
   const camId = typeof b.valor.camId === 'string' ? b.valor.camId : '';
   const [microfonos, setMicrofonos] = useState<MediaDeviceInfo[]>([]);
@@ -122,6 +131,17 @@ export function Estudio() {
   const confirmado = useRef(false);
   const vigilante = useRef<number | null>(null);
   const [camara, setCamara] = useState<MediaStream | null>(null);
+  const [llamada, setLlamada] = useState<{ estado: EstadoLlamada; nombre: string | null }>({
+    estado: 'esperando',
+    nombre: null,
+  });
+  const [remoto, setRemoto] = useState<MediaStream | null>(null);
+  const [creandoSala, setCreandoSala] = useState(false);
+  const sala = useRef<SalaAnfitrion | null>(null);
+  const camaraRef = useRef<MediaStream | null>(null);
+  camaraRef.current = camara;
+  const voz = useRef<MediaStream | null>(null);
+  const videoInvitado = useRef<HTMLVideoElement>(null);
   const [sinCamara, setSinCamara] = useState(false);
   const [recorte] = useState(() => puedeRecortarPestana());
   const [clavado, setClavado] = useState(false);
@@ -211,6 +231,106 @@ export function Estudio() {
       void videoCamara.current.play().catch(() => undefined);
     }
   }, [camara]);
+
+  // ---- Invitado remoto (C-INVITADO) ----
+  // Con un enlace vigente, el Estudio espera a su invitado: le manda la cámara y una voz limpia (cancelación de eco,
+  // supresión de ruido y ganancia automática), y pinta su imagen y su sonido en la segunda tarjeta. La grabación es la
+  // misma de siempre (la pestaña recortada al escenario): si el invitado se cae, la grabación sigue.
+  // La voz que oye el invitado (aparte de la que se graba): con los tres filtros encendidos.
+  const vozLista = useRef<Promise<unknown>>(Promise.resolve());
+  useEffect(() => {
+    if (!usuario || !modoInvitado) return;
+    let vivo = true;
+    vozLista.current = (
+      navigator.mediaDevices?.getUserMedia({
+        audio: { ...VOZ, deviceId: micId !== 'default' ? { exact: micId } : undefined },
+      }) ?? Promise.reject(new Error('sin mediaDevices'))
+    )
+      .then((f) => {
+        if (!vivo) return f.getTracks().forEach((p) => p.stop());
+        voz.current = f;
+        const p = f.getAudioTracks()[0];
+        if (p) sala.current?.cambiarPista(p);
+      })
+      .catch((e) => console.error('estudio: sin micrófono para el invitado', e));
+    return () => {
+      vivo = false;
+      voz.current?.getTracks().forEach((p) => p.stop());
+      voz.current = null;
+    };
+  }, [usuario, modoInvitado, micId]);
+  useEffect(() => {
+    if (!usuario || !modoInvitado || !codigoSala) return;
+    let vivo = true;
+    const s = new SalaAnfitrion(
+      codigoSala,
+      () => {
+        const pistas: MediaStreamTrack[] = [];
+        const v = camaraRef.current?.getVideoTracks()[0];
+        const a = voz.current?.getAudioTracks()[0];
+        if (v) pistas.push(v);
+        if (a) pistas.push(a);
+        return pistas;
+      },
+      {
+        estado: (estado, nombre) => {
+          if (!vivo) return;
+          setLlamada({ estado, nombre });
+          if (estado === 'vencida') b.cambiar('sala', '');
+        },
+        remoto: (f) => vivo && setRemoto(f),
+      },
+    );
+    sala.current = s;
+    setLlamada({ estado: 'esperando', nombre: null });
+    void vozLista.current.finally(() => {
+      if (vivo) void s.iniciar();
+    });
+    return () => {
+      vivo = false;
+      s.detener();
+      sala.current = null;
+      setRemoto(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario, modoInvitado, codigoSala]);
+  // Otra cámara: el invitado la ve sin cortar la llamada.
+  useEffect(() => {
+    const p = camara?.getVideoTracks()[0];
+    if (p) sala.current?.cambiarPista(p);
+  }, [camara]);
+  useEffect(() => {
+    const v = videoInvitado.current;
+    if (!v) return;
+    v.srcObject = remoto;
+    if (remoto) void v.play().catch((e) => console.error('estudio: video del invitado', e));
+  }, [remoto, modoInvitado]);
+  useEffect(() => {
+    if (videoInvitado.current) videoInvitado.current.volume = Math.min(1, Math.max(0, volVideo / 100));
+  }, [volVideo, remoto, modoInvitado]);
+
+  async function crearSala() {
+    setCreandoSala(true);
+    setError(null);
+    try {
+      const r = await pedir<{ codigo: string }>('/datos/estudio/invitado', { method: 'POST' });
+      b.cambiar('sala', r.codigo);
+      const ok = await copiar(enlaceInvitado(location.origin, r.codigo));
+      if (ok) avisar(ti.copiado);
+    } catch (e) {
+      setError({ texto: textoError(t, e instanceof ErrorApi ? e.codigo : 'servidor') });
+    } finally {
+      setCreandoSala(false);
+    }
+  }
+  async function cerrarSala() {
+    const codigo = codigoSala;
+    b.cambiar('sala', '');
+    if (codigo)
+      await pedir(`/datos/estudio/invitado/${codigo}`, { method: 'DELETE' }).catch((e) =>
+        console.error('estudio: cerrar invitación', e),
+      );
+  }
 
   const cargar = useCallback(
     async (texto: string, rellenar: boolean) => {
@@ -488,7 +608,7 @@ export function Estudio() {
 
   async function empezar() {
     setError(null);
-    if (!video) return setError({ texto: tx.sinVideo });
+    if (!video && !modoInvitado) return setError({ texto: tx.sinVideo });
     if (!recorte || !escenario.current) return setError({ texto: tx.sinRecorte, grabar: true });
     if (await recargarSiQuedoVieja()) return;
     const g = new Grabadora(
@@ -496,8 +616,9 @@ export function Estudio() {
         ...AJUSTES_INICIALES,
         modo: 'pantalla',
         microfonoId: micId,
-        // Sin ajuste automático de ganancia: con el micrófono cerca de la boca subía solo y saturaba.
-        autoGanancia: false,
+        // Sin ajuste automático de ganancia: con el micrófono cerca de la boca subía solo y saturaba. Con un invitado
+        // remoto sí (pedido de Richard, 10 nov 2026): las dos voces quedan parejas.
+        autoGanancia: modoInvitado,
         karaoke: karaoke ? { efecto, audifonos } : null,
         audioSistema: true,
         flotante: false,
@@ -519,7 +640,8 @@ export function Estudio() {
     );
     g.recortarA = escenario.current;
     g.ajustarVolumen('micro', volMicro / 100);
-    g.ajustarVolumen('sistema', volumenDelVideo(video.plataforma, volVideo).enGrabacion);
+    // Con invitado, el «sonido de la pestaña» es su voz (su volumen se ajusta en el propio video del invitado).
+    g.ajustarVolumen('sistema', video ? volumenDelVideo(video.plataforma, volVideo).enGrabacion : 1);
     // El escenario se clava arriba ANTES de pedir la grabación: si cambia de lugar después, el navegador lo pierde y
     // graba en negro. Clavado, ya no se mueve aunque se baje la página (lo que no se ve no se graba).
     setClavado(true);
@@ -604,7 +726,9 @@ export function Estudio() {
           : Promise.resolve(bl),
       );
       const titulo =
-        tituloReaccion(b.valor.tema, idioma) ?? tituloAutomatico(g.segmentos, idioma) ?? undefined;
+        (modoInvitado
+          ? b.valor.tema.trim() || ti.temaInvitado
+          : (tituloReaccion(b.valor.tema, idioma) ?? tituloAutomatico(g.segmentos, idioma))) ?? undefined;
       await pedir(`/datos/videos/${id}/completar`, {
         method: 'POST',
         json: { partes, duracion: dur, transcripcion: g.segmentos, titulo },
@@ -627,7 +751,7 @@ export function Estudio() {
       console.error('estudio: subida', e);
       setEstado('fallo');
     }
-  }, [avisar, b.valor.tema, idioma, limpiar, ordenar, t]);
+  }, [avisar, b.valor.tema, idioma, limpiar, ordenar, t, modoInvitado, ti]);
   terminarRef.current = terminar;
 
   async function descartar() {
@@ -650,8 +774,9 @@ export function Estudio() {
     idioma,
     programa: b.valor.programa,
     anfitrion: usuario.nombre,
-    creador: b.valor.creador,
+    creador: modoInvitado ? (llamada.nombre ?? '') : b.valor.creador,
     tema: b.valor.tema,
+    invitado: modoInvitado,
   });
   const enCurso = estado === 'cuenta' || estado === 'grabando' || estado === 'pausa';
 
@@ -673,7 +798,84 @@ export function Estudio() {
         </p>
       )}
 
+      <fieldset className="selector-modo estudio-segunda">
+        <legend>{ti.segunda}</legend>
+        {(['video', 'invitado'] as const).map((op) => (
+          <label key={op} className={b.valor.segunda === op ? 'activo' : ''}>
+            <input
+              type="radio"
+              name="estudio-segunda"
+              checked={b.valor.segunda === op}
+              disabled={enCurso}
+              onChange={() => b.cambiar('segunda', op)}
+            />
+            {op === 'video' ? `🎬 ${ti.segundaVideo}` : `🧑‍🤝‍🧑 ${ti.segundaInvitado}`}
+          </label>
+        ))}
+      </fieldset>
+
+      {modoInvitado && (
+        <div className="estudio-invitado" data-panel-invitado>
+          {codigoSala ? (
+            <>
+              <label htmlFor="estudio-enlace-invitado">{ti.enlace}</label>
+              <div className="estudio-fila">
+                <input
+                  id="estudio-enlace-invitado"
+                  readOnly
+                  value={enlaceInvitado(location.origin, codigoSala)}
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <button
+                  type="button"
+                  className="boton"
+                  onClick={() =>
+                    void copiar(enlaceInvitado(location.origin, codigoSala)).then(
+                      (ok) => ok && avisar(ti.copiado),
+                    )
+                  }
+                >
+                  {ti.copiar}
+                </button>
+                <button
+                  type="button"
+                  className="boton secundario"
+                  disabled={creandoSala}
+                  onClick={() => void crearSala()}
+                >
+                  {ti.nuevoEnlace}
+                </button>
+                <button
+                  type="button"
+                  className="boton secundario"
+                  disabled={enCurso}
+                  onClick={() => void cerrarSala()}
+                >
+                  {ti.cerrarInvitacion}
+                </button>
+              </div>
+              <p className="estudio-ayuda">{ti.ayudaEnlace}</p>
+              <p
+                className={`estado-llamada estado-${llamada.estado}`}
+                role="status"
+                data-estado-invitado={llamada.estado}
+              >
+                {ti.anfitrion[llamada.estado]}
+              </p>
+            </>
+          ) : (
+            <>
+              <button type="button" className="boton" disabled={creandoSala} onClick={() => void crearSala()}>
+                🔗 {ti.invitar}
+              </button>
+              <p className="estudio-ayuda">{ti.ayudaEnlace}</p>
+            </>
+          )}
+        </div>
+      )}
+
       <form
+        hidden={modoInvitado}
         className="estudio-enlace"
         onSubmit={(e) => {
           e.preventDefault();
@@ -762,18 +964,20 @@ export function Estudio() {
             ['tema', tx.tema],
             ['programa', tx.programa],
           ] as const
-        ).map(([campo, etiqueta]) => (
-          <div className="campo" key={campo}>
-            <label htmlFor={`estudio-${campo}`}>{etiqueta}</label>
-            <input
-              id={`estudio-${campo}`}
-              value={b.valor[campo]}
-              placeholder={campo === 'programa' ? m.programa : ''}
-              maxLength={campo === 'tema' ? 120 : 40}
-              onChange={(e) => b.cambiar(campo, e.target.value)}
-            />
-          </div>
-        ))}
+        )
+          .filter(([campo]) => !(modoInvitado && campo === 'creador'))
+          .map(([campo, etiqueta]) => (
+            <div className="campo" key={campo}>
+              <label htmlFor={`estudio-${campo}`}>{etiqueta}</label>
+              <input
+                id={`estudio-${campo}`}
+                value={b.valor[campo]}
+                placeholder={campo === 'programa' ? m.programa : ''}
+                maxLength={campo === 'tema' ? 120 : 40}
+                onChange={(e) => b.cambiar(campo, e.target.value)}
+              />
+            </div>
+          ))}
       </div>
 
       <fieldset className="selector-modo estudio-formatos">
@@ -877,7 +1081,22 @@ export function Estudio() {
             </figure>
             <figure className="escenario-tarjeta escenario-video">
               <div className="escenario-caja">
-                {video?.plataforma === 'archivo' ? (
+                {modoInvitado ? (
+                  <>
+                    <video
+                      ref={videoInvitado}
+                      className="video-invitado"
+                      playsInline
+                      autoPlay
+                      data-video-invitado
+                    />
+                    {!remoto && (
+                      <div className="escenario-vacio invitado-vacio" aria-hidden="true">
+                        {codigoSala ? ti.tarjeta[llamada.estado] : ti.invitar}
+                      </div>
+                    )}
+                  </>
+                ) : video?.plataforma === 'archivo' ? (
                   <video
                     key={video.id}
                     ref={videoLocal}
@@ -950,7 +1169,7 @@ export function Estudio() {
 
       <div className="estudio-controles">
         {enCurso && <ProbadorMicrofono compacto microfonoId={micId} />}
-        <div className="estudio-reproductor" role="group" aria-label="Video">
+        <div className="estudio-reproductor" role="group" aria-label="Video" hidden={modoInvitado}>
           <button
             type="button"
             className="boton secundario"
@@ -1046,7 +1265,7 @@ export function Estudio() {
         <div className="estudio-volumenes">
           <label>
             <span>
-              🔊 {tx.volumenVideo} <b>{volVideo}%</b>
+              🔊 {modoInvitado ? ti.volumenInvitado : tx.volumenVideo} <b>{volVideo}%</b>
             </span>
             <input
               type="range"
@@ -1054,7 +1273,7 @@ export function Estudio() {
               max={100}
               step={5}
               value={volVideo}
-              aria-label={tx.volumenVideo}
+              aria-label={modoInvitado ? ti.volumenInvitado : tx.volumenVideo}
               onChange={(e) => b.cambiar('volVideo', Number(e.target.value))}
             />
           </label>
@@ -1147,7 +1366,11 @@ export function Estudio() {
         </p>
       )}
       <p className="estudio-ayuda">
-        {video?.plataforma === 'tiktok' ? tx.volumenAyudaTiktok : tx.volumenAyuda}
+        {modoInvitado
+          ? ti.volumenInvitadoAyuda
+          : video?.plataforma === 'tiktok'
+            ? tx.volumenAyudaTiktok
+            : tx.volumenAyuda}
       </p>
       {sinSonido && enCurso && <p className="estudio-aviso">{tx.sinSonido}</p>}
       <div className="estudio-dispositivos">

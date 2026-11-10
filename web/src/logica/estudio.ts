@@ -419,8 +419,19 @@ export function armarMascara(d: {
   anfitrion: string;
   creador?: string;
   tema?: string;
+  /** Segunda tarjeta = un invitado remoto (C-INVITADO): su nombre y «Invitado» en vez de «@creador · Reaccionando». */
+  invitado?: boolean;
 }): Mascara {
   const es = d.idioma === 'es';
+  if (d.invitado) {
+    const base = armarMascara({ ...d, invitado: false });
+    return {
+      ...base,
+      creador: cortar(d.creador?.trim() || (es ? 'Invitado' : 'Guest'), 32),
+      rolCreador: es ? 'Invitado' : 'Guest',
+      tema: cortar(d.tema?.trim() || (es ? 'Entrevista en vivo' : 'Live interview'), 90),
+    };
+  }
   const primerNombre = cortar(d.anfitrion.split(/\s+/)[0] ?? '', 24);
   const programa = cortar(d.programa?.trim() || (es ? 'Estudio de reacciones' : 'Reaction Studio'), 40);
   return {

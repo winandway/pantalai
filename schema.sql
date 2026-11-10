@@ -355,3 +355,20 @@ CREATE TABLE IF NOT EXISTS red_denuncias_revisadas (
   admin_id TEXT NOT NULL,
   revisado INTEGER NOT NULL
 );
+
+-- Invitado remoto del Estudio (C-INVITADO). Una sala por anfitrión; el enlace vence en 24 h y sirve para UN invitado
+-- a la vez (asiento). Saludo WebRTC sin goteo de candidatos: una oferta del invitado y una respuesta del anfitrión por
+-- intento. Se guarda el hash del código, nunca el código. Sin índices de más (cada índice es una escritura más) y sin
+-- reloj: las salas vencidas se borran cuando alguien crea una nueva.
+CREATE TABLE IF NOT EXISTS salas_invitado (
+  codigo_hash TEXT PRIMARY KEY,
+  anfitrion_id TEXT NOT NULL,
+  anfitrion_nombre TEXT NOT NULL,
+  creada INTEGER NOT NULL,
+  vence INTEGER NOT NULL,
+  asiento_hash TEXT,
+  invitado_nombre TEXT,
+  intento INTEGER NOT NULL DEFAULT 0,
+  oferta TEXT,
+  respuesta TEXT
+);

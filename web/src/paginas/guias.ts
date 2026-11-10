@@ -1003,6 +1003,45 @@ export const GUIAS: Guia[] = [
     },
   },
   {
+    slug: 'interview-a-remote-guest',
+    seccion: 'grabar',
+    icono: '🧑‍🤝‍🧑',
+    imagen: 'invitado-estudio',
+    imagenes: [null, null, 'invitado-pagina', null],
+    en: {
+      titulo: 'Interview a remote guest in the Reaction Studio',
+      resumen:
+        'Send a link, and your guest joins from their computer or phone with no account. You see and hear each other, and you record the interview in your podcast frame with both names.',
+      cuerpo: [
+        'Open the Reaction Studio and, under “Second card”, choose “A remote guest”. The second card of your stage is now for your guest instead of a video. Your own camera stays in the first card, with your name and “Host”.',
+        'Press “Invite a guest”. Pantalay creates a private link and copies it for you. Send it to your guest by email, WhatsApp or any chat. The link works for 24 hours and for one guest at a time. If you need a fresh one, press “New link”: the old one stops working. “Close invitation” turns it off right away.',
+        'Your guest opens the link on a computer or a phone (iPhone and Android included). They do not need an account or to install anything. They write their name, see their camera preview and press “Join the interview”. We ask them to use headphones, so your voice does not come back as an echo.',
+        'In a few seconds you are connected: you see and hear your guest in the second card, with their name and “Guest”, and your guest sees and hears you. Echo cancellation, noise reduction and automatic volume are on for both of you. Above the stage you always see the status: waiting for your guest, connecting, connected, reconnecting or your guest left.',
+        'Write today’s topic and the name of your show, choose horizontal or vertical, and press Start recording. When your browser asks what to share, choose “This tab” and turn on “Also share tab audio”: that is how your guest’s voice gets into the recording, together with your microphone.',
+        'Use “Guest volume” to make your guest louder or softer (for you and in the recording) and “Microphone in the recording” for your own voice.',
+        'If the connection drops, Pantalay reconnects by itself and your recording keeps going: you never lose what you already recorded. If your guest leaves, they can come back with the same link.',
+        'The recording happens in your browser, just like any other Pantalay video: when you press Finish it uploads and its link is copied. Your guest does not get a copy; share the link with them when it is ready.',
+        'Tip: for the best result, both of you should use headphones, a good connection and a quiet room. The Studio works in Chrome or Edge on a computer; your guest can use any modern browser.',
+      ],
+    },
+    es: {
+      titulo: 'Entrevista a un invitado a distancia en el Estudio de reacciones',
+      resumen:
+        'Manda un enlace y tu invitado entra desde su computadora o su celular, sin cuenta. Se ven y se oyen, y grabas la entrevista en tu marco de podcast con los dos nombres.',
+      cuerpo: [
+        'Abre el Estudio de reacciones y, en «Segunda tarjeta», elige «Un invitado a distancia». La segunda tarjeta de tu escenario queda para tu invitado en vez de un video. Tu cámara sigue en la primera tarjeta, con tu nombre y «Anfitrión».',
+        'Toca «Invitar a alguien». Pantalay crea un enlace privado y te lo copia. Mándaselo a tu invitado por correo, WhatsApp o cualquier chat. El enlace sirve por 24 horas y para un invitado a la vez. Si necesitas uno nuevo, toca «Enlace nuevo»: el anterior deja de servir. «Cerrar la invitación» lo apaga al instante.',
+        'Tu invitado abre el enlace en una computadora o en un celular (iPhone y Android incluidos). No necesita cuenta ni instalar nada. Escribe su nombre, ve cómo sale en su cámara y toca «Entrar a la entrevista». Le pedimos que use audífonos para que tu voz no vuelva como eco.',
+        'En unos segundos quedan conectados: ves y oyes a tu invitado en la segunda tarjeta, con su nombre e «Invitado», y tu invitado te ve y te oye. La cancelación de eco, la reducción de ruido y el volumen automático están encendidos para los dos. Arriba del escenario siempre ves el estado: esperando a tu invitado, conectando, conectado, reconectando o tu invitado salió.',
+        'Escribe el tema de hoy y el nombre de tu programa, elige horizontal o vertical, y toca Empezar a grabar. Cuando el navegador pregunte qué compartir, elige «Esta pestaña» y enciende «Compartir también el audio de la pestaña»: así entra la voz de tu invitado en la grabación, junto con tu micrófono.',
+        'Usa «Volumen del invitado» para que tu invitado suene más fuerte o más suave (para ti y en la grabación) y «Micrófono en la grabación» para tu propia voz.',
+        'Si se cae la conexión, Pantalay vuelve a conectar sola y tu grabación sigue: nunca pierdes lo que ya grabaste. Si tu invitado sale, puede volver con el mismo enlace.',
+        'La grabación se hace en tu navegador, como cualquier otro video de Pantalay: al tocar Terminar se sube y su enlace queda copiado. Tu invitado no recibe una copia; mándale el enlace cuando esté listo.',
+        'Consejo: para el mejor resultado, que los dos usen audífonos, una buena conexión y un cuarto silencioso. El Estudio funciona en Chrome o Edge de computadora; tu invitado puede usar cualquier navegador moderno.',
+      ],
+    },
+  },
+  {
     slug: 'publish-to-videos',
     seccion: 'compartir',
     icono: '📣',

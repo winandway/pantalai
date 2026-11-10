@@ -933,3 +933,30 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `pruebas/karaoke.test.ts` (comprobada en ROJO el 9 nov 2026: desconectar el reverb la pone en rojo) y
   `e2e/karaoke.spec.ts` (graba de verdad con Karaoke, el efecto se mueve en vivo, hay sonido y no satura).
 - Falta la escucha de Richard (pruebas de aceptación de la ficha, sección 6).
+
+## C-INVITADO: invitado remoto en el Estudio (10 nov 2026)
+
+- Protege: el anfitrión toca «Invite a guest» y obtiene `/join/<32 letras>` (24 h, un invitado a la vez, se guarda
+  solo la huella del código). El invitado entra sin cuenta (computadora o celular), escribe su nombre (con borrador),
+  ve su cámara y el aviso de audífonos. Conexión WebRTC directa; su imagen va en la segunda tarjeta (sin espejo) con
+  su nombre y «Guest», y su voz entra a la grabación por el sonido de la pestaña (la MISMA tubería del Estudio: no hay
+  otra grabadora). Si el invitado se cae, la grabación sigue y se guarda. Voz con cancelación de eco, supresión de
+  ruido y ganancia automática en los dos lados.
+- Cómo funciona: saludo SIN goteo (cada lado espera a juntar sus rutas ICE y manda UNA descripción): el invitado
+  `POST /datos/invitado/:codigo/oferta`, el anfitrión consulta `GET /datos/estudio/invitado/:codigo` y responde
+  `POST …/respuesta`; el invitado consulta `GET /datos/invitado/:codigo/respuesta`. Consultas solo mientras se
+  saludan; conectados, nadie pregunta. Salir avisa por el canal directo («adios»), sin escribir. Tabla
+  `salas_invitado` sin índices extra; las vencidas se borran al crear otra sala (sin reloj).
+- Presupuesto: una entrevista sin cortes escribe ≤ 8 filas (6 medidas); cada reconexión +3. `PRESUPUESTO_FILAS` en
+  `servidor/invitado.ts`.
+- Puente: STUN público de Cloudflare siempre; TURN de Cloudflare Realtime solo si están `TURN_LLAVE_ID` y
+  `TURN_LLAVE_TOKEN` (credenciales de 24 h pedidas por el servidor; la llave nunca va al navegador; se quita el
+  puerto 53). Canario: `/datos/salud` → `invitado.turn`.
+- Pruebas: `pruebas/invitado.test.ts` (rutas, un invitado a la vez, dueño, vencido, zod, límites, presupuesto, TURN,
+  canario, y la llamada con WebRTC simulado) y `e2e/invitado.spec.ts` (dos Chrome reales: invitado MAGENTA con tono
+  de 440 Hz; el MP4 grabado tiene los píxeles magenta en su tarjeta y su voz con el micrófono del anfitrión en 0; el
+  invitado se cae a mitad y la grabación se guarda igual). Comprobadas en rojo el 10 nov 2026: con el video del
+  invitado oculto la e2e da R=0 en su tarjeta; con escrituras en las consultas falla «presupuesto de escrituras».
+- No tocar: no mezclar además la pista del invitado directo en el mezclador (ya entra por el sonido de la pestaña:
+  saldría doble); no volver al goteo de candidatos (multiplica las escrituras); no poner `transform: scaleX(-1)` al
+  video del invitado.

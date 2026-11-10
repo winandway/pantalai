@@ -245,7 +245,7 @@ export const LANDINGS: Landing[] = [
     slug: 'reaction-video-maker',
     icono: '🎙️',
     destino: '/studio',
-    guias: ['reaction-studio', 'record-a-vertical-short'],
+    guias: ['reaction-studio', 'interview-a-remote-guest', 'record-a-vertical-short'],
     en: {
       titulo: 'Reaction Video Maker — React to YouTube & TikTok | Pantalay',
       descripcion:

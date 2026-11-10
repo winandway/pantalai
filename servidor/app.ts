@@ -29,6 +29,19 @@ import {
   type VideoParaMapa,
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
+import {
+  ASIENTO,
+  CODIGO_SALA,
+  OFERTAS_MAX,
+  VENCE_SALA_MS,
+  VENTANA_OFERTAS_MS,
+  esquemaOferta,
+  esquemaRespuesta,
+  primerNombre,
+  servidoresIce,
+  turnConfigurado,
+  type EnvTurn,
+} from './invitado';
 import { arrobaDe, videoDeTiktok, videoDeYoutube } from '../web/src/logica/estudio';
 import { buscarEnRed, sugerencias, textoDeTranscripcion } from '../web/src/logica/busquedaRed';
 import { REGISTROS_MAX_BYTES, esquemaRegistros, limpiarEnServidor } from './registros';
@@ -96,7 +109,8 @@ import { grabadorViejo } from '../web/src/logica/version';
 import { copiaIndiceValida } from '../web/src/logica/cajasMp4';
 
 export type Env = EnvPago &
-  EnvCorreo & {
+  EnvCorreo &
+  EnvTurn & {
     DB: D1Database;
     BUCKET: R2Bucket;
     ASSETS?: Fetcher;
@@ -498,6 +512,8 @@ app.get('/datos/salud', async (c) => {
       // Canario del cobro: claves de Stripe puestas (secreta, publicable y la del aviso) y límites encendidos.
       pago: { listo: pagoListo(c.env), cobro_activo: cobroActivo(c.env) },
       correo: correoListo(c.env),
+      // Canario del invitado remoto: true = hay puente TURN (entra gente de redes difíciles); false = solo STUN.
+      invitado: { turn: turnConfigurado(c.env) },
       commit: COMMIT,
     },
     ok ? 200 : 500,
@@ -3236,6 +3252,180 @@ app.post('/datos/videos/:id/ia/generar', requiereSesion, async (c) => {
   } catch (e) {
     return errorIA(c, e);
   }
+});
+
+// ---------- invitado remoto en el Estudio (CANDADO C-INVITADO) ----------
+// El anfitrión crea un enlace; el invitado entra sin cuenta. Saludo WebRTC sin goteo: el invitado manda UNA oferta
+// completa y el anfitrión UNA respuesta completa. Esperar y consultar solo leen; ver PRESUPUESTO_FILAS.
+
+type FilaSala = {
+  codigo_hash: string;
+  anfitrion_id: string;
+  anfitrion_nombre: string;
+  vence: number;
+  asiento_hash: string | null;
+  invitado_nombre: string | null;
+  intento: number;
+  oferta: string | null;
+  respuesta: string | null;
+};
+
+async function salaDe(c: C, codigo: string): Promise<FilaSala | null> {
+  if (!CODIGO_SALA.test(codigo)) return null;
+  const s = await c.env.DB.prepare('SELECT * FROM salas_invitado WHERE codigo_hash = ?')
+    .bind(await sha256(codigo))
+    .first<FilaSala>();
+  return s && s.vence > Date.now() ? s : null;
+}
+
+/** La sala de ESTE anfitrión (otro anfitrión recibe 404, como si no existiera). */
+async function salaDelAnfitrion(c: C): Promise<FilaSala | null> {
+  const s = await salaDe(c, c.req.param('codigo') ?? '');
+  return s && s.anfitrion_id === c.get('usuario')!.id ? s : null;
+}
+
+/**
+ * Las rutas del invitado (sin cuenta): solo cuentan los FALLOS (enlace que no existe) para frenar a quien prueba
+ * códigos; el uso normal no escribe nada. La oferta sí cuenta cada vez (tiene su tope).
+ */
+async function frenoInvitado(c: C): Promise<Response | null> {
+  if (await yaExcedido(c.env.DB, 'invitado', ip(c), 30, 15 * 60 * 1000)) return err(c, 429, 'demasiados');
+  return null;
+}
+async function enlaceMalo(c: C): Promise<Response> {
+  await dentroDelLimite(c.env.DB, 'invitado', ip(c), 30, 15 * 60 * 1000);
+  return err(c, 404, 'sala_vencida');
+}
+
+app.post('/datos/estudio/invitado', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  if (!(await dentroDelLimite(c.env.DB, 'sala_invitado', u.id, 30, 3600 * 1000)))
+    return err(c, 429, 'demasiados');
+  const codigo = nuevoId(32);
+  const ahora = Date.now();
+  // Un enlace por anfitrión: el anterior deja de servir. Y de paso se van las salas vencidas de todos (sin reloj).
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM salas_invitado WHERE anfitrion_id = ? OR vence < ?').bind(u.id, ahora),
+    c.env.DB.prepare(
+      `INSERT INTO salas_invitado (codigo_hash, anfitrion_id, anfitrion_nombre, creada, vence)
+       VALUES (?, ?, ?, ?, ?)`,
+    ).bind(await sha256(codigo), u.id, primerNombre(u.nombre), ahora, ahora + VENCE_SALA_MS),
+  ]);
+  return c.json({ codigo, vence: ahora + VENCE_SALA_MS }, 201);
+});
+
+// El anfitrión mira si llegó una oferta nueva (solo lee).
+app.get('/datos/estudio/invitado/:codigo', requiereSesion, async (c) => {
+  const s = await salaDelAnfitrion(c);
+  if (!s) return err(c, 404, 'sala_vencida');
+  return c.json(
+    {
+      vence: s.vence,
+      intento: s.intento,
+      nombre: s.invitado_nombre,
+      // La oferta solo mientras espera su respuesta.
+      oferta: s.oferta && !s.respuesta ? s.oferta : null,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.post('/datos/estudio/invitado/:codigo/respuesta', requiereSesion, async (c) => {
+  const s = await salaDelAnfitrion(c);
+  if (!s) return err(c, 404, 'sala_vencida');
+  const d = await cuerpo(c, esquemaRespuesta);
+  if (!d) return err(c, 400, 'datos');
+  // Solo responde al intento que sigue vigente (si el invitado ya mandó otro, esta respuesta llega tarde).
+  const r = await c.env.DB.prepare(
+    'UPDATE salas_invitado SET respuesta = ? WHERE codigo_hash = ? AND intento = ? AND oferta IS NOT NULL',
+  )
+    .bind(d.sdp, s.codigo_hash, d.intento)
+    .run();
+  if (!r.meta.changes) return err(c, 409, 'intento_viejo');
+  return c.json({ ok: true });
+});
+
+// El invitado se fue: el asiento queda libre para otra persona con el mismo enlace.
+app.post('/datos/estudio/invitado/:codigo/liberar', requiereSesion, async (c) => {
+  const s = await salaDelAnfitrion(c);
+  if (!s) return err(c, 404, 'sala_vencida');
+  if (s.asiento_hash || s.oferta)
+    await c.env.DB.prepare(
+      `UPDATE salas_invitado SET asiento_hash = NULL, invitado_nombre = NULL, oferta = NULL, respuesta = NULL
+       WHERE codigo_hash = ?`,
+    )
+      .bind(s.codigo_hash)
+      .run();
+  return c.json({ ok: true });
+});
+
+app.delete('/datos/estudio/invitado/:codigo', requiereSesion, async (c) => {
+  const s = await salaDelAnfitrion(c);
+  if (s) await c.env.DB.prepare('DELETE FROM salas_invitado WHERE codigo_hash = ?').bind(s.codigo_hash).run();
+  return c.json({ ok: true });
+});
+
+app.get('/datos/estudio/ice', requiereSesion, async (c) =>
+  c.json(await servidoresIce(c.env), 200, { 'Cache-Control': 'no-store' }),
+);
+
+// ---- lado del invitado (sin cuenta) ----
+
+app.get('/datos/invitado/:codigo', async (c) => {
+  const freno = await frenoInvitado(c);
+  if (freno) return freno;
+  const s = await salaDe(c, c.req.param('codigo'));
+  if (!s) return enlaceMalo(c);
+  const asiento = c.req.header('x-asiento') ?? '';
+  const mio = Boolean(s.asiento_hash && ASIENTO.test(asiento) && s.asiento_hash === (await sha256(asiento)));
+  return c.json(
+    { anfitrion: s.anfitrion_nombre, vence: s.vence, ocupada: Boolean(s.asiento_hash) && !mio },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
+});
+
+app.get('/datos/invitado/:codigo/ice', async (c) => {
+  const freno = await frenoInvitado(c);
+  if (freno) return freno;
+  if (!(await salaDe(c, c.req.param('codigo')))) return enlaceMalo(c);
+  return c.json(await servidoresIce(c.env), 200, { 'Cache-Control': 'no-store' });
+});
+
+app.post('/datos/invitado/:codigo/oferta', async (c) => {
+  const s = await salaDe(c, c.req.param('codigo'));
+  if (!s) return enlaceMalo(c);
+  const d = await cuerpo(c, esquemaOferta);
+  if (!d) return err(c, 400, 'datos');
+  const asiento = await sha256(d.asiento);
+  // Un invitado a la vez: otra persona con el mismo enlace no puede quitarle el puesto.
+  if (s.asiento_hash && s.asiento_hash !== asiento) return err(c, 409, 'ocupada');
+  if (!(await dentroDelLimite(c.env.DB, 'invitado_oferta', ip(c), OFERTAS_MAX, VENTANA_OFERTAS_MS)))
+    return err(c, 429, 'demasiados');
+  const intento = s.intento + 1;
+  const r = await c.env.DB.prepare(
+    `UPDATE salas_invitado SET asiento_hash = ?, invitado_nombre = ?, intento = ?, oferta = ?, respuesta = NULL
+     WHERE codigo_hash = ? AND intento = ? AND (asiento_hash IS NULL OR asiento_hash = ?)`,
+  )
+    .bind(asiento, d.nombre, intento, d.sdp, s.codigo_hash, s.intento, asiento)
+    .run();
+  if (!r.meta.changes) return err(c, 409, 'ocupada');
+  return c.json({ intento }, 201);
+});
+
+// El invitado espera la respuesta del anfitrión (solo lee).
+app.get('/datos/invitado/:codigo/respuesta', async (c) => {
+  const freno = await frenoInvitado(c);
+  if (freno) return freno;
+  const s = await salaDe(c, c.req.param('codigo'));
+  if (!s) return enlaceMalo(c);
+  const asiento = c.req.header('x-asiento') ?? '';
+  if (!ASIENTO.test(asiento) || s.asiento_hash !== (await sha256(asiento))) return err(c, 409, 'ocupada');
+  const intento = Number(c.req.query('intento'));
+  return c.json({ respuesta: s.intento === intento ? s.respuesta : null, intento: s.intento }, 200, {
+    'Cache-Control': 'no-store',
+  });
 });
 
 // ---------- errores que pasan en la computadora del cliente ----------

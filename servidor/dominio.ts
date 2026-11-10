@@ -106,6 +106,7 @@ export function robots(): string {
     '/library',
     '/record',
     '/studio',
+    '/join/',
     '/checkout',
     '/account',
     '/panel/',
