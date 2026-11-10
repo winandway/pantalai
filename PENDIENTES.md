@@ -2,8 +2,9 @@
 
 ## 👤 Depende de Richard
 
-- 👤 En Google Search Console → Sitemaps: enviar `https://pantalay.com/video-sitemap.xml` (el mapa de videos).
-  Destraba: que Google indexe cada video publicado en Videos.
+- ✅ 9 nov 2026: mapa de videos enviado en Search Console (Correcto, 5 videos descubiertos).
+- 👤 Primer lunes de cada mes: captura de Rendimiento e Indexación de Search Console para la revisión mensual de SEO
+  (plan en `docs/SEO-SEGUIMIENTO.md`; la revisión técnica de cada lunes es automática).
 
 - 👤 Registrar el agente de derechos de autor (DMCA) de Pantalay en la Oficina de Derechos de Autor de EE. UU.
   (designated agent, 6 USD, en línea, a nombre de Windoce LLC). Destraba: la protección legal de la red de videos
