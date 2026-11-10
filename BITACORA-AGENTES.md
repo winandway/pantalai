@@ -1,3 +1,5 @@
+2026-11-10 · investigador · ficha INVITADOS-EN-VIVO (REA sobre StreamYard, Riverside, Restream + precios de infraestructura) · ok, con puntos [NV] anotados · sin commit
+
 # Bitácora de los agentes
 
 Una línea por trabajo, la más nueva arriba: fecha · puesto · qué se hizo · resultado · commit.

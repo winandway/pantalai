@@ -130,3 +130,4 @@
 - [x] Almacenamiento a 500 GB (YaDominios, 24 oct 2026) y `ALMACEN_LIMITE_GB=500` puesto.
 
 - ✅ (hecho el 9 nov 2026, C-KARAOKE) [para: desarrollador] Construir el botón Karaoke del Estudio siguiendo docs/investigacion-rea/FICHA-KARAOKE.md (sección 6, plan de 12 pasos; decisión en sección 7). Motivo: la ficha ya trae cadena, valores y pruebas de aceptación.
+- [para: desarrollador] Invitado remoto en vivo: empezar por la Fase 1 de docs/investigacion-rea/INVITADOS-EN-VIVO.md (WebRTC directo + TURN de Cloudflare, grabado en el navegador del anfitrión). 👤 Richard: visto bueno para crear un Worker aparte en Cloudflare (señalización) antes de crear nada.
