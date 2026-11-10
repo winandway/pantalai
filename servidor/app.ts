@@ -219,6 +219,11 @@ function videoPublico(
     estado: v.estado,
     tipo: v.tipo,
     bytes: v.bytes,
+    /**
+     * Versión del archivo guardado (C-SONIDO-RECIEN-GRABADO): cambia cuando el archivo se reemplaza (tamaño) o cuando
+     * se guarda otro recorte (la copia MP4 se rehace). El reproductor la pone en la dirección del video.
+     */
+    version_archivo: `${v.bytes}-${firmaRecorte(v)}`,
     duracion: v.duracion,
     ancho: v.ancho,
     alto: v.alto,

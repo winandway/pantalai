@@ -888,7 +888,8 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   MISMA dirección. El navegador ya tenía guardado el principio de la versión vieja y pedía el resto de la nueva; el
   servidor además respondía un pedazo fuera del final con el archivo entero (206). Resultado: «PIPELINE_ERROR_READ:
   data source error» y el reproductor se paraba.
-- Arreglo: (1) cada versión del archivo tiene su propia dirección (`&v=` con `versionArchivo`: tamaño + recorte) y la
+- Arreglo: (1) cada versión del archivo tiene su propia dirección (`&v=` con `version_archivo`, que da el SERVIDOR: tamaño +
+  recorte guardado; nunca los cortes sin guardar del editor, que renovaban el video a cada arrastre) y la
   pieza `<video>` se renueva al cambiar, siguiendo desde el mismo segundo; (2) al terminar el reordenado se avisa
   (`EVENTO_ARCHIVO_CAMBIO`) y la página del video se pone al día sola; (3) el servidor responde 416 a un pedazo que
   empieza después del final.

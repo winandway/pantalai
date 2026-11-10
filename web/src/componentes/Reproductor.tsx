@@ -22,11 +22,12 @@ export type ManejoReproductor = {
   elemento: () => HTMLVideoElement | null;
 };
 
-/** La versión del archivo: cambia cuando el archivo se reemplaza (tamaño) o se corta (copia MP4 nueva). */
-export function versionArchivo(
-  v: Pick<Video, 'bytes' | 'recorte_inicio' | 'recorte_fin' | 'cortes'>,
-): string {
-  return [v.bytes, v.recorte_inicio, v.recorte_fin, v.cortes.length].join('.');
+/**
+ * La versión del archivo guardado, para la dirección del video. La da el servidor (tamaño + recorte GUARDADO): los
+ * cortes que se mueven en el editor sin guardar no la cambian (si no, el video se renovaba a cada arrastre).
+ */
+export function versionArchivo(v: Pick<Video, 'bytes' | 'version_archivo'>): string {
+  return encodeURIComponent(v.version_archivo ?? String(v.bytes));
 }
 
 const VELOCIDADES = [0.5, 0.8, 1, 1.2, 1.5, 1.75, 2, 2.5];

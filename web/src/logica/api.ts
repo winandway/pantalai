@@ -64,6 +64,8 @@ export type Video = {
   estado: string;
   tipo: string;
   bytes: number;
+  /** Versión del archivo guardado (la da el servidor; no cambia con los cortes sin guardar del editor). */
+  version_archivo?: string;
   duracion: number;
   ancho: number;
   alto: number;

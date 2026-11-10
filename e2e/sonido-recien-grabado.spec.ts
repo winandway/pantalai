@@ -22,18 +22,33 @@ test('el video recién grabado se reproduce entero sin recargar', async ({ page 
   await page.getByRole('button', { name: /Finish/ }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
   const id = page.url().split('/v/')[1]!;
-  // Se espera a que termine todo lo de fondo (el reordenado del archivo, si Chrome grabó en MP4).
-  await expect
-    .poll(
-      async () =>
-        (
-          (await (await page.request.get(`/datos/videos/${id}`)).json()) as {
-            video: { tiene_mp4: boolean };
-          }
-        ).video.tiene_mp4,
-      { timeout: 90_000 },
-    )
-    .toBe(true);
+  // Se espera a que termine todo lo de fondo: la copia MP4 (si este navegador codifica H.264 + AAC; el Chrome de
+  // GitHub no) y el reordenado del archivo (si Chrome grabó en MP4).
+  const puede = await page.evaluate(async () => {
+    try {
+      const v = await VideoEncoder.isConfigSupported({ codec: 'avc1.42001f', width: 640, height: 480 });
+      const a = await AudioEncoder.isConfigSupported({
+        codec: 'mp4a.40.2',
+        sampleRate: 48000,
+        numberOfChannels: 2,
+      });
+      return Boolean(v.supported && a.supported);
+    } catch {
+      return false;
+    }
+  });
+  if (puede)
+    await expect
+      .poll(
+        async () =>
+          (
+            (await (await page.request.get(`/datos/videos/${id}`)).json()) as {
+              video: { tiene_mp4: boolean };
+            }
+          ).video.tiene_mp4,
+        { timeout: 90_000 },
+      )
+      .toBe(true);
   await page.waitForTimeout(2500);
   await page.evaluate(() => {
     const w = window as unknown as { __errores: string[] };
