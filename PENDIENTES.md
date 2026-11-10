@@ -37,7 +37,7 @@
 ## Videos: siguiente fase (de la ficha de YouTube)
 
 - Suscribirse a un creador, «No me gusta», guardar en listas, comentarios en la red, historial y «Sin mirar».
-- Pantalla del superadmin para revisar denuncias y ocultar videos.
+- ✅ 9 nov 2026: pantalla del superadmin para revisar denuncias y ocultar videos (C-DENUNCIAS).
 
 ## Hecho por Richard
 

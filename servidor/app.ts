@@ -2747,6 +2747,78 @@ app.get('/datos/red-denuncias', requiereSesion, async (c) => {
   return c.json({ denuncias: filas.results ?? [] });
 });
 
+/**
+ * Pantalla de denuncias del superadmin (C-DENUNCIAS): una fila por video denunciado, con cuántas denuncias tiene,
+ * sus motivos y las pendientes (las que llegaron después de la última decisión). Pendientes primero.
+ */
+app.get('/datos/admin/denuncias', requiereSuperadmin, async (c) => {
+  const estado = c.req.query('estado') === 'revisadas' ? 'revisadas' : 'pendientes';
+  const filas = await c.env.DB.prepare(
+    `SELECT d.video_id, v.titulo, v.usuario_id, u.nombre AS autor, u.correo AS autor_correo, v.privacidad,
+       COALESCE(r.oculto, 0) AS oculto, COALESCE(r.publicado, 0) AS publicado,
+       COUNT(*) AS total,
+       SUM(CASE WHEN d.creado > COALESCE(x.revisado, 0) THEN 1 ELSE 0 END) AS pendientes,
+       MAX(d.creado) AS ultima, x.decision, x.revisado
+     FROM red_denuncias d
+     LEFT JOIN videos v ON v.id = d.video_id
+     LEFT JOIN usuarios u ON u.id = v.usuario_id
+     LEFT JOIN red_publicaciones r ON r.video_id = d.video_id
+     LEFT JOIN red_denuncias_revisadas x ON x.video_id = d.video_id
+     GROUP BY d.video_id
+     HAVING ${estado === 'pendientes' ? 'pendientes > 0' : 'pendientes = 0'}
+     ORDER BY pendientes DESC, ultima DESC LIMIT 200`,
+  ).all<{ video_id: string }>();
+  const lista = filas.results ?? [];
+  const ids = lista.map((f) => f.video_id);
+  const detalle = ids.length
+    ? ((
+        await c.env.DB.prepare(
+          `SELECT id, video_id, motivo, detalle, correo, creado FROM red_denuncias
+           WHERE video_id IN (${ids.map(() => '?').join(',')}) ORDER BY creado DESC LIMIT 1000`,
+        )
+          .bind(...ids)
+          .all<{ video_id: string }>()
+      ).results ?? [])
+    : [];
+  const hoy = await Promise.all(ids.map((id) => firmaPanel(c.env, id)));
+  const pendientesTotal = await c.env.DB.prepare(
+    `SELECT COUNT(DISTINCT d.video_id) AS n FROM red_denuncias d
+     LEFT JOIN red_denuncias_revisadas x ON x.video_id = d.video_id WHERE d.creado > COALESCE(x.revisado, 0)`,
+  ).first<{ n: number }>();
+  return c.json({
+    pendientes: pendientesTotal?.n ?? 0,
+    videos: lista.map((f, i) => ({
+      ...f,
+      firma: hoy[i],
+      denuncias: detalle.filter((d) => d.video_id === f.video_id).slice(0, 50),
+    })),
+  });
+});
+
+/** Decidir sobre las denuncias de un video: ocultarlo de Videos, volver a mostrarlo o descartar (está bien). */
+app.post('/datos/admin/denuncias/:id', requiereSuperadmin, async (c) => {
+  const d = await cuerpo(c, z.object({ decision: z.enum(['ocultado', 'mostrado', 'descartado']) }));
+  if (!d) return err(c, 400, 'datos');
+  const id = c.req.param('id') ?? '';
+  const hay = await c.env.DB.prepare('SELECT 1 AS si FROM red_denuncias WHERE video_id = ? LIMIT 1')
+    .bind(id)
+    .first();
+  if (!hay) return err(c, 404, 'no_existe');
+  if (d.decision !== 'descartado')
+    await c.env.DB.prepare('UPDATE red_publicaciones SET oculto = ? WHERE video_id = ?')
+      .bind(d.decision === 'ocultado' ? 1 : 0, id)
+      .run();
+  await c.env.DB.prepare(
+    `INSERT INTO red_denuncias_revisadas (video_id, decision, admin_id, revisado) VALUES (?, ?, ?, ?)
+     ON CONFLICT (video_id) DO UPDATE SET decision = excluded.decision, admin_id = excluded.admin_id,
+       revisado = excluded.revisado`,
+  )
+    .bind(id, d.decision, c.get('usuario')!.id, Date.now())
+    .run();
+  await anotarAdmin(c, `denuncia_${d.decision}`, id);
+  return c.json({ ok: true });
+});
+
 // ---------- actividad: comentarios, reacciones, vistas ----------
 
 app.get('/datos/videos/:id/actividad', async (c) => {

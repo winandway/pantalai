@@ -345,3 +345,13 @@ CREATE TABLE IF NOT EXISTS red_denuncias (
   correo TEXT NOT NULL DEFAULT '',
   creado INTEGER NOT NULL
 );
+
+-- Lo que decidió el equipo sobre las denuncias de cada video (C-DENUNCIAS). Las denuncias que llegan DESPUÉS de
+-- «revisado» vuelven a contar como pendientes.
+CREATE TABLE IF NOT EXISTS red_denuncias_revisadas (
+  video_id TEXT PRIMARY KEY,
+  -- 'ocultado' | 'mostrado' | 'descartado'
+  decision TEXT NOT NULL,
+  admin_id TEXT NOT NULL,
+  revisado INTEGER NOT NULL
+);

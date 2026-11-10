@@ -1373,3 +1373,72 @@ describe('CANDADO C-BUSCADOR: buscador de la red', () => {
     expect(sug.sugerencias).toEqual(['Tutorial de Excel']);
   });
 });
+
+describe('CANDADO C-DENUNCIAS: el superadmin revisa las denuncias de la red', () => {
+  const RUTA = '/panel/prueba-secreta-1234567';
+  const P = { 'x-panel': RUTA };
+
+  it('lista lo pendiente, oculta, descarta y una denuncia nueva vuelve a pedir revisión', async () => {
+    env = { ...env, SUPERADMIN_CORREOS: 'soporte@example.com', SUPERADMIN_RUTA: RUTA } as typeof env;
+    const ana = await registrado('Ana', 'ana.den@example.com', '7.9.1.1');
+    const uno = await videoListo(ana);
+    const dos = await videoListo(ana);
+    for (const v of [uno, dos])
+      await ana(`/datos/videos/${v.id}/publicar`, { method: 'POST', json: { publicar: true, acepto: true } });
+    const anon = cliente('7.9.1.2');
+    const denunciar = (id: string, motivo: string, detalle = '') =>
+      anon(`/datos/red/${id}/denunciar`, { method: 'POST', json: { motivo, detalle } });
+    await denunciar(uno.id, 'derechos', 'es mi canción');
+    await denunciar(uno.id, 'spam');
+    await denunciar(dos.id, 'otro');
+    const admin = await registrado('Soporte Pantalay', 'soporte@example.com', '7.9.1.3');
+    type Lista = {
+      pendientes: number;
+      videos: {
+        video_id: string;
+        total: number;
+        pendientes: number;
+        oculto: number;
+        denuncias: { motivo: string }[];
+      }[];
+    };
+    const ver = async (estado = 'pendientes') =>
+      (await (await admin(`/datos/admin/denuncias?estado=${estado}`, { headers: P })).json()) as Lista;
+
+    // Nadie más lo ve: ni la dueña, ni el superadmin sin la dirección secreta.
+    expect((await ana('/datos/admin/denuncias', { headers: P })).status).toBe(404);
+    expect((await admin('/datos/admin/denuncias')).status).toBe(404);
+
+    let l = await ver();
+    expect(l.pendientes).toBe(2);
+    expect(l.videos[0]).toMatchObject({ video_id: uno.id, total: 2, pendientes: 2, oculto: 0 });
+    expect(l.videos[0]!.denuncias.map((d) => d.motivo).sort()).toEqual(['derechos', 'spam']);
+
+    // Ocultar: sale de la red y de lo pendiente.
+    const decidir = (id: string, decision: string) =>
+      admin(`/datos/admin/denuncias/${id}`, { method: 'POST', headers: P, json: { decision } });
+    expect((await decidir(uno.id, 'ocultado')).status).toBe(200);
+    const red = (await (await anon('/datos/red')).json()) as { videos: { id: string }[] };
+    expect(red.videos.map((v) => v.id)).toEqual([dos.id]);
+    // Descartar: sigue en la red.
+    expect((await decidir(dos.id, 'descartado')).status).toBe(200);
+    l = await ver();
+    expect(l.pendientes).toBe(0);
+    expect(l.videos).toEqual([]);
+    expect((await ver('revisadas')).videos.map((v) => v.video_id).sort()).toEqual([uno.id, dos.id].sort());
+
+    // Una denuncia nueva después de descartar vuelve a la lista.
+    await new Promise((r) => setTimeout(r, 5));
+    await denunciar(dos.id, 'violencia');
+    l = await ver();
+    expect(l.videos.map((v) => v.video_id)).toEqual([dos.id]);
+    expect(l.videos[0]!.pendientes).toBe(1);
+
+    // Volver a mostrar el oculto.
+    expect((await decidir(uno.id, 'mostrado')).status).toBe(200);
+    const red2 = (await (await anon('/datos/red')).json()) as { videos: { id: string }[] };
+    expect(red2.videos.map((v) => v.id).sort()).toEqual([uno.id, dos.id].sort());
+    expect((await decidir('no-existe', 'ocultado')).status).toBe(404);
+    expect((await decidir(uno.id, 'borrar')).status).toBe(400);
+  });
+});

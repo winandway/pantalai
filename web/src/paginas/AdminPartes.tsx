@@ -891,3 +891,220 @@ export function PestanaSistema() {
     </div>
   );
 }
+
+type DenunciaVideo = {
+  video_id: string;
+  titulo: string | null;
+  usuario_id: string | null;
+  autor: string | null;
+  autor_correo: string | null;
+  oculto: number;
+  publicado: number;
+  total: number;
+  pendientes: number;
+  ultima: number;
+  decision: string | null;
+  revisado: number | null;
+  firma: string;
+  denuncias: { id: string; motivo: string; detalle: string; correo: string; creado: number }[];
+};
+
+const MOTIVO: Record<string, [string, string]> = {
+  derechos: ['Derechos de autor', 'Copyright'],
+  sexual: ['Contenido sexual', 'Sexual content'],
+  violencia: ['Violencia o actos peligrosos', 'Violence or dangerous acts'],
+  odio: ['Odio o acoso', 'Hate or harassment'],
+  spam: ['Spam o estafa', 'Spam or scam'],
+  otro: ['Otra cosa', 'Something else'],
+};
+
+/**
+ * Denuncias de la red de videos (C-DENUNCIAS): cada video denunciado con sus motivos, y tres decisiones —
+ * ocultarlo de Videos, volver a mostrarlo o descartar la denuncia—. Lo pendiente va primero.
+ */
+export function PestanaDenuncias({
+  mirar,
+  abrirFicha,
+  alCambiar,
+}: {
+  mirar: (v: { id: string; titulo: string; firma: string; usuario?: string; correo?: string }) => void;
+  abrirFicha: (id: string) => void;
+  alCambiar?: (pendientes: number) => void;
+}) {
+  const { idioma } = useIdioma();
+  const es = idioma === 'es';
+  const [estado, setEstado] = useState<'pendientes' | 'revisadas'>('pendientes');
+  const [lista, setLista] = useState<DenunciaVideo[] | null>(null);
+  const [ocultar, setOcultar] = useState<DenunciaVideo | null>(null);
+  const cargar = useCallback(() => {
+    void pedir<{ pendientes: number; videos: DenunciaVideo[] }>(`/datos/admin/denuncias?estado=${estado}`, {
+      headers: panel(),
+    }).then((r) => (setLista(r.videos), alCambiar?.(r.pendientes)));
+  }, [estado, alCambiar]);
+  useEffect(cargar, [cargar]);
+  const decidir = (v: DenunciaVideo, decision: 'ocultado' | 'mostrado' | 'descartado') =>
+    void pedir(`/datos/admin/denuncias/${v.video_id}`, {
+      method: 'POST',
+      headers: panel(),
+      json: { decision },
+    }).then(cargar);
+  const DECISION: Record<string, [string, string]> = {
+    ocultado: ['Oculto de Videos', 'Hidden from Videos'],
+    mostrado: ['Se volvió a mostrar', 'Shown again'],
+    descartado: ['Denuncia descartada', 'Report dismissed'],
+  };
+
+  return (
+    <div className="admin-denuncias">
+      <p className="ayuda">
+        {es
+          ? 'Videos de la red que alguien denunció. Míralo, y decide: ocultarlo de Videos (el dueño no lo puede volver a publicar) o descartar la denuncia si está bien. Todo queda en el registro.'
+          : 'Network videos someone reported. Watch it and decide: hide it from Videos (the owner can’t publish it again) or dismiss the report if it is fine. Everything is logged.'}
+      </p>
+      <div className="red-filtros" role="group" aria-label={es ? 'Estado' : 'Status'}>
+        {(['pendientes', 'revisadas'] as const).map((x) => (
+          <button
+            key={x}
+            type="button"
+            className={estado === x ? 'activo' : ''}
+            aria-pressed={estado === x}
+            onClick={() => setEstado(x)}
+          >
+            {x === 'pendientes' ? (es ? 'Por revisar' : 'To review') : es ? 'Revisadas' : 'Reviewed'}
+          </button>
+        ))}
+      </div>
+      {!lista ? (
+        <div className="cargando" aria-busy="true" />
+      ) : lista.length === 0 ? (
+        <p className="vacio">
+          {estado === 'pendientes'
+            ? es
+              ? 'No hay denuncias por revisar.'
+              : 'No reports to review.'
+            : es
+              ? 'Todavía no hay denuncias revisadas.'
+              : 'No reviewed reports yet.'}
+        </p>
+      ) : (
+        <ul className="admin-denuncias-lista">
+          {lista.map((v) => (
+            <li key={v.video_id} className="admin-denuncia" data-video={v.video_id}>
+              <div className="admin-denuncia-cabeza">
+                <div>
+                  <strong>{v.titulo ?? (es ? '(video borrado)' : '(deleted video)')}</strong>
+                  <p className="ayuda">
+                    {v.autor ? `${v.autor} · ${v.autor_correo} · ` : ''}
+                    {es
+                      ? `${v.total} ${v.total === 1 ? 'denuncia' : 'denuncias'}`
+                      : `${v.total} ${v.total === 1 ? 'report' : 'reports'}`}
+                    {v.pendientes > 0 && ` · ${v.pendientes} ${es ? 'por revisar' : 'to review'}`} ·{' '}
+                    {haceCuanto(v.ultima, idioma)}
+                  </p>
+                  <p>
+                    {v.oculto ? (
+                      <span className="estado-pago mal">
+                        {es ? 'Oculto de Videos' : 'Hidden from Videos'}
+                      </span>
+                    ) : v.publicado ? (
+                      <span className="estado-pago bien">{es ? 'Se ve en Videos' : 'Visible in Videos'}</span>
+                    ) : (
+                      <span className="estado-pago neutro">{es ? 'Fuera de Videos' : 'Not in Videos'}</span>
+                    )}{' '}
+                    {v.decision && (
+                      <span className="ayuda">
+                        {DECISION[v.decision]?.[es ? 0 : 1] ?? v.decision}
+                        {v.revisado ? ` · ${haceCuanto(v.revisado, idioma)}` : ''}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="admin-denuncia-acciones">
+                  {v.titulo && (
+                    <button
+                      type="button"
+                      className="boton secundario chico"
+                      onClick={() =>
+                        mirar({
+                          id: v.video_id,
+                          titulo: v.titulo ?? '',
+                          firma: v.firma,
+                          usuario: v.autor ?? undefined,
+                          correo: v.autor_correo ?? undefined,
+                        })
+                      }
+                    >
+                      {es ? 'Ver video' : 'Watch'}
+                    </button>
+                  )}
+                  {v.oculto ? (
+                    <button
+                      type="button"
+                      className="boton secundario chico"
+                      onClick={() => decidir(v, 'mostrado')}
+                    >
+                      {es ? 'Volver a mostrar' : 'Show again'}
+                    </button>
+                  ) : (
+                    <button type="button" className="boton chico" onClick={() => setOcultar(v)}>
+                      {es ? 'Ocultar de Videos' : 'Hide from Videos'}
+                    </button>
+                  )}
+                  {v.pendientes > 0 && !v.oculto && (
+                    <button
+                      type="button"
+                      className="boton secundario chico"
+                      onClick={() => decidir(v, 'descartado')}
+                    >
+                      {es ? 'Está bien, descartar' : 'It’s fine, dismiss'}
+                    </button>
+                  )}
+                  {v.usuario_id && (
+                    <MenuPuntos
+                      opciones={[
+                        {
+                          etiqueta: es ? 'Ver la ficha del creador' : 'Open creator profile',
+                          accion: () => abrirFicha(v.usuario_id!),
+                        },
+                        {
+                          etiqueta: es ? 'Abrir en Videos' : 'Open in Videos',
+                          accion: () => window.open(`/videos/${v.video_id}`, '_blank', 'noopener'),
+                        },
+                      ]}
+                    />
+                  )}
+                </div>
+              </div>
+              <ul className="admin-denuncia-motivos">
+                {v.denuncias.map((d) => (
+                  <li key={d.id}>
+                    <b>{MOTIVO[d.motivo]?.[es ? 0 : 1] ?? d.motivo}</b> · {haceCuanto(d.creado, idioma)}
+                    {d.correo && ` · ${d.correo}`}
+                    {d.detalle && <p>{d.detalle}</p>}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+      {ocultar && (
+        <Confirmar
+          texto={
+            es
+              ? `¿Ocultar «${ocultar.titulo ?? ''}» de Videos? Deja de verse en la red y el dueño no lo puede volver a publicar. Su enlace sigue funcionando para quien lo tenga.`
+              : `Hide “${ocultar.titulo ?? ''}” from Videos? It leaves the network and the owner can’t publish it again. Its link still works for whoever has it.`
+          }
+          etiquetaSi={es ? 'Ocultar de Videos' : 'Hide from Videos'}
+          etiquetaNo={es ? 'Cancelar' : 'Cancel'}
+          no={() => setOcultar(null)}
+          si={() => {
+            const v = ocultar;
+            setOcultar(null);
+            decidir(v, 'ocultado');
+          }}
+        />
+      )}
+    </div>
+  );
+}

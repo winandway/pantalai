@@ -14,6 +14,7 @@ import {
   NOMBRE_PLAN,
   panel,
   PestanaAlmacen,
+  PestanaDenuncias,
   PestanaPagos,
   PestanaSeguridad,
   PestanaSistema,
@@ -68,6 +69,11 @@ const ACCION: Record<string, { en: string; es: string }> = {
   bloquear_ip: { en: 'blocked IP', es: 'bloqueó la IP' },
   desbloquear_ip: { en: 'unblocked IP', es: 'desbloqueó la IP' },
   intento: { en: 'attempt without permission', es: 'intento sin permiso' },
+  denuncia_ocultado: { en: 'hid from Videos after a report', es: 'ocultó de Videos por denuncia' },
+  denuncia_mostrado: { en: 'showed again in Videos', es: 'volvió a mostrar en Videos' },
+  denuncia_descartado: { en: 'dismissed the report on', es: 'descartó la denuncia de' },
+  red_ocultar: { en: 'hid from Videos', es: 'ocultó de Videos' },
+  red_mostrar: { en: 'showed in Videos', es: 'mostró en Videos' },
 };
 
 export function Admin() {
@@ -76,7 +82,15 @@ export function Admin() {
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [negado, setNegado] = useState(false);
   const [vista, setVista] = useState<
-    'usuarios' | 'videos' | 'moderacion' | 'pagos' | 'almacen' | 'sistema' | 'seguridad' | 'registro'
+    | 'usuarios'
+    | 'videos'
+    | 'moderacion'
+    | 'denuncias'
+    | 'pagos'
+    | 'almacen'
+    | 'sistema'
+    | 'seguridad'
+    | 'registro'
   >('usuarios');
   const [ficha, setFicha] = useState<string | null>(null);
   const [borrar, setBorrar] = useState<FilaVideo | null>(null);
@@ -86,6 +100,7 @@ export function Admin() {
   const [deUsuario, setDeUsuario] = useState<FilaUsuario | null>(null);
   const [abierto, setAbierto] = useState<FilaVideo | null>(null);
   const [sacar, setSacar] = useState<FilaVideo | null>(null);
+  const [porRevisar, setPorRevisar] = useState<number | null>(null);
 
   useEffect(() => {
     // Sin sesión no se dice nada de esta página: se va a entrar como siempre.
@@ -102,6 +117,14 @@ export function Admin() {
   useEffect(() => {
     if (usuario) cargarResumen();
   }, [usuario, cargarResumen]);
+
+  useEffect(() => {
+    // El número de denuncias por revisar se ve en el menú aunque no se abra la pestaña.
+    if (resumen && porRevisar === null)
+      void pedir<{ pendientes: number }>('/datos/admin/denuncias', { headers: panel() }).then((r) =>
+        setPorRevisar(r.pendientes),
+      );
+  }, [resumen, porRevisar]);
 
   useEffect(() => {
     if (!resumen) return;
@@ -145,6 +168,7 @@ export function Admin() {
     ['usuarios', '👥', t('adminUsuarios'), resumen.usuarios],
     ['videos', '🎬', t('adminVideos'), resumen.videos],
     ['moderacion', '🧐', t('adminModeracion'), null],
+    ['denuncias', '🚩', idioma === 'es' ? 'Denuncias' : 'Reports', porRevisar || null],
     ['pagos', '💳', t('adminPagos'), null],
     ['almacen', '💾', t('adminAlmacen'), null],
     ['sistema', '⚙️', t('adminSistema'), null],
@@ -236,6 +260,15 @@ export function Admin() {
         {vista === 'seguridad' && <PestanaSeguridad />}
         {vista === 'almacen' && <PestanaAlmacen abrirFicha={setFicha} />}
         {vista === 'sistema' && <PestanaSistema />}
+        {vista === 'denuncias' && (
+          <PestanaDenuncias
+            mirar={(v) =>
+              setAbierto({ ...v, duracion: 0, bytes: 0, privacidad: '', tiene_miniatura: 0, creado: 0 })
+            }
+            abrirFicha={setFicha}
+            alCambiar={setPorRevisar}
+          />
+        )}
         {(vista === 'usuarios' || vista === 'videos' || vista === 'moderacion') && (
           <div className="admin-tabla-marco">
             {vista === 'usuarios' ? (

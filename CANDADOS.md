@@ -865,3 +865,17 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `pruebas/busqueda-red.test.ts`, `pruebas/servidor.test.ts` › C-BUSCADOR y `e2e/red.spec.ts`. Comprobadas
   en ROJO el 9 nov 2026 (romper `normalizar` pone 5 pruebas en rojo).
 - No tocar: el orden de las rutas (`/videos/search` antes de `/videos/:id`) ni el filtro `SQL_RED`.
+
+## C-DENUNCIAS: el superadmin revisa las denuncias de la red (9 nov 2026)
+
+- Pestaña «Denuncias» del panel (`PestanaDenuncias` en `web/src/paginas/AdminPartes.tsx`), con el número de videos
+  por revisar en el menú. Cada video denunciado sale una vez, con el creador, cuántas denuncias tiene, cada motivo y
+  lo que escribió quien denunció. Acciones: «Ver video» (visor del panel con firma), «Ocultar de Videos» (con
+  confirmación), «Volver a mostrar» y «Está bien, descartar»; en los tres puntos, la ficha del creador.
+- Servidor: `GET /datos/admin/denuncias?estado=pendientes|revisadas` y `POST /datos/admin/denuncias/:id`
+  `{decision: ocultado|mostrado|descartado}`, los dos con `requiereSuperadmin` (sesión + lista + dirección secreta).
+  La decisión se guarda en la tabla nueva `red_denuncias_revisadas`; una denuncia que llega DESPUÉS de la decisión
+  vuelve a poner el video en «Por revisar». Cada decisión queda en el registro del panel (`denuncia_*`).
+- Pruebas: `pruebas/servidor.test.ts` › C-DENUNCIAS (comprobada en ROJO el 9 nov 2026: contar todas las denuncias
+  como pendientes la pone en rojo) y `e2e/denuncias.spec.ts` (se salta sin `E2E_PANEL` y `E2E_PANEL_CORREO`; local:
+  `wrangler dev --var SUPERADMIN_CORREOS:… --var SUPERADMIN_RUTA:…`).
