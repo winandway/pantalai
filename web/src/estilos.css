@@ -6321,3 +6321,21 @@ html.con-shorts body {
   flex-basis: 100%;
   margin: 0;
 }
+/* Mientras se graba, la barra de abajo no crece: el Karaoke apagado se esconde y el encendido deja solo su Efecto,
+   en la misma línea que los volúmenes (si no, la barra tapaba el escenario y eso no se ve en la grabación). */
+.estudio.grabando .estudio-karaoke:not(.activo),
+.estudio.grabando .estudio-karaoke .estudio-ayuda,
+.estudio.grabando .estudio-karaoke .estudio-karaoke-audifonos {
+  display: none;
+}
+.estudio.grabando .estudio-karaoke {
+  margin-top: 0;
+  flex: 1 1 220px;
+}
+.estudio.grabando .estudio-karaoke-boton {
+  padding: 4px 12px;
+  font-size: 0.85rem;
+}
+.estudio.grabando .estudio-controles .estudio-volumenes {
+  flex: 3 1 420px;
+}

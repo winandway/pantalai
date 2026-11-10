@@ -38,6 +38,10 @@ test('grabar con Karaoke en el Estudio', async ({ page }) => {
   // Mientras se graba, el botón no se puede cambiar, pero el efecto sí.
   await expect(page.getByRole('button', { name: /Karaoke/ })).toBeDisabled();
   await page.getByRole('slider', { name: 'Effect' }).fill('80');
+  // La barra de abajo no tapa el escenario (lo tapado no sale en el video), también con Karaoke encendido.
+  const fijo = (await page.locator('[data-escenario]').boundingBox())!;
+  const barra = (await page.locator('.estudio-controles').boundingBox())!;
+  expect(fijo.y + fijo.height).toBeLessThanOrEqual(barra.y + 1);
   await page.waitForTimeout(3500);
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
