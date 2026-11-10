@@ -1063,11 +1063,14 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   video está «Original video by @…»). Comprobadas en ROJO el 10 nov 2026: sin sostener la voz falla la unitaria; con
   el cartel gris en vez de verde falla la e2e «cuadros con el cartel Hablando en verde»; y el primer intento devolvía el
   crédito fuera de `video` (la unitaria lo atrapó).
-- 10 nov 2026 (tarde): la e2e fallaba SIEMPRE en GitHub (Linux) y nunca en la Mac. Causa: el micrófono de prueba de
-  Chrome es un pitido fijo y la supresión de ruido que pide el cartel (`noiseSuppression: true`) lo aprende y lo apaga
-  en Linux al segundo: antes de grabar se veía «Speaking», durante la grabación ya «Listening» (lo mostraban los cuadros
-  de la grabación de GitHub). La prueba ahora le da al cartel una voz de mentira con sílabas y pausas hecha con WebAudio
-  (no pasa por ese filtro). El producto no cambia: una voz real no es un tono fijo.
+- 10 nov 2026 (tarde): la e2e fallaba SIEMPRE en GitHub (Linux) y nunca en la Mac (tres corridas seguidas, una de
+  ellas un reintento). Causa medida en los cuadros de una grabación de GitHub: allá se graba en WebM VP9 y el verde
+  del cartel encendido sale (7, 142, 70), por debajo del umbral g > 150 que se calibró con el H.264 de la Mac. El
+  umbral pasó a g > 120 (sigue exigiendo azul y g muy por encima de b: el verde de la cámara de prueba, (0, 115, 1), no
+  cuenta y un cartel gris tampoco). Además, en esos cuadros el cartel se apagaba al segundo con el pitido fijo del
+  micrófono de prueba (la supresión de ruido de Linux lo aprende), así que la prueba le da una voz de mentira con
+  sílabas y pausas hecha con WebAudio. La grabación queda en los resultados para mirarla si vuelve a fallar. El
+  producto no cambia.
 - Fuera de esta fase: transmitir en vivo a YouTube (no estaba en la línea de PENDIENTES; gastaría y pide decisión de Richard).
 
 ## C-REVISION-10NOV: arreglos de la revisión de calidad del Estudio (10 nov 2026)

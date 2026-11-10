@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { cabecerasDePrueba, examinarVideo } from './ayuda';
 
@@ -72,7 +73,10 @@ test('el cartel «Hablando» se enciende con el micrófono y sale en la grabaci�
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
   const id = new URL(page.url()).pathname.split('/')[2]!;
-  const examen = await examinarVideo(await (await page.request.get(`/media/${id}/video?descargar=1`)).body());
+  const grabado = await (await page.request.get(`/media/${id}/video?descargar=1`)).body();
+  // Queda entre los resultados (en GitHub se suben solo si algo falla) para poder mirar los cuadros.
+  writeFileSync(test.info().outputPath('hablando-grabado.video'), grabado);
+  const examen = await examinarVideo(grabado);
   let verdes = 0;
   for (const s of [0.4, 0.8, 1.2, 1.6, 2.0, 2.4, 2.8, 3.2]) {
     const cuadro = examen.cuadro(s);
@@ -80,8 +84,9 @@ test('el cartel «Hablando» se enciende con el micrófono y sale en la grabaci�
       puntos.some((p) => {
         const [r, g, b] = cuadro(p.x, p.y) as [number, number, number];
         if (process.env.DEPURAR) console.log(s, p.x.toFixed(3), p.y.toFixed(3), r, g, b);
-        // El verde del cartel (#16a34a) lleva azul; el de la cámara de prueba, no: así no se confunden.
-        return g > 150 && r < 90 && b > 45 && b < 130 && g > b + 50;
+        // El verde del cartel (#16a34a) lleva azul; el de la cámara de prueba, no: así no se confunden. En GitHub
+        // (Linux, WebM VP9) el mismo cartel sale más oscuro, (7, 142, 70), que en la Mac (H.264): por eso g > 120.
+        return g > 120 && r < 90 && b > 45 && b < 130 && g > b + 50;
       })
     )
       verdes++;
