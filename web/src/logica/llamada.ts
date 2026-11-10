@@ -39,6 +39,16 @@ export const STUN: RTCIceServer = { urls: ['stun:stun.cloudflare.com:3478'] };
 /** Voz limpia en los dos lados: cancelación de eco, supresión de ruido y ganancia automática. */
 export const VOZ = { echoCancellation: true, noiseSuppression: true, autoGainControl: true } as const;
 
+/** Servidores ICE renovados si los guardados tienen más de esto (la credencial TURN vive 2 h en el servidor). */
+export const RENOVAR_ICE_MS = 60 * 60 * 1000;
+
+/**
+ * Si la conexión con el invitado queda caída este tiempo y él no vuelve a ofrecer, el anfitrión libera el asiento
+ * (se le acabó la batería, cerró la pestaña sin despedirse). Más que lo que tarda el invitado en reintentar solo
+ * (8 s esperando que vuelva sola + 2 s), para no cortarle la reconexión; y si vuelve después, retoma su asiento.
+ */
+export const LIBERAR_TRAS_MS = 20_000;
+
 /** Mensaje del canal de datos cuando el invitado sale a propósito. */
 export const ADIOS = 'adios';
 
@@ -98,6 +108,10 @@ export class SalaAnfitrion {
   private atendido = 0;
   private vivo = false;
   private ice: RTCIceServer[] = [STUN];
+  private iceDesde = 0;
+  private relojLiberar: ReturnType<typeof setTimeout> | null = null;
+  /** Se puede acortar en las pruebas. */
+  liberarTras = LIBERAR_TRAS_MS;
   nombre: string | null = null;
   estado: EstadoLlamada = 'esperando';
 
@@ -113,14 +127,19 @@ export class SalaAnfitrion {
     this.ev.estado(e, this.nombre);
   }
 
-  async iniciar() {
-    if (this.vivo) return;
-    this.vivo = true;
+  private async pedirIce() {
     try {
       this.ice = (await this.d.pedir<{ iceServers: RTCIceServer[] }>('/datos/estudio/ice')).iceServers;
+      this.iceDesde = Date.now();
     } catch (e) {
       console.error('invitado: sin servidores ICE, se intenta directo', e);
     }
+  }
+
+  async iniciar() {
+    if (this.vivo) return;
+    this.vivo = true;
+    await this.pedirIce();
     this.poner('esperando');
     void this.bucle();
   }
@@ -148,7 +167,8 @@ export class SalaAnfitrion {
       }
       return;
     }
-    if (!r.oferta || r.intento <= this.atendido) return;
+    // Se detuvo mientras la consulta iba en camino: no se arma una conexión (ni se toma el micrófono) para nadie.
+    if (!this.vivo || !r.oferta || r.intento <= this.atendido) return;
     this.atendido = r.intento;
     this.nombre = r.nombre;
     await this.responder(r.oferta, r.intento);
@@ -156,6 +176,9 @@ export class SalaAnfitrion {
 
   private async responder(oferta: string, intento: number) {
     this.cerrar();
+    // Credenciales del puente con más de una hora: se piden otras antes de responder.
+    if (Date.now() - this.iceDesde > RENOVAR_ICE_MS) await this.pedirIce();
+    if (!this.vivo || this.atendido !== intento) return;
     const pc = new this.d.Conexion({ iceServers: this.ice });
     this.pc = pc;
     const pistas = this.pistas();
@@ -172,11 +195,14 @@ export class SalaAnfitrion {
     pc.onconnectionstatechange = () => {
       if (this.pc !== pc) return;
       const s = pc.connectionState;
-      if (s === 'connected') this.poner('conectado');
-      else if (s === 'disconnected' || s === 'failed') {
-        // El invitado vuelve a ofrecer solo; aquí se sigue esperando su oferta nueva.
+      if (s === 'connected') {
+        this.pararLiberar();
+        this.poner('conectado');
+      } else if (s === 'disconnected' || s === 'failed') {
+        // El invitado vuelve a ofrecer solo; aquí se sigue esperando su oferta nueva. Si no vuelve, se libera.
         if (s === 'failed') this.ev.remoto(null);
         this.poner('caido');
+        this.liberarSiNoVuelve(pc, intento);
       }
     };
     this.poner('conectando');
@@ -192,6 +218,30 @@ export class SalaAnfitrion {
       // Una respuesta que llega tarde (el invitado ya mandó otra oferta) no es un error: se atiende la nueva.
       if (!(e instanceof ErrorApi && e.codigo === 'intento_viejo')) console.error('invitado: responder', e);
     }
+  }
+
+  /**
+   * Caída: si en `liberarTras` la conexión no volvió y el invitado no ofreció de nuevo, se libera su asiento (el
+   * servidor solo lo hace si el intento sigue siendo este). Si vuelve más tarde con su asiento, entra igual.
+   */
+  private liberarSiNoVuelve(pc: RTCPeerConnection, intento: number) {
+    if (this.relojLiberar) return;
+    this.relojLiberar = setTimeout(() => {
+      this.relojLiberar = null;
+      if (!this.vivo || this.pc !== pc || this.atendido !== intento || pc.connectionState === 'connected')
+        return;
+      this.cerrar();
+      this.ev.remoto(null);
+      this.poner('salio');
+      void this.d
+        .pedir(`/datos/estudio/invitado/${this.codigo}/liberar`, { method: 'POST', json: { intento } })
+        .catch((e) => console.error('invitado: liberar tras la caída', e));
+    }, this.liberarTras);
+  }
+
+  private pararLiberar() {
+    if (this.relojLiberar) clearTimeout(this.relojLiberar);
+    this.relojLiberar = null;
   }
 
   /** El invitado salió a propósito: el enlace queda libre para volver a entrar. */
@@ -211,6 +261,7 @@ export class SalaAnfitrion {
   }
 
   private cerrar() {
+    this.pararLiberar();
     const pc = this.pc;
     this.pc = null;
     if (pc) {
@@ -253,17 +304,24 @@ export class LlamadaInvitado {
     this.ev.estado(e, this.nombre);
   }
 
-  async unir() {
-    this.vivo = true;
-    this.caidas = 0;
+  /** Servidores ICE (con credenciales TURN de 2 h). false si el enlace ya no existe. */
+  private async pedirIce(): Promise<boolean> {
     try {
       this.ice = (
         await this.d.pedir<{ iceServers: RTCIceServer[] }>(`/datos/invitado/${this.codigo}/ice`)
       ).iceServers;
     } catch (e) {
-      if (e instanceof ErrorApi && e.estado === 404) return this.poner('vencida');
-      console.error('invitado: sin servidores ICE, se intenta directo', e);
+      if (e instanceof ErrorApi && e.estado === 404) return false;
+      // Sin internet o demasiados pedidos: se sigue con los que había.
+      console.error('invitado: sin servidores ICE nuevos, se sigue con los de antes', e);
     }
+    return true;
+  }
+
+  async unir() {
+    this.vivo = true;
+    this.caidas = 0;
+    if (!(await this.pedirIce())) return this.poner('vencida');
     await this.ofrecer();
   }
 
@@ -352,6 +410,9 @@ export class LlamadaInvitado {
     this.poner('caido');
     const pc = this.pc;
     await this.d.esperar(pausaReintento(this.caidas));
+    if (this.pc !== pc || !this.vivo) return;
+    // Credenciales del puente nuevas en cada reintento (las de antes pueden haber vencido: viven 2 h).
+    if (!(await this.pedirIce())) return this.terminar('vencida');
     if (this.pc === pc) await this.ofrecer();
   }
 

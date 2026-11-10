@@ -193,3 +193,39 @@ test('la página del invitado: enlace que no existe, y versión en español', as
   }
   await contexto.close();
 });
+
+// Asiento bloqueado (arreglo del 10 nov 2026): el invitado cierra todo de golpe (sin despedirse: batería, pestaña
+// cerrada). El anfitrión ve la caída y, si nadie vuelve en unos segundos, libera el asiento: otra persona entra con el
+// MISMO enlace sin esperar 24 horas.
+test('si el invitado se cae de golpe, el enlace queda libre para otra persona', async ({ page, browser }) => {
+  await crearCuenta(page);
+  await page.goto('/studio');
+  await page.getByText('A remote guest').click();
+  await page.getByRole('button', { name: /Invite a guest/ }).click();
+  const enlace = new URL(await page.getByLabel('Guest link').inputValue()).pathname;
+  const estadoAnfitrion = page.locator('[data-estado-invitado]');
+
+  const primero = await abrirInvitado(browser, enlace);
+  await primero.pagina.getByLabel('Your name').fill('Primera');
+  await primero.pagina.getByRole('button', { name: 'Join the interview' }).click();
+  await expect(estadoAnfitrion).toHaveAttribute('data-estado-invitado', 'conectado', { timeout: 30_000 });
+
+  // Se va de golpe: el «adiós» no alcanza a salir (como sin batería) y se cierra el navegador entero.
+  await primero.pagina.evaluate(() => {
+    RTCDataChannel.prototype.send = () => undefined;
+  });
+  await primero.contexto.close();
+  await expect(estadoAnfitrion).toHaveAttribute('data-estado-invitado', 'salio', { timeout: 90_000 });
+
+  // Otra persona, con otro navegador y el mismo enlace, entra y queda conectada.
+  const segundo = await abrirInvitado(browser, enlace);
+  await expect(segundo.pagina.getByRole('heading', { name: 'Join a live interview' })).toBeVisible();
+  await segundo.pagina.getByLabel('Your name').fill('Segunda');
+  await segundo.pagina.getByRole('button', { name: 'Join the interview' }).click();
+  await expect(segundo.pagina.locator('[data-estado]')).toHaveAttribute('data-estado', 'conectado', {
+    timeout: 30_000,
+  });
+  await expect(estadoAnfitrion).toHaveAttribute('data-estado-invitado', 'conectado', { timeout: 30_000 });
+  await expect(page.locator('.cartel-video')).toContainText('Segunda');
+  await segundo.contexto.close();
+});

@@ -14,14 +14,33 @@ export const SDP_MAX = 30_000;
 /** Reintentos del invitado por ventana: cada uno escribe 2 filas (su intento y la sala). */
 export const OFERTAS_MAX = 20;
 export const VENTANA_OFERTAS_MS = 15 * 60 * 1000;
+/**
+ * Vida de la credencial del puente TURN: 2 horas (no las 24 h del enlace). Una entrevista más larga no se corta: la
+ * conexión ya armada sigue, y si se cae, el invitado pide credenciales nuevas al reintentar (y el anfitrión al
+ * responder, si las suyas tienen más de una hora). Así una credencial filtrada sirve poco tiempo.
+ */
+export const VIDA_TURN_S = 2 * 3600;
+/** El navegador renueva sus servidores ICE si los suyos tienen más de esto (bastante antes de que venzan). */
+export const RENOVAR_ICE_MS = 60 * 60 * 1000;
+/**
+ * Pedidos de credenciales TURN con enlace VÁLIDO (cada uno le pide a Cloudflare una credencial nueva): tope por IP y
+ * por sala en una hora. Una entrevista normal pide 1 + una por reintento (máx. 8 seguidos). Sin TURN no se cuenta
+ * nada (solo se entrega el STUN público, que no cuesta). También tiene tope el anfitrión (por cuenta).
+ */
+export const ICE_MAX_IP = 20;
+export const ICE_MAX_SALA = 40;
+export const ICE_MAX_ANFITRION = 40;
+export const VENTANA_ICE_MS = 3600 * 1000;
 
 /**
  * Presupuesto de filas escritas (regla «la nube no se come el dinero»). Una entrevista normal, sin cortes:
  * crear la sala (1 sala + 1 intento) + la oferta del invitado (1 intento + 1 sala) + la respuesta (1) + cerrarla (1)
- * = 6. Mirar, esperar y consultar no escriben nada. Cada reconexión suma 3 (oferta 2 + respuesta 1).
+ * = 6. Mirar, esperar y consultar no escriben nada. Cada reconexión suma 3 (oferta 2 + respuesta 1). Liberar el
+ * asiento (el invitado se fue o se cayó y no volvió) = 1. Con el puente TURN encendido, cada pedido de credenciales
+ * suma 2 (su límite por IP y por sala); sin TURN, 0.
  * La prueba «presupuesto de escrituras» de pruebas/invitado.test.ts falla si se pasa.
  */
-export const PRESUPUESTO_FILAS = { entrevista: 8, reconexion: 3 } as const;
+export const PRESUPUESTO_FILAS = { entrevista: 8, reconexion: 3, liberar: 1, iceConTurn: 2 } as const;
 
 const descripcion = z
   .string()
@@ -33,6 +52,9 @@ export const esquemaOferta = z.object({
   asiento: z.string().regex(ASIENTO),
   sdp: descripcion,
 });
+
+/** Liberar el asiento: con `intento`, solo si el invitado no volvió a ofrecer desde entonces (no se le corta). */
+export const esquemaLiberar = z.object({ intento: z.number().int().min(0).max(100_000).optional() });
 
 export const esquemaRespuesta = z.object({
   intento: z.number().int().min(1).max(100_000),
@@ -81,8 +103,8 @@ export async function servidoresIce(
           Authorization: `Bearer ${env.TURN_LLAVE_TOKEN!.trim()}`,
           'Content-Type': 'application/json',
         },
-        // Lo que dura el enlace: una entrevista larga no se queda sin puente a mitad.
-        body: JSON.stringify({ ttl: VENCE_SALA_MS / 1000 }),
+        // Vida corta (2 h): el navegador pide otra al reintentar. Ver VIDA_TURN_S.
+        body: JSON.stringify({ ttl: VIDA_TURN_S }),
       },
     );
     if (!r.ok) throw new Error(`turn ${r.status}`);

@@ -4,7 +4,16 @@
 // credenciales de corta vida sin sacar la llave del servidor; y /datos/salud dice si TURN está puesto.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../servidor/app';
-import { PRESUPUESTO_FILAS, servidoresIce, sinPuerto53, turnConfigurado } from '../servidor/invitado';
+import {
+  ICE_MAX_ANFITRION,
+  ICE_MAX_IP,
+  ICE_MAX_SALA,
+  PRESUPUESTO_FILAS,
+  VIDA_TURN_S,
+  servidoresIce,
+  sinPuerto53,
+  turnConfigurado,
+} from '../servidor/invitado';
 import { armarMascara } from '../web/src/logica/estudio';
 import {
   ADIOS,
@@ -296,7 +305,7 @@ describe('puente TURN y canario', () => {
     const salud = (await (await app.request('https://pantalai.test/datos/salud', {}, env)).json()) as {
       invitado: { turn: boolean };
     };
-    expect(salud.invitado).toEqual({ turn: false });
+    expect(salud.invitado).toMatchObject({ turn: false });
   });
 
   it('con llave: pide credenciales de corta vida, quita el puerto 53 y la llave no sale del servidor', async () => {
@@ -329,11 +338,13 @@ describe('puente TURN y canario', () => {
       'https://rtc.live.cloudflare.com/v1/turn/keys/llave-id/credentials/generate-ice-servers',
     );
     expect(new Headers(init!.headers).get('authorization')).toBe('Bearer token-secreto');
-    expect(JSON.parse(String(init!.body))).toEqual({ ttl: 86400 });
+    // Vida corta: 2 horas, no las 24 h del enlace (el navegador pide otra al reintentar).
+    expect(VIDA_TURN_S).toBe(7200);
+    expect(JSON.parse(String(init!.body))).toEqual({ ttl: VIDA_TURN_S });
     const salud = (await (await app.request('https://pantalai.test/datos/salud', {}, env)).json()) as {
       invitado: { turn: boolean };
     };
-    expect(salud.invitado).toEqual({ turn: true });
+    expect(salud.invitado).toMatchObject({ turn: true });
   });
 
   it('si Cloudflare falla, se sigue con STUN (y queda en el registro de errores)', async () => {
@@ -345,6 +356,106 @@ describe('puente TURN y canario', () => {
     expect(r).toEqual({ iceServers: [{ urls: ['stun:stun.cloudflare.com:3478'] }], turn: false });
     expect(error).toHaveBeenCalled();
     expect(sinPuerto53([{ urls: 'turn:x:53' }])).toEqual([]);
+  });
+});
+
+describe('arreglos del revisor (10 nov 2026): TURN con tope, asiento libre, canario de salas', () => {
+  /** Cloudflare simulado: cuenta cuántas credenciales se pidieron y con qué vida. */
+  function turnSimulado() {
+    env.TURN_LLAVE_ID = 'llave-id';
+    env.TURN_LLAVE_TOKEN = 'token-secreto';
+    const vidas: number[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (u, init) => {
+      if (String(u).startsWith('https://rtc.live.cloudflare.com/')) {
+        vidas.push((JSON.parse(String(init?.body)) as { ttl: number }).ttl);
+        return Response.json(
+          { iceServers: [{ urls: ['turn:turn.cloudflare.com:3478'], username: 'u', credential: 'c' }] },
+          { status: 201 },
+        );
+      }
+      return new Response('{}', { status: 200 });
+    });
+    return vidas;
+  }
+
+  it('con TURN, un enlace VÁLIDO también tiene tope de credenciales por IP y por sala (2 h cada una)', async () => {
+    const vidas = turnSimulado();
+    const ana = await anfitrion();
+    const { codigo } = (await (await ana('/datos/estudio/invitado', { method: 'POST' })).json()) as {
+      codigo: string;
+    };
+    const ice = (ip: string) => cliente(ip)(`/datos/invitado/${codigo}/ice`);
+    const primera = await ice('2.2.2.2');
+    expect(primera.status).toBe(200);
+    expect(await primera.json()).toMatchObject({ turn: true });
+    for (let i = 1; i < ICE_MAX_IP; i++) expect((await ice('2.2.2.2')).status).toBe(200);
+    // La misma IP no saca más credenciales en esta hora.
+    expect((await ice('2.2.2.2')).status).toBe(429);
+    expect(vidas.length).toBe(ICE_MAX_IP);
+    // Otras IP con el mismo enlace: hasta el tope de la sala, y después nadie más.
+    for (let i = 0; vidas.length < ICE_MAX_SALA; i++)
+      expect((await ice(`3.3.3.${Math.floor(i / (ICE_MAX_IP - 1))}`)).status).toBe(200);
+    expect((await ice('9.9.9.9')).status).toBe(429);
+    expect(vidas.length).toBe(ICE_MAX_SALA);
+    expect(vidas.every((v) => v === VIDA_TURN_S)).toBe(true);
+    // El anfitrión también tiene su tope (por cuenta).
+    for (let i = 0; i < ICE_MAX_ANFITRION; i++) expect((await ana('/datos/estudio/ice')).status).toBe(200);
+    expect((await ana('/datos/estudio/ice')).status).toBe(429);
+  });
+
+  it('sin TURN, pedir servidores ICE no escribe nada ni tiene tope (solo es el STUN público)', async () => {
+    const ana = await anfitrion();
+    const { codigo } = (await (await ana('/datos/estudio/invitado', { method: 'POST' })).json()) as {
+      codigo: string;
+    };
+    const antes = cambios();
+    for (let i = 0; i < ICE_MAX_IP + 5; i++) {
+      expect((await cliente('2.2.2.2')(`/datos/invitado/${codigo}/ice`)).status).toBe(200);
+      expect((await ana('/datos/estudio/ice')).status).toBe(200);
+    }
+    expect(cambios()).toBe(antes);
+  });
+
+  it('liberar tras una caída no le quita el asiento a quien ya volvió; el mismo invitado retoma el suyo', async () => {
+    const ana = await anfitrion();
+    const { codigo } = (await (await ana('/datos/estudio/invitado', { method: 'POST' })).json()) as {
+      codigo: string;
+    };
+    const beto = cliente('2.2.2.2');
+    const asiento = nuevoAsiento();
+    const ofrecer = (c: Cliente, a: string) =>
+      c(`/datos/invitado/${codigo}/oferta`, {
+        method: 'POST',
+        json: { nombre: 'Beto', asiento: a, sdp: OFERTA },
+      });
+    const liberar = (json: unknown) =>
+      ana(`/datos/estudio/invitado/${codigo}/liberar`, { method: 'POST', json });
+    expect((await ofrecer(beto, asiento)).status).toBe(201);
+    // Beto volvió a ofrecer (intento 2) antes de que el anfitrión liberara el intento 1: sigue sentado.
+    expect((await ofrecer(beto, asiento)).status).toBe(201);
+    expect(await (await liberar({ intento: 1 })).json()).toMatchObject({ liberado: false });
+    expect((await ofrecer(cliente('3.3.3.3'), nuevoAsiento())).status).toBe(409);
+    expect((await liberar({ intento: 'x' })).status).toBe(400);
+    // Nadie volvió después del intento 2: se libera.
+    expect(await (await liberar({ intento: 2 })).json()).toMatchObject({ liberado: true });
+    // Beto, con su asiento de siempre, retoma su puesto si vuelve.
+    expect(await (await ofrecer(beto, asiento)).json()).toMatchObject({ intento: 3 });
+  });
+
+  it('el canario dice cuántas salas siguen vivas (y cuántas vencidas), sin escribir', async () => {
+    const ana = await anfitrion();
+    const beto = await anfitrion('Beto', 'beto@example.com');
+    await ana('/datos/estudio/invitado', { method: 'POST' });
+    await beto('/datos/estudio/invitado', { method: 'POST' });
+    env.DB.crudo
+      .prepare("UPDATE salas_invitado SET vence = ? WHERE anfitrion_nombre = 'Beto'")
+      .run(Date.now() - 1);
+    const antes = cambios();
+    const salud = (await (await app.request('https://pantalai.test/datos/salud', {}, env)).json()) as {
+      invitado: Record<string, unknown>;
+    };
+    expect(salud.invitado).toEqual({ turn: false, salas_vivas: 1, salas_vencidas: 1 });
+    expect(cambios()).toBe(antes);
   });
 });
 
@@ -426,6 +537,7 @@ function servidorFalso() {
     respuesta: null as string | null,
     nombre: null as string | null,
     liberada: 0,
+    liberarCon: undefined as unknown,
   };
   const llamadas: string[] = [];
   const pedir = (async (ruta: string, op: RequestInit & { json?: unknown } = {}) => {
@@ -448,6 +560,7 @@ function servidorFalso() {
     }
     if (ruta.endsWith('/liberar')) {
       sala.liberada++;
+      sala.liberarCon = op.json;
       return { ok: true };
     }
     return { intento: sala.intento, nombre: sala.nombre, oferta: sala.respuesta ? null : sala.oferta };
@@ -579,6 +692,96 @@ describe('la llamada (navegador)', () => {
     expect(ConexionFalsa.todas.length).toBe(4);
     anf.detener();
     inv.salir();
+  });
+
+  it('el invitado se va sin despedirse: el anfitrión libera su asiento al rato; si vuelve antes, no', async () => {
+    const armar = () => {
+      const srv = servidorFalso();
+      const d: Dependencias = {
+        pedir: srv.pedir,
+        Conexion: ConexionFalsa as unknown as Dependencias['Conexion'],
+        esperar: () => dormir(1),
+        Flujo: FlujoFalso as unknown as Dependencias['Flujo'],
+      };
+      const estadosAnf: EstadoLlamada[] = [];
+      const anf = new SalaAnfitrion(
+        'c'.repeat(32),
+        () => [],
+        { estado: (e) => estadosAnf.push(e), remoto: () => undefined },
+        d,
+      );
+      const inv = new LlamadaInvitado(
+        'c'.repeat(32),
+        nuevoAsiento(),
+        'Beto',
+        new FlujoFalso([]) as unknown as MediaStream,
+        { estado: () => undefined, remoto: () => undefined },
+        d,
+      );
+      return { srv, anf, inv, estadosAnf };
+    };
+
+    // 1) Se le acabó la batería: la conexión del anfitrión cae y nadie vuelve a ofrecer.
+    ConexionFalsa.todas = [];
+    const a = armar();
+    a.anf.liberarTras = 30;
+    await a.anf.iniciar();
+    await a.inv.unir();
+    await hasta(() => a.srv.sala.respuesta !== null && ConexionFalsa.todas.length === 2);
+    const pcAnf = ConexionFalsa.todas[1]!;
+    pcAnf.ponerEstado('connected');
+    pcAnf.ponerEstado('disconnected');
+    expect(a.estadosAnf.at(-1)).toBe('caido');
+    await hasta(() => a.srv.sala.liberada === 1);
+    // Solo libera ESE intento (si el invitado ofreció otro mientras, el servidor no lo suelta).
+    expect(a.srv.sala.liberarCon).toEqual({ intento: 1 });
+    expect(a.estadosAnf.at(-1)).toBe('salio');
+    expect(pcAnf.cerrada).toBe(true);
+    a.anf.detener();
+
+    // 2) Un corte corto: el invitado vuelve a ofrecer solo (con credenciales ICE nuevas) y no se libera nada.
+    ConexionFalsa.todas = [];
+    const b = armar();
+    b.anf.liberarTras = 150;
+    await b.anf.iniciar();
+    await b.inv.unir();
+    await hasta(() => b.srv.sala.respuesta !== null && ConexionFalsa.todas.length === 2);
+    ConexionFalsa.todas[0]!.ponerEstado('failed');
+    ConexionFalsa.todas[1]!.ponerEstado('failed');
+    await hasta(() => b.srv.sala.intento === 2 && b.srv.sala.respuesta !== null);
+    await dormir(250);
+    expect(b.srv.sala.liberada).toBe(0);
+    expect(b.srv.llamadas.filter((l) => l === `GET /datos/invitado/${'c'.repeat(32)}/ice`).length).toBe(2);
+    b.anf.detener();
+    b.inv.salir();
+  });
+
+  it('detener con una consulta en camino no arma una conexión (ni toma el micrófono)', async () => {
+    let soltar: (v: unknown) => void = () => undefined;
+    let consultas = 0;
+    const pistas = vi.fn(() => [pista('audio')]);
+    const anf = new SalaAnfitrion(
+      'c'.repeat(32),
+      pistas,
+      { estado: () => undefined, remoto: () => undefined },
+      {
+        pedir: (async (ruta: string) => {
+          if (ruta.endsWith('/ice')) return { iceServers: [] };
+          consultas++;
+          return new Promise<unknown>((ok) => (soltar = ok));
+        }) as Dependencias['pedir'],
+        Conexion: ConexionFalsa as unknown as Dependencias['Conexion'],
+        esperar: () => dormir(1),
+        Flujo: FlujoFalso as unknown as Dependencias['Flujo'],
+      },
+    );
+    await anf.iniciar();
+    await hasta(() => consultas === 1);
+    anf.detener();
+    soltar({ intento: 1, nombre: 'Beto', oferta: OFERTA });
+    await dormir(20);
+    expect(ConexionFalsa.todas.length).toBe(0);
+    expect(pistas).not.toHaveBeenCalled();
   });
 
   it('enlace vencido u ocupado: lo dice y deja de intentar', async () => {

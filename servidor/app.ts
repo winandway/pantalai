@@ -32,9 +32,14 @@ import { llmsCompleto, llmsTxt } from './seo';
 import {
   ASIENTO,
   CODIGO_SALA,
+  ICE_MAX_ANFITRION,
+  ICE_MAX_IP,
+  ICE_MAX_SALA,
   OFERTAS_MAX,
   VENCE_SALA_MS,
+  VENTANA_ICE_MS,
   VENTANA_OFERTAS_MS,
+  esquemaLiberar,
   esquemaOferta,
   esquemaRespuesta,
   primerNombre,
@@ -43,11 +48,13 @@ import {
   type EnvTurn,
 } from './invitado';
 import {
+  CAMBIOS_MASCARA_MAX,
   ID_MASCARA,
   LOGO_MAX,
   MAX_MASCARAS,
   claveLogo,
   esquemaMascara,
+  mascaraIgual,
   mascaraPublica,
   tipoDeImagen,
   type FilaMascara,
@@ -504,6 +511,19 @@ app.get('/datos/salud', async (c) => {
     piezas.almacen = 'error';
   }
   const ok = Object.values(piezas).every((p) => p === 'ok');
+  // Salas del invitado: cuántas siguen vivas y cuántas vencidas esperan a que alguien cree otra (solo lee).
+  let salas: Record<string, number | string>;
+  try {
+    const f = await c.env.DB.prepare(
+      'SELECT COALESCE(SUM(vence > ?1), 0) AS vivas, COALESCE(SUM(vence <= ?1), 0) AS vencidas FROM salas_invitado',
+    )
+      .bind(Date.now())
+      .first<{ vivas: number; vencidas: number }>();
+    salas = { salas_vivas: f?.vivas ?? 0, salas_vencidas: f?.vencidas ?? 0 };
+  } catch (e) {
+    console.error('salud: salas del invitado', e);
+    salas = { salas: 'error' };
+  }
   // La IA no tumba la salud del sitio: se informa aparte (encendida o apagada, y el gasto del mes).
   let ia: Record<string, unknown> = { ...iaConfigurada(c.env) };
   try {
@@ -523,7 +543,7 @@ app.get('/datos/salud', async (c) => {
       pago: { listo: pagoListo(c.env), cobro_activo: cobroActivo(c.env) },
       correo: correoListo(c.env),
       // Canario del invitado remoto: true = hay puente TURN (entra gente de redes difíciles); false = solo STUN.
-      invitado: { turn: turnConfigurado(c.env) },
+      invitado: { turn: turnConfigurado(c.env), ...salas },
       commit: COMMIT,
     },
     ok ? 200 : 500,
@@ -3400,17 +3420,29 @@ app.post('/datos/estudio/invitado/:codigo/respuesta', requiereSesion, async (c) 
 });
 
 // El invitado se fue: el asiento queda libre para otra persona con el mismo enlace.
+// Con `intento` (el anfitrión vio caída la conexión y nadie volvió): solo se libera si el invitado no ofreció de nuevo
+// desde ese intento, para no cortarle la reconexión automática. `liberado` dice si se liberó.
 app.post('/datos/estudio/invitado/:codigo/liberar', requiereSesion, async (c) => {
   const s = await salaDelAnfitrion(c);
   if (!s) return err(c, 404, 'sala_vencida');
-  if (s.asiento_hash || s.oferta)
-    await c.env.DB.prepare(
-      `UPDATE salas_invitado SET asiento_hash = NULL, invitado_nombre = NULL, oferta = NULL, respuesta = NULL
-       WHERE codigo_hash = ?`,
-    )
-      .bind(s.codigo_hash)
-      .run();
-  return c.json({ ok: true });
+  let d: ReturnType<typeof esquemaLiberar.safeParse>;
+  try {
+    const texto = await c.req.text();
+    d = esquemaLiberar.safeParse(texto ? JSON.parse(texto) : {});
+  } catch {
+    return err(c, 400, 'datos');
+  }
+  if (!d.success) return err(c, 400, 'datos');
+  if (d.data.intento !== undefined && d.data.intento !== s.intento)
+    return c.json({ ok: true, liberado: false });
+  if (!s.asiento_hash && !s.oferta) return c.json({ ok: true, liberado: true });
+  const r = await c.env.DB.prepare(
+    `UPDATE salas_invitado SET asiento_hash = NULL, invitado_nombre = NULL, oferta = NULL, respuesta = NULL
+     WHERE codigo_hash = ? AND intento = ?`,
+  )
+    .bind(s.codigo_hash, s.intento)
+    .run();
+  return c.json({ ok: true, liberado: Boolean(r.meta.changes) });
 });
 
 app.delete('/datos/estudio/invitado/:codigo', requiereSesion, async (c) => {
@@ -3419,9 +3451,21 @@ app.delete('/datos/estudio/invitado/:codigo', requiereSesion, async (c) => {
   return c.json({ ok: true });
 });
 
-app.get('/datos/estudio/ice', requiereSesion, async (c) =>
-  c.json(await servidoresIce(c.env), 200, { 'Cache-Control': 'no-store' }),
-);
+// Con TURN, cada pedido le saca a Cloudflare una credencial nueva: tope por cuenta (sin TURN no cuesta ni escribe).
+app.get('/datos/estudio/ice', requiereSesion, async (c) => {
+  if (
+    turnConfigurado(c.env) &&
+    !(await dentroDelLimite(
+      c.env.DB,
+      'ice_anfitrion',
+      c.get('usuario')!.id,
+      ICE_MAX_ANFITRION,
+      VENTANA_ICE_MS,
+    ))
+  )
+    return err(c, 429, 'demasiados');
+  return c.json(await servidoresIce(c.env), 200, { 'Cache-Control': 'no-store' });
+});
 
 // ---- lado del invitado (sin cuenta) ----
 
@@ -3442,7 +3486,15 @@ app.get('/datos/invitado/:codigo', async (c) => {
 app.get('/datos/invitado/:codigo/ice', async (c) => {
   const freno = await frenoInvitado(c);
   if (freno) return freno;
-  if (!(await salaDe(c, c.req.param('codigo')))) return enlaceMalo(c);
+  const s = await salaDe(c, c.req.param('codigo'));
+  if (!s) return enlaceMalo(c);
+  // Enlace VÁLIDO también con tope (por IP y por sala): cada pedido con TURN es una credencial nueva en Cloudflare.
+  if (
+    turnConfigurado(c.env) &&
+    (!(await dentroDelLimite(c.env.DB, 'invitado_ice', ip(c), ICE_MAX_IP, VENTANA_ICE_MS)) ||
+      !(await dentroDelLimite(c.env.DB, 'invitado_ice_sala', s.codigo_hash, ICE_MAX_SALA, VENTANA_ICE_MS)))
+  )
+    return err(c, 429, 'demasiados');
   return c.json(await servidoresIce(c.env), 200, { 'Cache-Control': 'no-store' });
 });
 
@@ -3544,12 +3596,28 @@ app.put('/datos/estudio/mascaras/:id', requiereSesion, async (c) => {
   if (!m) return err(c, 404, 'no_existe');
   const d = await cuerpo(c, esquemaMascara);
   if (!d) return err(c, 400, 'datos');
+  // Nada cambió (el editor guarda solo al rato de escribir): no se escribe nada, ni el límite.
+  if (mascaraIgual(m, d)) return c.json({ mascara: mascaraPublica(m) });
+  if (!(await dentroDelLimite(c.env.DB, 'mascara_cambio', m.usuario_id, CAMBIOS_MASCARA_MAX, 3600 * 1000)))
+    return err(c, 429, 'demasiados');
   const ahora = Date.now();
   await c.env.DB.prepare(
     `UPDATE mascaras_estudio SET nombre = ?, estilo = ?, programa = ?, anfitrion = ?, rol = ?, principal = ?,
-       secundario = ?, fondo = ?, actualizado = ? WHERE id = ?`,
+       secundario = ?, fondo = ?, actualizado = ? WHERE id = ? AND usuario_id = ?`,
   )
-    .bind(d.nombre, d.estilo, d.programa, d.anfitrion, d.rol, d.principal, d.secundario, d.fondo, ahora, m.id)
+    .bind(
+      d.nombre,
+      d.estilo,
+      d.programa,
+      d.anfitrion,
+      d.rol,
+      d.principal,
+      d.secundario,
+      d.fondo,
+      ahora,
+      m.id,
+      m.usuario_id,
+    )
     .run();
   return c.json({ mascara: mascaraPublica({ ...m, ...d, actualizado: ahora }) });
 });
@@ -3557,8 +3625,11 @@ app.put('/datos/estudio/mascaras/:id', requiereSesion, async (c) => {
 app.delete('/datos/estudio/mascaras/:id', requiereSesion, async (c) => {
   const m = await mascaraDelDueno(c);
   if (!m) return err(c, 404, 'no_existe');
-  if (m.tiene_logo) await c.env.BUCKET.delete(claveLogo(m.usuario_id, m.id));
-  await c.env.DB.prepare('DELETE FROM mascaras_estudio WHERE id = ?').bind(m.id).run();
+  // Siempre (aunque la fila diga «sin logo»): si un logo estaba subiendo justo ahora, no queda huérfano.
+  await c.env.BUCKET.delete(claveLogo(m.usuario_id, m.id));
+  await c.env.DB.prepare('DELETE FROM mascaras_estudio WHERE id = ? AND usuario_id = ?')
+    .bind(m.id, m.usuario_id)
+    .run();
   return c.json({ ok: true });
 });
 
@@ -3576,9 +3647,16 @@ app.put('/datos/estudio/mascaras/:id/logo', requiereSesion, async (c) => {
     return err(c, 429, 'demasiados');
   await c.env.BUCKET.put(claveLogo(m.usuario_id, m.id), datos, { httpMetadata: { contentType: tipo } });
   const ahora = Date.now();
-  await c.env.DB.prepare('UPDATE mascaras_estudio SET tiene_logo = 1, actualizado = ? WHERE id = ?')
-    .bind(ahora, m.id)
+  const r = await c.env.DB.prepare(
+    'UPDATE mascaras_estudio SET tiene_logo = 1, actualizado = ? WHERE id = ? AND usuario_id = ?',
+  )
+    .bind(ahora, m.id, m.usuario_id)
     .run();
+  // La borraron mientras subía su logo: el archivo no se queda en el almacén sin dueño.
+  if (!r.meta.changes) {
+    await c.env.BUCKET.delete(claveLogo(m.usuario_id, m.id));
+    return err(c, 404, 'no_existe');
+  }
   return c.json({ mascara: mascaraPublica({ ...m, tiene_logo: 1, actualizado: ahora }) });
 });
 

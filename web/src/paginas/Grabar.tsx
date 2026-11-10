@@ -376,6 +376,9 @@ export function Grabar() {
     const s = subidor.current;
     const id = videoId.current;
     if (!g || !s || !id) return;
+    // La grabación se para en el momento del clic en «Terminar»: lo que tarde la miniatura (en una computadora lenta)
+    // no entra en el video ni en su duración (C-GRABAR-PUNTA-A-PUNTA).
+    g.pausar();
     setEstado('subiendo');
     flotante.current?.cerrar();
     flotante.current = null;

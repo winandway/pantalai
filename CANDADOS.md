@@ -950,8 +950,8 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Presupuesto: una entrevista sin cortes escribe ≤ 8 filas (6 medidas); cada reconexión +3. `PRESUPUESTO_FILAS` en
   `servidor/invitado.ts`.
 - Puente: STUN público de Cloudflare siempre; TURN de Cloudflare Realtime solo si están `TURN_LLAVE_ID` y
-  `TURN_LLAVE_TOKEN` (credenciales de 24 h pedidas por el servidor; la llave nunca va al navegador; se quita el
-  puerto 53). Canario: `/datos/salud` → `invitado.turn`.
+  `TURN_LLAVE_TOKEN` (credenciales de 2 h pedidas por el servidor —antes 24 h, ver C-REVISION-10NOV—; la llave nunca
+  va al navegador; se quita el puerto 53). Canario: `/datos/salud` → `invitado.turn`, `salas_vivas`, `salas_vencidas`.
 - Pruebas: `pruebas/invitado.test.ts` (rutas, un invitado a la vez, dueño, vencido, zod, límites, presupuesto, TURN,
   canario, y la llamada con WebRTC simulado) y `e2e/invitado.spec.ts` (dos Chrome reales: invitado MAGENTA con tono
   de 440 Hz; el MP4 grabado tiene los píxeles magenta en su tarjeta y su voz con el micrófono del anfitrión en 0; el
@@ -976,7 +976,8 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   idéntico a antes); las demás llevan `mascara-propia estilo-<x>` y las variables `--neon-a`, `--neon-b`,
   `--fondo-mascara`, `--texto`, `--sobre-a`, `--sobre-b` (letras claras u oscuras según el color). El editor
   (`MascarasEstudio.tsx`) usa borrador (el logo elegido viaja como «data:» y vuelve al recargar).
-- Presupuesto: crear ≤ 2 filas, cambiar 1, logo ≤ 2, quitar logo 1, borrar 1; mirar 0 (`PRESUPUESTO_FILAS_MASCARA`).
+- Presupuesto: crear ≤ 2 filas, cambiar ≤ 2 (1 + su límite), guardar sin cambios 0, logo ≤ 2, quitar logo 1,
+  borrar 1; mirar 0 (`PRESUPUESTO_FILAS_MASCARA`).
 - Marca de agua: no se toca. El plan gratis la sigue llevando grabada sobre la cámara con cualquier máscara (se ve en
   los MP4 de la e2e).
 - Pruebas: `pruebas/mascaras.test.ts` (rutas, dueño, zod, tope, logo por bytes y peso, borrar cuenta, presupuesto,
@@ -1018,3 +1019,52 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   el cartel gris en vez de verde falla la e2e «cuadros con el cartel Hablando en verde»; y el primer intento devolvía el
   crédito fuera de `video` (la unitaria lo atrapó).
 - Fuera de esta fase: transmitir en vivo a YouTube (no estaba en la línea de PENDIENTES; gastaría y pide decisión de Richard).
+
+## C-REVISION-10NOV: arreglos de la revisión de calidad del Estudio (10 nov 2026)
+
+El revisor de calidad revisó invitado remoto, máscaras y crédito (05fca1e, 43ccd3b, 6b25ec0). Cada arreglo tiene su
+prueba, comprobada en ROJO quitando el arreglo (mutación a mano, se restauró el código después).
+
+1. **TURN con tope y vida corta.** Antes: cada `GET /datos/invitado/:codigo/ice` con enlace válido pedía a Cloudflare
+   una credencial nueva de 24 h, sin tope. Ahora: `VIDA_TURN_S` = 2 h (`servidor/invitado.ts`); con TURN encendido,
+   tope por IP (`ICE_MAX_IP` = 20/h), por sala (`ICE_MAX_SALA` = 40/h) y por cuenta del anfitrión
+   (`ICE_MAX_ANFITRION` = 40/h); sin TURN no se cuenta ni se escribe nada (solo es el STUN público). El invitado pide
+   servidores ICE nuevos en CADA reintento y el anfitrión antes de responder si los suyos tienen más de 1 h
+   (`RENOVAR_ICE_MS`). Pruebas: «con TURN, un enlace VÁLIDO también tiene tope…» y «sin TURN, pedir servidores ICE no
+   escribe nada» (Cloudflare simulado). Rojo: ttl de 24 h, sin tope por IP, sin tope por sala.
+2. **Asiento bloqueado.** Antes: si el invitado se iba sin despedirse (batería, pestaña cerrada) el enlace quedaba
+   «ocupado» hasta 24 h. Ahora `SalaAnfitrion` (`web/src/logica/llamada.ts`), con la conexión caída
+   `LIBERAR_TRAS_MS` (20 s) sin que vuelva, llama a `POST …/liberar` con `{ intento }`; el servidor solo libera si el
+   intento sigue siendo ese (si el invitado ya volvió a ofrecer, no se le corta: `liberado: false`). El mismo invitado
+   retoma su asiento con su asiento guardado. Pruebas: «liberar tras una caída no le quita el asiento a quien ya
+   volvió…», «el invitado se va sin despedirse: el anfitrión libera…» y la e2e «si el invitado se cae de golpe, el
+   enlace queda libre para otra persona» (el adiós se anula y se cierra el contexto; otro contexto entra y conecta).
+   Rojo: sin el reloj del anfitrión la e2e queda en «caido»; sin la condición del intento falla la unitaria.
+3. **Crédito al creador.** `pruebas/credito.test.ts`: el enlace solo acepta https de youtube.com o tiktok.com (rechaza
+   http, `youtube.com.evil…`, `youtube.com@evil…`, javascript:, vimeo, demasiado largo), solo el dueño lo lee (otra
+   cuenta y un visitante ven el video con `credito: null`), reintentar el cierre o duplicar no deja dos filas, y se
+   borra con el video. Rojo: sin la regla del enlace (falla «http://…») y sin el borrado en `borrarVideo`.
+4. **Máscaras: guardar sin cambios no escribe** (`mascaraIgual`) y cambiar tiene límite (`CAMBIOS_MASCARA_MAX` =
+   120/h por cuenta). Rojo: sin comparar y sin límite.
+5. **Logo huérfano.** `PUT …/logo` comprueba DESPUÉS de subir que la máscara sigue siendo suya (`UPDATE … AND
+usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra el archivo SIEMPRE, aunque la fila
+   diga «sin logo» (un logo a medio subir). Prueba «si la máscara se borra mientras sube su logo…». Rojo con cada uno.
+6. **Fuga de conexión al detener (sospecha CONFIRMADA).** `SalaAnfitrion.consultar` con una consulta en camino armaba
+   un `RTCPeerConnection` (y tomaba el micrófono) después de `detener()`. Ahora revisa `this.vivo` antes de responder
+   y otra vez antes de crear la conexión. Prueba «detener con una consulta en camino no arma una conexión». Rojo: se
+   creaba 1 conexión.
+7. **Salas vencidas.** Se dejan como estaban (se borran al crear otra sala: son pocas filas). El canario
+   `/datos/salud` dice `invitado.salas_vivas` y `invitado.salas_vencidas` (solo lee). Prueba «el canario dice cuántas
+   salas siguen vivas…». Si `salas_vencidas` crece mucho, se agrega un borrado en el reloj.
+8. **Candado de máscaras muerde.** Quitando el filtro `usuario_id` de `mascaraDelDueno`, de la lista o de
+   `/media/mascaras/:id/logo`, falla una prueba de `pruebas/mascaras.test.ts` en cada caso (ya existían; no hizo falta
+   agregar). Marca de agua del plan gratis: e2e `grabar-short.spec.ts` en verde; candado de versión: «C-VERSION» en
+   `pruebas/recorte.test.ts` en verde.
+9. **Prueba inestable `e2e/grabar.spec.ts` (falló el Action verify de 6830bb0 con 13,4 s contra un tope de 13 s).**
+   Causa: el tope fijo suponía que los clics no tardan; en CI (dos grabaciones a la vez en 4 CPU) cada clic tarda y,
+   además, la grabación seguía corriendo mientras se sacaba la miniatura después de tocar «Finish». Arreglo de raíz:
+   (a) `Grabar.tsx` para la grabadora (`g.pausar()`) en el mismo clic de «Terminar», antes de esperar la miniatura
+   (lo de después ya no entra al video ni a su duración); (b) la prueba mide con relojes propios: máximo = desde el
+   clic en «Start» + 3 s de cuenta hasta que vuelve el clic en «Finish», menos la pausa medida (5 s, más que el
+   arranque); mínimo = lo grabado antes y después de la pausa. Rojo: con una grabadora que cuenta la pausa, falla
+   (14,2 s contra un máximo de 9,9 s).

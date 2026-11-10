@@ -20,6 +20,7 @@
   vez). Van como variables del sitio `TURN_LLAVE_ID` y `TURN_LLAVE_TOKEN` (la IA las guarda y republica). El token de
   wrangler no tiene permiso de Realtime (respuesta «Authentication error»), por eso no se pudo crear desde aquí.
   Destraba: invitados detrás de redes difíciles (oficinas, algunos celulares). Mientras tanto funciona con STUN.
+  Ya listo para cuando llegue (10 nov): credenciales de 2 h con tope por IP, por sala y por cuenta (C-REVISION-10NOV).
   Gratis hasta 1.000 GB al mes; después 0,05 USD por GB.
 - 👤 Invitado remoto: decidir si es para todos los planes o solo para los de pago, y si lleva tope de minutos.
   Hoy está abierto a toda cuenta con sesión (decisión de negocio).

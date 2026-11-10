@@ -19,8 +19,12 @@ test('grabar, subir y ver un video', async ({ page }) => {
 
   await page.goto('/record');
   await page.getByText('Screen + Cam').click();
+  // Relojes del lado de la prueba para comprobar que la pausa no cuenta SIN números fijos: en una máquina lenta
+  // (CI con dos grabaciones a la vez) cada clic tarda, y un tope fijo de 13 s fallaba al azar (13,4 s el 10 nov).
+  const tClicEmpezar = Date.now();
   await page.getByRole('button', { name: 'Start recording' }).click();
   await expect(page.getByText('Recording', { exact: true })).toBeVisible({ timeout: 15_000 });
+  const tGrabando = Date.now();
   // CANDADO C-VISTA-PREVIA: mientras se graba, la vista previa tiene imagen (antes quedaba en negro).
   await expect
     .poll(() =>
@@ -32,12 +36,19 @@ test('grabar, subir y ver un video', async ({ page }) => {
   // El botón de arriba dice «Recording» con el tiempo, no «Record».
   await expect(page.locator('.encabezado .grabando-ahora')).toContainText('Recording');
   await page.waitForTimeout(7000);
+  const tClicPausa = Date.now();
   await page.getByRole('button', { name: /Pause/ }).click();
   await expect(page.locator('.barra-grabacion .indicador')).toHaveText('Paused');
-  await page.waitForTimeout(1500);
+  const tEnPausa = Date.now();
+  // Pausa larga: más que lo que puede tardar el arranque, así una pausa que contara se notaría siempre.
+  await page.waitForTimeout(5000);
+  const tClicSeguir = Date.now();
   await page.getByRole('button', { name: /Resume/ }).click();
+  const tSiguio = Date.now();
   await page.waitForTimeout(2000);
+  const tClicTerminar = Date.now();
   await page.getByRole('button', { name: /Finish/ }).click();
+  const tTermino = Date.now();
 
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
   const id = page.url().split('/v/')[1]!;
@@ -50,7 +61,14 @@ test('grabar, subir y ver un video', async ({ page }) => {
   );
   expect(datos.video.estado).toBe('listo');
   expect(datos.video.duracion).toBeGreaterThan(7);
-  expect(datos.video.duracion).toBeLessThan(13); // la pausa no cuenta
+  // La pausa no cuenta. Cotas medidas: la grabación empezó después de la cuenta regresiva de 3 s y antes de verse
+  // «Recording»; la pausa duró al menos de «Paused» al clic en «Resume»; se paró durante el clic en «Finish».
+  const pausaMin = (tClicSeguir - tEnPausa) / 1000;
+  const maximo = (tTermino - tClicEmpezar - 3000) / 1000 - pausaMin;
+  const minimo = (tClicPausa - tGrabando + (tClicTerminar - tSiguio)) / 1000;
+  expect(pausaMin).toBeGreaterThan(4.5);
+  expect(datos.video.duracion).toBeLessThanOrEqual(maximo + 0.2);
+  expect(datos.video.duracion).toBeGreaterThanOrEqual(minimo - 0.2);
   expect(datos.video.bytes).toBeGreaterThan(10_000);
   expect(datos.video.tiene_miniatura).toBe(true);
 

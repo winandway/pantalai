@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../servidor/app';
 import {
+  CAMBIOS_MASCARA_MAX,
   LOGO_MAX,
   MAX_MASCARAS,
   PRESUPUESTO_FILAS_MASCARA,
@@ -245,6 +246,66 @@ describe('máscaras del Estudio (servidor)', () => {
     antes = cambios();
     await ana(`/datos/estudio/mascaras/${m!.id}`, { method: 'DELETE' });
     expect(cambios() - antes).toBeLessThanOrEqual(PRESUPUESTO_FILAS_MASCARA.borrar);
+  });
+});
+
+describe('máscaras: cambios, límite y logo huérfano', () => {
+  it('guardar sin cambios no escribe nada; cambiar escribe; y los cambios tienen límite por hora', async () => {
+    const ana = await cuenta('Ana Pérez', 'ana@example.com');
+    const { m } = await crear(ana);
+    let antes = cambios();
+    for (let i = 0; i < 5; i++) {
+      const r = await ana(`/datos/estudio/mascaras/${m!.id}`, { method: 'PUT', json: DATOS });
+      expect(r.status).toBe(200);
+      expect(((await r.json()) as { mascara: MascaraGuardada }).mascara).toMatchObject(DATOS);
+    }
+    expect(cambios() - antes).toBe(PRESUPUESTO_FILAS_MASCARA.sinCambios);
+    antes = cambios();
+    await ana(`/datos/estudio/mascaras/${m!.id}`, { method: 'PUT', json: { ...DATOS, programa: 'Otro' } });
+    expect(cambios() - antes).toBeGreaterThan(0);
+    expect(cambios() - antes).toBeLessThanOrEqual(PRESUPUESTO_FILAS_MASCARA.cambiar);
+    // Un robot que cambia sin parar queda frenado (los intentos ya contados en esta hora se simulan).
+    const yo = ((await (await ana('/datos/yo')).json()) as { usuario: { id: string } }).usuario.id;
+    const ins = env.DB.crudo.prepare('INSERT INTO intentos (clave, momento) VALUES (?, ?)');
+    for (let i = 0; i < CAMBIOS_MASCARA_MAX; i++) ins.run(`mascara_cambio:${yo}`, Date.now());
+    const frenado = await ana(`/datos/estudio/mascaras/${m!.id}`, {
+      method: 'PUT',
+      json: { ...DATOS, programa: 'Uno más' },
+    });
+    expect(frenado.status).toBe(429);
+    // Lo que no cambia sigue respondiendo bien aunque esté frenado (no gasta nada).
+    expect(
+      (await ana(`/datos/estudio/mascaras/${m!.id}`, { method: 'PUT', json: { ...DATOS, programa: 'Otro' } }))
+        .status,
+    ).toBe(200);
+  });
+
+  it('si la máscara se borra mientras sube su logo, el archivo no queda en el almacén', async () => {
+    const ana = await cuenta('Ana Pérez', 'ana@example.com');
+    const { m } = await crear(ana);
+    const yo = ((await (await ana('/datos/yo')).json()) as { usuario: { id: string } }).usuario.id;
+    const clave = claveLogo(yo, m!.id);
+    // Mientras el almacén guarda el logo, la persona borra la máscara desde otra pestaña.
+    const putReal = env.BUCKET.put.bind(env.BUCKET);
+    env.BUCKET.put = (async (...a: Parameters<typeof putReal>) => {
+      const r = await putReal(...a);
+      expect((await ana(`/datos/estudio/mascaras/${m!.id}`, { method: 'DELETE' })).status).toBe(200);
+      return r;
+    }) as typeof env.BUCKET.put;
+    const r = await ana(`/datos/estudio/mascaras/${m!.id}/logo`, {
+      method: 'PUT',
+      body: PNG as unknown as BodyInit,
+      headers: { 'content-type': 'image/png' },
+    });
+    expect(r.status).toBe(404);
+    expect(env.BUCKET.objetos.has(clave)).toBe(false);
+
+    // Al revés: se borra la máscara cuando la fila todavía dice «sin logo» pero el archivo ya está: se borra igual.
+    env.BUCKET.put = putReal;
+    const { m: otra } = await crear(ana);
+    await env.BUCKET.put(claveLogo(yo, otra!.id), PNG);
+    expect((await ana(`/datos/estudio/mascaras/${otra!.id}`, { method: 'DELETE' })).status).toBe(200);
+    expect(env.BUCKET.objetos.has(claveLogo(yo, otra!.id))).toBe(false);
   });
 });
 

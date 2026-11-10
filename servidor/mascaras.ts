@@ -14,10 +14,20 @@ export const TIPOS_LOGO = ['image/png', 'image/jpeg', 'image/webp'] as const;
 
 /**
  * Presupuesto de filas escritas (regla «la nube no se come el dinero»): guardar una máscara nueva = 1 fila + 1 del
- * límite de intentos; cambiarla = 1; poner o quitar el logo = 1 (+1 del límite al poner); borrarla = 1. Mirar la lista
+ * límite de intentos; cambiarla = 1 + 1 del límite (y 0 si no cambió nada); poner o quitar el logo = 1 (+1 del límite al poner); borrarla = 1. Mirar la lista
  * y el logo no escribe nada. La prueba «presupuesto» de pruebas/mascaras.test.ts falla si se pasa.
  */
-export const PRESUPUESTO_FILAS_MASCARA = { crear: 2, cambiar: 1, logo: 2, quitarLogo: 1, borrar: 1 } as const;
+export const PRESUPUESTO_FILAS_MASCARA = {
+  crear: 2,
+  cambiar: 2,
+  sinCambios: 0,
+  logo: 2,
+  quitarLogo: 1,
+  borrar: 1,
+} as const;
+
+/** Cambios guardados por cuenta en una hora (el editor guarda al rato de escribir; esto frena a un robot). */
+export const CAMBIOS_MASCARA_MAX = 120;
 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
@@ -60,6 +70,11 @@ export type FilaMascara = DatosMascara & {
   tiene_logo: number;
   actualizado: number;
 };
+
+/** ¿Lo que llega es igual a lo guardado? (entonces no se escribe nada). */
+export function mascaraIgual(f: FilaMascara, d: DatosMascara): boolean {
+  return (Object.keys(esquemaMascara.shape) as (keyof DatosMascara)[]).every((k) => f[k] === d[k]);
+}
 
 /** Lo que ve el navegador (sin el dueño), con la dirección del logo versionada para que no quede uno viejo. */
 export function mascaraPublica(f: FilaMascara) {
