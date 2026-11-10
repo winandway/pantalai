@@ -305,6 +305,16 @@ CREATE TABLE IF NOT EXISTS videos_equipo (
   PRIMARY KEY (video_id, equipo_id)
 );
 CREATE INDEX IF NOT EXISTS videos_equipo_equipo ON videos_equipo (equipo_id);
+-- Carpetas compartidas con un equipo (10 nov 2026, CANDADO C-CARPETAS-EQUIPO). Una fila de relación: compartir no
+-- copia ni reescribe videos. Los miembros ven todo lo que esté (y lo que se agregue después) en la carpeta del autor.
+CREATE TABLE IF NOT EXISTS carpetas_equipo (
+  carpeta_id TEXT NOT NULL,
+  equipo_id TEXT NOT NULL,
+  compartido_por TEXT NOT NULL,
+  creado INTEGER NOT NULL,
+  PRIMARY KEY (carpeta_id, equipo_id)
+);
+CREATE INDEX IF NOT EXISTS carpetas_equipo_equipo ON carpetas_equipo (equipo_id);
 -- Reporte de error con la extensión de Chrome (8 nov 2026, CANDADO C-REPORTE-ERROR): mensajes de consola y peticiones
 -- de red de la pestaña con el fallo, ya alineados con el segundo del video. Nunca cuerpos, cookies ni cabeceras.
 CREATE TABLE IF NOT EXISTS registros_video (

@@ -641,6 +641,43 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   crear, invitar, copiar enlace, unirse creando la cuenta, compartir un video privado y verlo).
 - No tocar: que `puedeVer` exija estado `listo` antes de mirar equipos, y que unirse compare el correo de la sesión.
 
+## C-CARPETAS-EQUIPO (10 nov 2026)
+
+- Qué es: compartir una CARPETA entera con un equipo (antes era video por video). Tabla nueva `carpetas_equipo`
+  (`schema.sql`, solo `CREATE ... IF NOT EXISTS`, llave `(carpeta_id, equipo_id)`, índice por equipo). Es una fila de
+  relación: compartir nunca copia ni reescribe videos; meter un video en la carpeta no escribe nada en el equipo.
+- Permisos (los mismos de C-EQUIPOS, sin niveles nuevos): `puedeVer` mira, para un video listo y privado, si la cuenta es
+  miembro de un equipo con el que está compartido el video O su carpeta, con dos condiciones: el video no está
+  archivado y la carpeta es DEL AUTOR del video (`JOIN carpetas k ... k.usuario_id = autor`), así nadie «cuela» un
+  video ajeno escribiendo el id de una carpeta compartida. Vale igual para `/datos/videos/:id`, actividad,
+  comentarios, `/media/:id/video` y `/media/:id/miniatura`. Solo el autor edita, mueve o borra (`videoDelDueno`).
+- Rutas: `GET /datos/carpetas/:id/equipos` (la ventanita, solo el dueño), `POST /datos/equipos/:id/carpetas`
+  (`{carpeta_id}` con zod; solo el dueño de la carpeta y miembro del equipo), `DELETE /datos/equipos/:id/carpetas/:c`
+  (el dueño o un admin del equipo), `GET /datos/equipos/:id/carpetas/:c` (videos listos y sin archivar, solo
+  miembros; los demás 404). `GET /datos/equipos/:id` trae `carpetas` (nombre, autor, cuántos videos) y
+  `GET /datos/carpetas` trae `equipos` (con cuántos está compartida).
+- Corte al instante y sin huérfanas: salir o ser quitado borra lo que esa persona compartió (videos y carpetas) del
+  equipo; borrar la carpeta, el equipo o la cuenta borra sus filas de `carpetas_equipo`. Nunca se borra un video.
+- Presupuesto (`servidor/carpetasEquipo.ts`, `PRESUPUESTO_FILAS_CARPETA_EQUIPO`): compartir 1 fila, repetir 0, dejar
+  de compartir 1, mirar 0.
+- Pantalla: «Share with a team / Compartir con un equipo» en el menú ⋮ de cada carpeta (misma ventanita de casillas,
+  `CompartirConEquipo carpeta=…`), 👥 junto al nombre de la carpeta compartida, sección «Shared folders / Carpetas
+  compartidas» en `/team/<id>` y página `/team/<id>/folder/<carpeta>` marcada «Carpeta compartida en <equipo> ·
+  Compartida por <dueño>», sin menús para quien no es dueño. Dejar de compartir vive en el menú ⋮ con confirmación.
+  `/team/...` sigue con noindex.
+- Guía pública: Docs → «Team spaces / Espacios de equipo» (tres párrafos y tres capturas nuevas, en/es) y una línea
+  en «Library, folders and archive». Funciones: «Team spaces / Espacios de equipo» (sale en portada y `llms.txt`).
+- Pruebas: `pruebas/carpetas-equipo.test.ts` (9: ver la carpeta y los videos de hoy y los de después, salir de la
+  carpeta o archivar lo saca, los de fuera nunca ven ni listan por API ni por archivo, no se cuelan videos ajenos, el
+  miembro no borra ni mueve, dejar de compartir/salir/ser quitado corta, admin saca la carpeta, sin huérfanas al
+  borrar carpeta/equipo/cuenta, presupuesto, zod). Comprobada en ROJO cuatro veces el 10 nov 2026: `puedeVer`
+  dejando ver todo lo privado a cualquier sesión (fallan 6), sin exigir que la carpeta sea del autor (falla 1), borrar
+  carpeta sin borrar la fila (falla 1) y salir sin borrar lo compartido (falla 1). E2E: `e2e/carpetas-equipo.spec.ts`
+  (tres cuentas reales: dueña comparte desde el menú ⋮, miembro entra y abre el video privado, la de fuera recibe 404
+  en API, archivo y página, y al dejar de compartir el miembro pierde el acceso). `CAPTURAS=1` rehace las capturas.
+- No tocar: la condición «carpeta del autor» y «sin archivar» de `puedeVer`; que meter un video en la carpeta no
+  escriba en el equipo; los planes (la decisión de en qué plan van los equipos sigue siendo de Richard).
+
 ### Revisión del 8 nov 2026 (C-REPORTE-ERROR y C-EXTENSION)
 
 - La consola y la red las ven SOLO el dueño y los miembros del equipo con el que se compartió el video; quien solo tiene

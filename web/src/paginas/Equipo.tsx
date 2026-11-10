@@ -1,6 +1,6 @@
 // Espacios de equipo (CANDADO C-EQUIPOS): la página del equipo, la página que abre la invitación, la ventanita para
-// crear un equipo y la de «Compartir con un equipo». Las acciones que quitan algo viven SOLO en el menú de tres
-// puntos y piden confirmación.
+// crear un equipo y la de «Compartir con un equipo» (de un video o de una carpeta entera, C-CARPETAS-EQUIPO), y la
+// página de una carpeta compartida. Las acciones que quitan algo viven SOLO en el menú de tres puntos.
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos, type Opcion } from '../componentes/MenuPuntos';
@@ -9,6 +9,8 @@ import {
   ErrorApi,
   miniaturaVideo,
   pedir,
+  type CarpetaEquipo,
+  type DatosCarpetaEquipo,
   type DatosEquipo,
   type EquipoLista,
   type MiembroEquipo,
@@ -26,7 +28,8 @@ type Pendiente =
   | { tipo: 'eliminar' }
   | { tipo: 'salir' }
   | { tipo: 'quitar'; miembro: MiembroEquipo }
-  | { tipo: 'renombrar' };
+  | { tipo: 'renombrar' }
+  | { tipo: 'carpeta'; carpeta: CarpetaEquipo };
 
 export function PaginaEquipo({ id }: { id: string }) {
   const { t, idioma } = useIdioma();
@@ -74,6 +77,7 @@ export function PaginaEquipo({ id }: { id: string }) {
     );
   if (!datos) return <p className="vacio">…</p>;
   const { equipo, miembros, invitaciones, videos } = datos;
+  const carpetas = datos.carpetas ?? [];
   const admin = equipo.rol === 'admin';
   const opcionesEquipo: Opcion[] = [];
   if (admin)
@@ -107,46 +111,60 @@ export function PaginaEquipo({ id }: { id: string }) {
       </div>
       <div className="equipo-columnas">
         <section>
+          <h2>
+            {t('carpetasEquipo')} <span className="contador">{carpetas.length}</span>
+          </h2>
+          {carpetas.length === 0 && <p className="ayuda">{t('sinCarpetasEquipo')}</p>}
+          <ul className="equipo-carpetas">
+            {carpetas.map((k) => (
+              <li key={k.id} className="tarjeta equipo-carpeta">
+                <a href={`/team/${equipo.id}/folder/${k.id}`} onClick={alClicEnlace}>
+                  <span className="equipo-carpeta-icono" aria-hidden="true">
+                    📁
+                  </span>
+                  <span>
+                    <strong>{k.nombre}</strong>
+                    <span className="ayuda">
+                      {t('carpetaDe')} {k.autor} · {k.videos}{' '}
+                      {k.videos === 1 ? t('unVideo') : t('resumenVideos')}
+                    </span>
+                  </span>
+                </a>
+                {(admin || k.es_mia) && (
+                  <MenuPuntos
+                    opciones={[
+                      {
+                        etiqueta: t('dejarDeCompartirCarpeta'),
+                        peligro: true,
+                        accion: () => setPendiente({ tipo: 'carpeta', carpeta: k }),
+                      },
+                    ]}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
           <h2>{t('videosEquipo')}</h2>
           {videos.length === 0 && <p className="vacio">{t('sinVideosEquipo')}</p>}
           <div className="rejilla">
-            {videos.map((v) => {
-              const puedeQuitar = admin || v.usuario_id === usuario.id;
-              return (
-                <article key={v.id} className="tarjeta-video">
-                  <a href={`/v/${v.id}`} onClick={alClicEnlace} className="tarjeta-video-imagen">
-                    {v.tiene_miniatura ? (
-                      <img src={miniaturaVideo(v.id)} alt="" loading="lazy" />
-                    ) : (
-                      <div className="sin-miniatura" />
-                    )}
-                    <span className="duracion">{formatoTiempo(v.duracion)}</span>
-                    {v.privacidad === 'privado' && <span className="etiqueta-privado">{t('privado')}</span>}
-                  </a>
-                  <div className="tarjeta-video-pie">
-                    <div>
-                      <a href={`/v/${v.id}`} onClick={alClicEnlace} className="tarjeta-video-titulo">
-                        {v.titulo}
-                      </a>
-                      <p className="ayuda">
-                        {v.autor} · {haceCuanto(v.compartido, idioma)}
-                      </p>
-                    </div>
-                    {puedeQuitar && (
-                      <MenuPuntos
-                        opciones={[
-                          {
-                            etiqueta: t('dejarDeCompartir'),
-                            peligro: true,
-                            accion: () => void hacer(`/datos/equipos/${equipo.id}/videos/${v.id}`, 'DELETE'),
-                          },
-                        ]}
-                      />
-                    )}
-                  </div>
-                </article>
-              );
-            })}
+            {videos.map((v) => (
+              <TarjetaVideoEquipo
+                key={v.id}
+                v={v}
+                pie={`${v.autor} · ${haceCuanto(v.compartido, idioma)}`}
+                opciones={
+                  admin || v.usuario_id === usuario.id
+                    ? [
+                        {
+                          etiqueta: t('dejarDeCompartir'),
+                          peligro: true,
+                          accion: () => void hacer(`/datos/equipos/${equipo.id}/videos/${v.id}`, 'DELETE'),
+                        },
+                      ]
+                    : []
+                }
+              />
+            ))}
           </div>
         </section>
 
@@ -261,6 +279,19 @@ export function PaginaEquipo({ id }: { id: string }) {
           }}
         />
       )}
+      {pendiente?.tipo === 'carpeta' && (
+        <Confirmar
+          texto={`📁 ${pendiente.carpeta.nombre}: ${t('dejarDeCompartirCarpeta')}?`}
+          etiquetaSi={t('dejarDeCompartirCarpeta')}
+          etiquetaNo={t('cancelar')}
+          no={() => setPendiente(null)}
+          si={() => {
+            const k = pendiente.carpeta;
+            setPendiente(null);
+            void hacer(`/datos/equipos/${equipo.id}/carpetas/${k.id}`, 'DELETE');
+          }}
+        />
+      )}
       {pendiente?.tipo === 'quitar' && (
         <Confirmar
           texto={`${pendiente.miembro.nombre}: ${t('confirmarQuitarMiembro')}`}
@@ -274,6 +305,106 @@ export function PaginaEquipo({ id }: { id: string }) {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Tarjeta de un video que se ve en el equipo (suelto o dentro de una carpeta compartida). */
+function TarjetaVideoEquipo({
+  v,
+  pie,
+  opciones,
+}: {
+  v: { id: string; titulo: string; duracion: number; tiene_miniatura: number; privacidad: string };
+  pie: string;
+  opciones: Opcion[];
+}) {
+  const { t } = useIdioma();
+  return (
+    <article className="tarjeta-video">
+      <a href={`/v/${v.id}`} onClick={alClicEnlace} className="tarjeta-video-imagen">
+        {v.tiene_miniatura ? (
+          <img src={miniaturaVideo(v.id)} alt="" loading="lazy" />
+        ) : (
+          <div className="sin-miniatura" />
+        )}
+        <span className="duracion">{formatoTiempo(v.duracion)}</span>
+        {v.privacidad === 'privado' && <span className="etiqueta-privado">{t('privado')}</span>}
+      </a>
+      <div className="tarjeta-video-pie">
+        <div>
+          <a href={`/v/${v.id}`} onClick={alClicEnlace} className="tarjeta-video-titulo">
+            {v.titulo}
+          </a>
+          <p className="ayuda">{pie}</p>
+        </div>
+        {opciones.length > 0 && <MenuPuntos opciones={opciones} />}
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Una carpeta compartida con el equipo (C-CARPETAS-EQUIPO): marcada con el nombre del equipo y de quién es. Solo
+ * mirar: los miembros no editan, mueven ni borran lo que no es suyo (el servidor tampoco lo deja).
+ */
+export function PaginaCarpetaEquipo({ equipo, carpeta }: { equipo: string; carpeta: string }) {
+  const { t, idioma } = useIdioma();
+  const { usuario, cargando } = useSesion();
+  const [datos, setDatos] = useState<DatosCarpetaEquipo | null>(null);
+  const [error, setError] = useState('');
+  const ruta = `/team/${equipo}/folder/${carpeta}`;
+  useEffect(() => {
+    if (!cargando && !usuario) navegar(`/login?volver=${encodeURIComponent(ruta)}`, true);
+  }, [cargando, usuario, ruta]);
+  useEffect(() => {
+    if (!usuario) return;
+    pedir<DatosCarpetaEquipo>(`/datos/equipos/${equipo}/carpetas/${carpeta}`)
+      .then((d) => {
+        setDatos(d);
+        setError('');
+      })
+      .catch((e: unknown) =>
+        setError(codigo(e) === 'no_existe' ? t('noEncontrado') : textoError(t, codigo(e))),
+      );
+  }, [usuario, equipo, carpeta, t]);
+  if (!usuario) return null;
+  if (error)
+    return (
+      <section className="vacio pagina-angosta">
+        <p className="error">{error}</p>
+        <a className="boton" href="/library" onClick={alClicEnlace}>
+          {t('biblioteca')}
+        </a>
+      </section>
+    );
+  if (!datos) return <p className="vacio">…</p>;
+  return (
+    <div className="equipo-pagina">
+      <a className="ayuda" href={`/team/${datos.equipo.id}`} onClick={alClicEnlace}>
+        ← 👥 {datos.equipo.nombre}
+      </a>
+      <div className="equipo-cabecera">
+        <div>
+          <p className="ayuda carpeta-compartida-marca">
+            {t('carpetaCompartidaEn')} <strong>👥 {datos.equipo.nombre}</strong> · {t('carpetaDe')}{' '}
+            <strong>{datos.carpeta.autor}</strong>
+          </p>
+          <h1>📁 {datos.carpeta.nombre}</h1>
+        </div>
+      </div>
+      {!datos.carpeta.es_mia && <p className="ayuda">{t('soloLectura')}</p>}
+      {datos.videos.length === 0 && <p className="vacio">{t('sinVideosCarpeta')}</p>}
+      <div className="rejilla">
+        {datos.videos.map((v) => (
+          <TarjetaVideoEquipo
+            key={v.id}
+            v={v}
+            pie={`${v.autor} · ${haceCuanto(v.creado, idioma)}`}
+            opciones={[]}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -436,28 +567,42 @@ export function NuevoEquipo({ cuenta, cerrar }: { cuenta: string; cerrar: () => 
   );
 }
 
-/** «Compartir con un equipo»: los equipos de la cuenta con su casilla. Cada casilla comparte o deja de compartir. */
-export function CompartirConEquipo({ video, cerrar }: { video: string; cerrar: () => void }) {
+/**
+ * «Compartir con un equipo»: los equipos de la cuenta con su casilla. Cada casilla comparte o deja de compartir un
+ * video, o una carpeta entera (C-CARPETAS-EQUIPO: sus videos de hoy y los que se agreguen después).
+ */
+export function CompartirConEquipo({
+  video,
+  carpeta,
+  cerrar,
+}: {
+  video?: string;
+  carpeta?: string;
+  cerrar: () => void;
+}) {
   const { t } = useIdioma();
   const avisar = useAviso();
   const [equipos, setEquipos] = useState<{ id: string; nombre: string; compartido: boolean }[] | null>(null);
   const [error, setError] = useState('');
+  const origen = carpeta ? `/datos/carpetas/${carpeta}/equipos` : `/datos/videos/${video ?? ''}/equipos`;
   useEffect(() => {
-    pedir<{ equipos: { id: string; nombre: string; compartido: boolean }[] }>(
-      `/datos/videos/${video}/equipos`,
-    )
+    pedir<{ equipos: { id: string; nombre: string; compartido: boolean }[] }>(origen)
       .then((r) => setEquipos(r.equipos))
       .catch((e: unknown) => setError(textoError(t, codigo(e))));
-  }, [video, t]);
+  }, [origen, t]);
   // La casilla cambia al instante; si el servidor no lo guarda, vuelve como estaba y se dice por qué.
   const marcar = (id: string, compartido: boolean) =>
     setEquipos((l) => l?.map((e) => (e.id === id ? { ...e, compartido } : e)) ?? null);
   async function cambiar(id: string, compartir: boolean) {
     marcar(id, compartir);
     try {
-      if (compartir)
+      if (carpeta) {
+        if (compartir)
+          await pedir(`/datos/equipos/${id}/carpetas`, { method: 'POST', json: { carpeta_id: carpeta } });
+        else await pedir(`/datos/equipos/${id}/carpetas/${carpeta}`, { method: 'DELETE' });
+      } else if (compartir)
         await pedir(`/datos/equipos/${id}/videos`, { method: 'POST', json: { video_id: video } });
-      else await pedir(`/datos/equipos/${id}/videos/${video}`, { method: 'DELETE' });
+      else await pedir(`/datos/equipos/${id}/videos/${video ?? ''}`, { method: 'DELETE' });
       avisar(t('guardado'));
     } catch (e) {
       marcar(id, !compartir);
@@ -465,12 +610,16 @@ export function CompartirConEquipo({ video, cerrar }: { video: string; cerrar: (
     }
   }
   return (
-    <Modal titulo={t('compartirConEquipo')} cerrar={cerrar} ancho={420}>
+    <Modal
+      titulo={carpeta ? t('compartirCarpetaConEquipo') : t('compartirConEquipo')}
+      cerrar={cerrar}
+      ancho={420}
+    >
       {error && <p className="error">{error}</p>}
       {equipos && equipos.length === 0 && <p className="ayuda">{t('sinEquipos')}</p>}
       {equipos && equipos.length > 0 && (
         <>
-          <p className="ayuda">{t('compartirConEquipoAyuda')}</p>
+          <p className="ayuda">{carpeta ? t('compartirCarpetaAyuda') : t('compartirConEquipoAyuda')}</p>
           <div className="lista-casillas">
             {equipos.map((e) => (
               <label key={e.id}>

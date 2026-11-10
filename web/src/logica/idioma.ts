@@ -585,6 +585,18 @@ const en = {
   'error.es_dueno': 'The owner can’t leave the team or be removed. The owner can delete the team instead.',
   'error.solo_admin': 'Only team admins can do that.',
   'error.solo_dueno': 'Only the team owner can do that.',
+  compartirCarpetaConEquipo: 'Share folder with a team',
+  compartirCarpetaAyuda:
+    'Check the teams that should see this folder. They see every video in it, including the ones you add later. Only you can edit, move or delete them.',
+  carpetasEquipo: 'Shared folders',
+  unVideo: 'video',
+  sinCarpetasEquipo: 'No shared folders yet. Share one of yours from the ⋮ menu of a folder in your library.',
+  carpetaDe: 'Shared by',
+  carpetaCompartidaEn: 'Shared folder in',
+  dejarDeCompartirCarpeta: 'Stop sharing this folder',
+  sinVideosCarpeta: 'This folder has no videos yet. New videos added to it show up here automatically.',
+  carpetaCompartidaEtiqueta: 'Shared with a team',
+  soloLectura: 'You can watch and comment. Only the owner can edit, move or delete these videos.',
 };
 
 type Clave = keyof typeof en;
@@ -1164,6 +1176,19 @@ const es: Record<Clave, string> = {
     'El dueño no puede salirse del equipo ni ser quitado. Si quiere, puede eliminar el equipo.',
   'error.solo_admin': 'Solo los administradores del equipo pueden hacer eso.',
   'error.solo_dueno': 'Solo el dueño del equipo puede hacer eso.',
+  compartirCarpetaConEquipo: 'Compartir carpeta con un equipo',
+  compartirCarpetaAyuda:
+    'Marca los equipos que deben ver esta carpeta. Ven todos sus videos, también los que agregues después. Solo tú los puedes editar, mover o borrar.',
+  carpetasEquipo: 'Carpetas compartidas',
+  unVideo: 'video',
+  sinCarpetasEquipo:
+    'Todavía no hay carpetas compartidas. Comparte una tuya desde el menú ⋮ de una carpeta en tu biblioteca.',
+  carpetaDe: 'Compartida por',
+  carpetaCompartidaEn: 'Carpeta compartida en',
+  dejarDeCompartirCarpeta: 'Dejar de compartir esta carpeta',
+  sinVideosCarpeta: 'Esta carpeta todavía no tiene videos. Los que se agreguen aparecen aquí solos.',
+  carpetaCompartidaEtiqueta: 'Compartida con un equipo',
+  soloLectura: 'Puedes mirar y comentar. Solo su dueño puede editar, mover o borrar estos videos.',
 };
 
 export const TEXTOS: Record<Idioma, Record<Clave, string>> = { en, es };

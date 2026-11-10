@@ -286,19 +286,25 @@ async function buscarVideo(c: C, id: string): Promise<FilaVideo | null> {
 
 /**
  * El dueño ve todo; los demás, videos listos con privacidad «enlace». Un video listo compartido con un equipo lo ven
- * sus miembros aunque sea privado (CANDADO C-EQUIPOS). Solo lee: nunca escribe en la base por mirar.
+ * sus miembros aunque sea privado (CANDADO C-EQUIPOS). También lo ven si está (sin archivar) en una carpeta del autor
+ * compartida con un equipo suyo (CANDADO C-CARPETAS-EQUIPO): la carpeta tiene que ser del autor del video, así que
+ * nadie puede «colar» un video ajeno moviéndolo a su carpeta. Solo lee: nunca escribe en la base por mirar.
  */
 async function puedeVer(c: C, v: FilaVideo, u: Usuario | null): Promise<boolean> {
   if (u && u.id === v.usuario_id) return true;
   if (v.estado !== 'listo') return false;
   if (v.privacidad === 'enlace') return true;
   if (!u) return false;
+  const porCarpeta = v.carpeta_id && !v.archivado ? v.carpeta_id : null;
   return Boolean(
     await c.env.DB.prepare(
-      `SELECT 1 FROM videos_equipo ve JOIN miembros_equipo m ON m.equipo_id = ve.equipo_id AND m.usuario_id = ?
-       WHERE ve.video_id = ? LIMIT 1`,
+      `SELECT 1 FROM miembros_equipo m WHERE m.usuario_id = ? AND (
+         EXISTS (SELECT 1 FROM videos_equipo ve WHERE ve.video_id = ? AND ve.equipo_id = m.equipo_id)
+         OR EXISTS (SELECT 1 FROM carpetas_equipo ce JOIN carpetas k ON k.id = ce.carpeta_id AND k.usuario_id = ?
+                    WHERE ce.carpeta_id = ? AND ce.equipo_id = m.equipo_id)
+       ) LIMIT 1`,
     )
-      .bind(u.id, v.id)
+      .bind(u.id, v.id, v.usuario_id, porCarpeta)
       .first(),
   );
 }
@@ -958,6 +964,7 @@ app.post('/datos/cuenta/borrar', requiereSesion, async (c) => {
   if (logos.length) await c.env.BUCKET.delete(logos.map((m) => claveLogo(u.id, m.id)));
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM miembros_equipo WHERE usuario_id = ?').bind(u.id),
+    c.env.DB.prepare('DELETE FROM carpetas_equipo WHERE compartido_por = ?').bind(u.id),
     ...[
       'carpetas',
       'sesiones',
@@ -1838,7 +1845,8 @@ const esquemaCarpeta = z.object({ nombre: z.string().trim().min(1).max(80) });
 app.get('/datos/carpetas', requiereSesion, async (c) => {
   const u = c.get('usuario')!;
   const { results } = await c.env.DB.prepare(
-    `SELECT c.id, c.nombre, c.creada, (SELECT COUNT(*) FROM videos v WHERE v.carpeta_id = c.id AND v.archivado = 0) AS videos
+    `SELECT c.id, c.nombre, c.creada, (SELECT COUNT(*) FROM videos v WHERE v.carpeta_id = c.id AND v.archivado = 0) AS videos,
+       (SELECT COUNT(*) FROM carpetas_equipo ce WHERE ce.carpeta_id = c.id) AS equipos
      FROM carpetas c WHERE c.usuario_id = ? ORDER BY c.nombre`,
   )
     .bind(u.id)
@@ -1873,10 +1881,14 @@ app.delete('/datos/carpetas/:id', requiereSesion, async (c) => {
     .bind(id, u.id)
     .run();
   if (!r.meta.changes) return err(c, 404, 'no_existe');
-  // Los videos no se borran: vuelven a «Todos los videos».
-  await c.env.DB.prepare('UPDATE videos SET carpeta_id = NULL WHERE carpeta_id = ? AND usuario_id = ?')
-    .bind(id, u.id)
-    .run();
+  // Los videos no se borran: vuelven a «Todos los videos». Y la carpeta deja de estar compartida (sin filas huérfanas).
+  await c.env.DB.batch([
+    c.env.DB.prepare('UPDATE videos SET carpeta_id = NULL WHERE carpeta_id = ? AND usuario_id = ?').bind(
+      id,
+      u.id,
+    ),
+    c.env.DB.prepare('DELETE FROM carpetas_equipo WHERE carpeta_id = ?').bind(id),
+  ]);
   return c.json({ ok: true });
 });
 
@@ -1889,6 +1901,14 @@ app.delete('/datos/carpetas/:id', requiereSesion, async (c) => {
 type Rol = 'admin' | 'miembro';
 type FilaEquipo = { id: string; nombre: string; dueno_id: string; rol: Rol };
 type FilaInvitacion = { correo: string; vence: number; creado: number };
+type FilaCarpetaEquipo = {
+  id: string;
+  nombre: string;
+  usuario_id: string;
+  autor: string;
+  compartida: number;
+  videos: number;
+};
 const VENCE_INVITACION = 7 * 24 * 3600 * 1000;
 const esquemaEquipo = z.object({ nombre: z.string().trim().min(1).max(80) });
 
@@ -1905,7 +1925,7 @@ async function equipoDe(c: C, equipoId: string): Promise<FilaEquipo | null> {
 /** Borra todo lo del equipo. Los videos NUNCA se tocan: solo dejan de estar compartidos. */
 async function borrarEquipo(c: C, equipoId: string) {
   await c.env.DB.batch([
-    ...['videos_equipo', 'invitaciones_equipo', 'miembros_equipo'].map((t) =>
+    ...['videos_equipo', 'carpetas_equipo', 'invitaciones_equipo', 'miembros_equipo'].map((t) =>
       c.env.DB.prepare(`DELETE FROM ${t} WHERE equipo_id = ?`).bind(equipoId),
     ),
     c.env.DB.prepare('DELETE FROM equipos WHERE id = ?').bind(equipoId),
@@ -1966,7 +1986,7 @@ app.get('/datos/equipos/:id', requiereSesion, async (c) => {
   const e = await equipoDe(c, c.req.param('id') ?? '');
   if (!e) return err(c, 404, 'no_existe');
   const u = c.get('usuario')!;
-  const [miembros, videos, invitaciones] = await Promise.all([
+  const [miembros, videos, invitaciones, carpetas] = await Promise.all([
     c.env.DB.prepare(
       `SELECT u.id, u.nombre, u.correo, m.rol, m.creado FROM miembros_equipo m JOIN usuarios u ON u.id = m.usuario_id
        WHERE m.equipo_id = ? ORDER BY m.creado`,
@@ -1988,6 +2008,16 @@ app.get('/datos/equipos/:id', requiereSesion, async (c) => {
           .bind(e.id, Date.now())
           .all<FilaInvitacion>()
       : Promise.resolve({ results: [] as FilaInvitacion[] }),
+    // Carpetas compartidas (C-CARPETAS-EQUIPO): solo cuenta videos listos y sin archivar, que son los que se ven.
+    c.env.DB.prepare(
+      `SELECT k.id, k.nombre, k.usuario_id, u.nombre AS autor, ce.creado AS compartida,
+         (SELECT COUNT(*) FROM videos v WHERE v.carpeta_id = k.id AND v.usuario_id = k.usuario_id AND v.archivado = 0
+            AND v.estado = 'listo') AS videos
+       FROM carpetas_equipo ce JOIN carpetas k ON k.id = ce.carpeta_id JOIN usuarios u ON u.id = k.usuario_id
+       WHERE ce.equipo_id = ? ORDER BY k.nombre LIMIT 200`,
+    )
+      .bind(e.id)
+      .all<FilaCarpetaEquipo>(),
   ]);
   return c.json(
     {
@@ -1995,6 +2025,7 @@ app.get('/datos/equipos/:id', requiereSesion, async (c) => {
       miembros: miembros.results.map((m) => ({ ...m, es_dueno: m.id === e.dueno_id })),
       invitaciones: invitaciones.results,
       videos: videos.results,
+      carpetas: carpetas.results.map((k) => ({ ...k, es_mia: k.usuario_id === u.id })),
     },
     200,
     { 'Cache-Control': 'no-store' },
@@ -2082,10 +2113,12 @@ app.delete('/datos/equipos/:id/miembros/:usuario', requiereSesion, async (c) => 
     .bind(e.id, otro)
     .run();
   if (!r.meta.changes) return err(c, 404, 'no_existe');
-  // Lo que compartió deja de verse en el equipo (sus videos siguen intactos en su biblioteca).
-  await c.env.DB.prepare('DELETE FROM videos_equipo WHERE equipo_id = ? AND compartido_por = ?')
-    .bind(e.id, otro)
-    .run();
+  // Lo que compartió (videos y carpetas) deja de verse en el equipo (sigue intacto en su biblioteca).
+  await c.env.DB.batch(
+    ['videos_equipo', 'carpetas_equipo'].map((t) =>
+      c.env.DB.prepare(`DELETE FROM ${t} WHERE equipo_id = ? AND compartido_por = ?`).bind(e.id, otro),
+    ),
+  );
   return c.json({ ok: true });
 });
 
@@ -2151,6 +2184,93 @@ app.delete('/datos/equipos/:id/videos/:video', requiereSesion, async (c) => {
     .run();
   if (!r.meta.changes) return err(c, 404, 'no_existe');
   return c.json({ ok: true });
+});
+
+// ---------- carpetas compartidas con un equipo (CANDADO C-CARPETAS-EQUIPO) ----------
+// Mismo permiso que compartir un video: solo el dueño de la carpeta la comparte con un equipo del que es miembro; deja
+// de compartirla él o un admin del equipo. Los miembros ven los videos listos y sin archivar de esa carpeta, los de hoy
+// y los que se agreguen después, sin poder editarlos, moverlos ni borrarlos. Una fila de relación, nada se copia.
+
+/** Con qué equipos está compartida una carpeta propia (para la ventanita «Compartir con un equipo»). */
+app.get('/datos/carpetas/:id/equipos', requiereSesion, async (c) => {
+  const u = c.get('usuario')!;
+  const k = await c.env.DB.prepare('SELECT id FROM carpetas WHERE id = ? AND usuario_id = ?')
+    .bind(c.req.param('id') ?? '', u.id)
+    .first<{ id: string }>();
+  if (!k) return err(c, 404, 'no_existe');
+  const { results } = await c.env.DB.prepare(
+    `SELECT e.id, e.nombre, (SELECT 1 FROM carpetas_equipo ce WHERE ce.carpeta_id = ? AND ce.equipo_id = e.id) AS compartido
+     FROM miembros_equipo m JOIN equipos e ON e.id = m.equipo_id WHERE m.usuario_id = ? ORDER BY e.nombre`,
+  )
+    .bind(k.id, u.id)
+    .all<{ id: string; nombre: string; compartido: number | null }>();
+  return c.json({
+    equipos: results.map((e) => ({ id: e.id, nombre: e.nombre, compartido: e.compartido === 1 })),
+  });
+});
+
+app.post('/datos/equipos/:id/carpetas', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  const d = await cuerpo(c, z.object({ carpeta_id: z.string().min(1).max(40) }));
+  if (!d) return err(c, 400, 'datos');
+  const u = c.get('usuario')!;
+  // Solo el dueño de la carpeta la comparte.
+  const k = await c.env.DB.prepare('SELECT id FROM carpetas WHERE id = ? AND usuario_id = ?')
+    .bind(d.carpeta_id, u.id)
+    .first<{ id: string }>();
+  if (!k) return err(c, 404, 'no_existe');
+  await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO carpetas_equipo (carpeta_id, equipo_id, compartido_por, creado) VALUES (?, ?, ?, ?)',
+  )
+    .bind(k.id, e.id, u.id, Date.now())
+    .run();
+  return c.json({ ok: true }, 201);
+});
+
+/** Deja de compartir la carpeta: su dueño, o un admin del equipo (la carpeta y sus videos siguen intactos). */
+app.delete('/datos/equipos/:id/carpetas/:carpeta', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  const u = c.get('usuario')!;
+  const r = await c.env.DB.prepare(
+    'DELETE FROM carpetas_equipo WHERE equipo_id = ? AND carpeta_id = ? AND (compartido_por = ? OR ? = 1)',
+  )
+    .bind(e.id, c.req.param('carpeta') ?? '', u.id, e.rol === 'admin' ? 1 : 0)
+    .run();
+  if (!r.meta.changes) return err(c, 404, 'no_existe');
+  return c.json({ ok: true });
+});
+
+/** Los videos de una carpeta compartida, para los miembros del equipo. Quien no es miembro recibe 404. Solo lee. */
+app.get('/datos/equipos/:id/carpetas/:carpeta', requiereSesion, async (c) => {
+  const e = await equipoDe(c, c.req.param('id') ?? '');
+  if (!e) return err(c, 404, 'no_existe');
+  const u = c.get('usuario')!;
+  const k = await c.env.DB.prepare(
+    `SELECT k.id, k.nombre, k.usuario_id, u.nombre AS autor FROM carpetas_equipo ce
+     JOIN carpetas k ON k.id = ce.carpeta_id JOIN usuarios u ON u.id = k.usuario_id
+     WHERE ce.equipo_id = ? AND ce.carpeta_id = ?`,
+  )
+    .bind(e.id, c.req.param('carpeta') ?? '')
+    .first<{ id: string; nombre: string; usuario_id: string; autor: string }>();
+  if (!k) return err(c, 404, 'no_existe');
+  const { results } = await c.env.DB.prepare(
+    `SELECT v.id, v.titulo, v.duracion, v.creado, v.tiene_miniatura, v.privacidad, v.usuario_id, ? AS autor
+     FROM videos v WHERE v.carpeta_id = ? AND v.usuario_id = ? AND v.archivado = 0 AND v.estado = 'listo'
+     ORDER BY v.creado DESC LIMIT 500`,
+  )
+    .bind(k.autor, k.id, k.usuario_id)
+    .all();
+  return c.json(
+    {
+      equipo: { id: e.id, nombre: e.nombre, rol: e.rol },
+      carpeta: { id: k.id, nombre: k.nombre, autor: k.autor, es_mia: k.usuario_id === u.id },
+      videos: results,
+    },
+    200,
+    { 'Cache-Control': 'no-store' },
+  );
 });
 
 // ---------- videos: biblioteca ----------

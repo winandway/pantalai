@@ -51,6 +51,7 @@ export function Biblioteca() {
   const [nuevaCarpeta, setNuevaCarpeta] = useState(false);
   const [borrandoCarpeta, setBorrandoCarpeta] = useState<Carpeta | null>(null);
   const [renombrandoCarpeta, setRenombrandoCarpeta] = useState<Carpeta | null>(null);
+  const [compartiendoCarpeta, setCompartiendoCarpeta] = useState<Carpeta | null>(null);
   const [equipos, setEquipos] = useState<EquipoLista[]>([]);
   const [nuevoEquipo, setNuevoEquipo] = useState(false);
   const [compartiendo, setCompartiendo] = useState<VideoLista | null>(null);
@@ -141,13 +142,23 @@ export function Biblioteca() {
               className={`lateral-carpeta ${vista.tipo === 'carpeta' && vista.id === c.id ? 'activo' : ''}`}
             >
               <button type="button" onClick={() => setVista({ tipo: 'carpeta', id: c.id })}>
-                📁 {c.nombre} <span className="contador">{c.videos}</span>
+                📁 {c.nombre}{' '}
+                {(c.equipos ?? 0) > 0 && (
+                  <span className="carpeta-equipo-marca" title={t('carpetaCompartidaEtiqueta')}>
+                    👥<span className="solo-lector">{t('carpetaCompartidaEtiqueta')}</span>
+                  </span>
+                )}{' '}
+                <span className="contador">{c.videos}</span>
               </button>
               <MenuPuntos
                 opciones={[
                   {
                     etiqueta: t('renombrar'),
                     accion: () => setRenombrandoCarpeta(c),
+                  },
+                  {
+                    etiqueta: t('compartirConEquipo'),
+                    accion: () => setCompartiendoCarpeta(c),
                   },
                   {
                     etiqueta: t('eliminar'),
@@ -343,6 +354,15 @@ export function Biblioteca() {
       )}
       {nuevoEquipo && <NuevoEquipo cuenta={usuario.id} cerrar={() => setNuevoEquipo(false)} />}
       {compartiendo && <CompartirConEquipo video={compartiendo.id} cerrar={() => setCompartiendo(null)} />}
+      {compartiendoCarpeta && (
+        <CompartirConEquipo
+          carpeta={compartiendoCarpeta.id}
+          cerrar={() => {
+            setCompartiendoCarpeta(null);
+            void cargar();
+          }}
+        />
+      )}
       {nuevaCarpeta && (
         <NuevaCarpeta
           cuenta={usuario.id}

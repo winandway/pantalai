@@ -19,7 +19,7 @@ import { Docs } from './paginas/Docs';
 import { Editar } from './paginas/Editar';
 import { Entrar, Recuperar, Restablecer } from './paginas/Entrar';
 import { FranjaCorreo, VerificarCorreo } from './componentes/VerificarCorreo';
-import { PaginaEquipo, UnirseEquipo } from './paginas/Equipo';
+import { PaginaCarpetaEquipo, PaginaEquipo, UnirseEquipo } from './paginas/Equipo';
 import { Grabar } from './paginas/Grabar';
 import { Estudio } from './paginas/Estudio';
 import { PaginaInvitado } from './paginas/Invitado';
@@ -111,6 +111,8 @@ export function App() {
   else if (ruta === '/verify-email') pagina = <VerificarCorreo />;
   else if (ruta === '/library') pagina = <Biblioteca />;
   else if (partes[0] === 'team' && partes[1] && partes.length === 2) pagina = <PaginaEquipo id={partes[1]} />;
+  else if (partes[0] === 'team' && partes[1] && partes[2] === 'folder' && partes[3] && partes.length === 4)
+    pagina = <PaginaCarpetaEquipo equipo={partes[1]} carpeta={partes[3]} />;
   else if (partes[0] === 'join' && partes[1] && partes.length === 2)
     pagina = <PaginaInvitado codigo={partes[1]} />;
   else if (ruta === '/join') pagina = <UnirseEquipo />;

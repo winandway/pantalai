@@ -106,7 +106,8 @@ export type VideoLista = {
   comentarios: number;
 };
 
-export type Carpeta = { id: string; nombre: string; videos: number };
+/** `equipos`: con cuántos equipos está compartida (C-CARPETAS-EQUIPO). */
+export type Carpeta = { id: string; nombre: string; videos: number; equipos?: number };
 
 export type Comentario = {
   id: string;
@@ -184,4 +185,20 @@ export type DatosEquipo = {
   miembros: MiembroEquipo[];
   invitaciones: { correo: string; vence: number; creado: number }[];
   videos: VideoEquipo[];
+  carpetas: CarpetaEquipo[];
+};
+/** Una carpeta compartida con el equipo (C-CARPETAS-EQUIPO): de quién es y cuántos videos se ven. */
+export type CarpetaEquipo = {
+  id: string;
+  nombre: string;
+  usuario_id: string;
+  autor: string;
+  compartida: number;
+  videos: number;
+  es_mia: boolean;
+};
+export type DatosCarpetaEquipo = {
+  equipo: { id: string; nombre: string; rol: RolEquipo };
+  carpeta: { id: string; nombre: string; autor: string; es_mia: boolean };
+  videos: (Omit<VideoEquipo, 'compartido'> & { compartido?: number })[];
 };

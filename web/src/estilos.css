@@ -4362,6 +4362,49 @@ main {
     grid-template-columns: 1fr;
   }
 }
+/* Carpetas compartidas con un equipo (C-CARPETAS-EQUIPO) */
+.equipo-carpetas {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.equipo-carpeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.equipo-carpeta > a {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--tinta);
+  text-decoration: none;
+}
+.equipo-carpeta > a strong,
+.equipo-carpeta > a .ayuda {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.equipo-carpeta > a .ayuda {
+  margin-top: 2px;
+}
+.equipo-carpeta-icono {
+  font-size: 1.6rem;
+  flex: none;
+}
+.carpeta-compartida-marca {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+.carpeta-equipo-marca {
+  font-size: 0.8rem;
+}
 
 /* ---------- estudio de reacciones (máscara «Podcast», neón oscuro) ---------- */
 .enlace-estudio {
