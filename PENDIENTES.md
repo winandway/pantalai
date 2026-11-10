@@ -83,7 +83,7 @@
       aviso amable de que TikTok pide la sesión iniciada en el navegador.
 - [x] Estudio, fase 3 (10 nov 2026): máscaras Podcast, Noticiero y Minimalista; personalizar nombre del programa,
       cartel, logo (con «Tomar foto») y colores, guardadas por cuenta (C-MASCARAS, C-CAMARA-FOTO). Guía en Docs.
-- [ ] [para: revisor-calidad] Revisar el paquete del Estudio fases 3 y 4 (máscaras, cámara para imágenes, cartel
+- [x] (revisado el 10 nov 2026) [para: revisor-calidad] Revisar el paquete del Estudio fases 3 y 4 (máscaras, cámara para imágenes, cartel
       «Hablando», crédito en «Para YouTube»). Motivo: se publicó por orden de la meta; falta la revisión del paquete.
 - [x] Estudio, fase 4 (10 nov 2026): cartel «Hablando/Escuchando» con el micrófono (anfitrión e invitado), barras de
       sonido y «Para YouTube» con el crédito al creador ya puesto (C-HABLANDO, C-CREDITO). Guía en Docs.
@@ -117,7 +117,8 @@
 - [x] Espacios de equipo: crear, invitar por correo o enlace, unirse, compartir videos (también privados) y salir
       (8 nov 2026, C-EQUIPOS).
 - [ ] 👤 Decidir en qué plan van los equipos (hoy, con el cobro apagado, cualquier cuenta crea equipos sin tope).
-- [ ] Carpetas compartidas dentro de un equipo (hoy se comparte video por video).
+- [x] Carpetas compartidas dentro de un equipo (10 nov 2026, C-CARPETAS-EQUIPO): el dueño comparte una carpeta entera
+      desde su menú ⋮; los miembros ven sus videos de hoy y los de después; salir o dejar de compartir corta al instante.
 - [ ] Cobro: conectar Stripe (suscripción mensual y anual, prueba de 14 días, precio de fundador), llenar
       `suscripciones`, probar de punta a punta y recién ahí encender `COBRO_ACTIVO=1` y anunciar la página de precios
       (`/pricing`, hoy oculta con noindex). Mensual y anual, prueba de 14 días, aviso firmado y canario: construidos.
@@ -148,4 +149,4 @@
 - [x] Almacenamiento a 500 GB (YaDominios, 24 oct 2026) y `ALMACEN_LIMITE_GB=500` puesto.
 
 - ✅ (hecho el 9 nov 2026, C-KARAOKE) [para: desarrollador] Construir el botón Karaoke del Estudio siguiendo docs/investigacion-rea/FICHA-KARAOKE.md (sección 6, plan de 12 pasos; decisión en sección 7). Motivo: la ficha ya trae cadena, valores y pruebas de aceptación.
-- [para: desarrollador] Invitado remoto en vivo: empezar por la Fase 1 de docs/investigacion-rea/INVITADOS-EN-VIVO.md (WebRTC directo + TURN de Cloudflare, grabado en el navegador del anfitrión). 👤 Richard: visto bueno para crear un Worker aparte en Cloudflare (señalización) antes de crear nada.
+- ✅ (Fase 1 publicada el 10 nov 2026, commit 05fca1e) [para: desarrollador] Invitado remoto en vivo: empezar por la Fase 1 de docs/investigacion-rea/INVITADOS-EN-VIVO.md (WebRTC directo + TURN de Cloudflare, grabado en el navegador del anfitrión). 👤 Richard: visto bueno para crear un Worker aparte en Cloudflare (señalización) antes de crear nada.
