@@ -31,6 +31,10 @@ export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
     ],
     ['Viewer insights', 'Views, average watch time, completion rate and button clicks for every video.'],
     [
+      'Team spaces',
+      'Invite your team and share single videos or whole folders. New videos in a shared folder show up for everyone, and only members can see them.',
+    ],
+    [
       'AI writes the rest',
       'Title, summary, chapters and tasks appear on their own. Remove filler words in one click.',
     ],
@@ -68,6 +72,10 @@ export const FUNCIONES: Record<'en' | 'es', [string, string][]> = {
     [
       'Estadísticas',
       'Vistas, tiempo promedio, cuántos lo vieron completo y clics en tu botón, video por video.',
+    ],
+    [
+      'Espacios de equipo',
+      'Invita a tu equipo y comparte videos sueltos o carpetas enteras. Los videos nuevos de una carpeta compartida le aparecen a todos, y solo los miembros los ven.',
     ],
     [
       'La IA escribe lo demás',
