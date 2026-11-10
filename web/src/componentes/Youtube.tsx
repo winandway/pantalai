@@ -6,6 +6,7 @@ import { textoError, useIdioma } from '../logica/idioma';
 import {
   descripcionYoutube,
   largoEtiquetas,
+  lineaCredito,
   MAX_ETIQUETAS,
   type EstiloTitulo,
   type KitYoutube,
@@ -41,10 +42,13 @@ export function ParaYoutube({
   video,
   kit,
   cambiar,
+  puedeEscribir = true,
 }: {
   video: Video;
   kit: KitYoutube | null | undefined;
   cambiar: (k: KitYoutube) => void;
+  /** false = la IA no está disponible: se muestra solo el crédito, sin el botón de escribir. */
+  puedeEscribir?: boolean;
 }) {
   const { t } = useIdioma();
   const avisar = useAviso();
@@ -75,8 +79,10 @@ export function ParaYoutube({
         duracion: video.duracion,
         hashtags: kit.hashtags,
         idioma: video.idioma,
+        credito: video.credito,
       })
     : '';
+  const credito = video.credito ? lineaCredito(video.credito, video.idioma) : '';
   const etiquetas = kit ? kit.etiquetas.join(', ') : '';
   const todo = kit
     ? [
@@ -97,17 +103,27 @@ export function ParaYoutube({
         </h2>
         <div className="fila-botones">
           {kit && <Copiar texto={todo} etiqueta={t('ytCopiarTodo')} />}
-          <button
-            type="button"
-            className="enlace chico"
-            disabled={escribiendo}
-            onClick={() => void escribir()}
-          >
-            {escribiendo ? t('ytEscribiendo') : kit ? t('ytOtraVez') : t('ytCrear')}
-          </button>
+          {puedeEscribir && (
+            <button
+              type="button"
+              className="enlace chico"
+              disabled={escribiendo}
+              onClick={() => void escribir()}
+            >
+              {escribiendo ? t('ytEscribiendo') : kit ? t('ytOtraVez') : t('ytCrear')}
+            </button>
+          )}
         </div>
       </div>
       <p className="ayuda">{t('ytAyuda')}</p>
+      {credito && (
+        <div className="yt-fila yt-credito" data-credito>
+          <p>
+            <b>{t('ytCredito')}</b> {credito}
+          </p>
+          <Copiar texto={credito} />
+        </div>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}

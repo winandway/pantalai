@@ -2398,21 +2398,23 @@ app.get('/datos/videos/:id', async (c) => {
     .first<{ nombre: string; correo: string }>();
   return c.json(
     {
-      video: videoPublico(
-        v,
-        autor?.nombre ?? '',
-        u?.id === v.usuario_id,
-        await tieneMp4(c, v),
-        await llevaMarca(c, v.usuario_id, autor?.correo ?? ''),
-        Boolean(await c.env.DB.prepare('SELECT 1 FROM video_marca WHERE video_id = ?').bind(v.id).first()),
-      ),
-      // Solo el dueño lo necesita («Para YouTube»): a los demás no se les gasta una lectura.
-      credito:
-        u?.id === v.usuario_id
-          ? await c.env.DB.prepare('SELECT creador, enlace FROM video_credito WHERE video_id = ?')
-              .bind(v.id)
-              .first<{ creador: string; enlace: string }>()
-          : null,
+      video: {
+        ...videoPublico(
+          v,
+          autor?.nombre ?? '',
+          u?.id === v.usuario_id,
+          await tieneMp4(c, v),
+          await llevaMarca(c, v.usuario_id, autor?.correo ?? ''),
+          Boolean(await c.env.DB.prepare('SELECT 1 FROM video_marca WHERE video_id = ?').bind(v.id).first()),
+        ),
+        // Solo el dueño lo necesita («Para YouTube»): a los demás no se les gasta una lectura.
+        credito:
+          u?.id === v.usuario_id
+            ? await c.env.DB.prepare('SELECT creador, enlace FROM video_credito WHERE video_id = ?')
+                .bind(v.id)
+                .first<{ creador: string; enlace: string }>()
+            : null,
+      },
     },
     200,
     {

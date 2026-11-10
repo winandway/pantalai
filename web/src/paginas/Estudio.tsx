@@ -54,6 +54,7 @@ import { SalaAnfitrion, VOZ, enlaceInvitado, type EstadoLlamada } from '../logic
 import { TEXTOS_INVITADO } from '../logica/textosInvitado';
 import { copiar } from './Biblioteca';
 import { MascarasEstudio } from '../componentes/MascarasEstudio';
+import { CartelVoz, useVoz } from '../componentes/CartelVoz';
 import {
   ELECCION_DEFECTO,
   claseMascara,
@@ -106,7 +107,10 @@ export function Estudio() {
     sala: '',
     // Máscara elegida (C-MASCARAS): «plantilla:podcast|noticiero|minimal» o el id de una máscara guardada.
     mascara: ELECCION_DEFECTO,
+    // Cartel «Hablando / Escuchando» y barras de sonido (C-HABLANDO): encendido por defecto.
+    cartelVoz: true,
   });
+  const cartelVoz = b.valor.cartelVoz !== false;
   const [vistaMascara, setVistaMascara] = useState<MascaraVista>(() => vistaDePlantilla('podcast'));
   const modoInvitado = b.valor.segunda === 'invitado';
   const codigoSala = typeof b.valor.sala === 'string' ? b.valor.sala : '';
@@ -163,6 +167,35 @@ export function Estudio() {
     return () => document.documentElement.classList.remove('estudio-sin-scroll');
   }, [fijo]);
 
+  // El micrófono, escuchado aparte (sin tocar la mezcla) para el cartel «Hablando» y sus barras.
+  const [vozMicro, setVozMicro] = useState<MediaStream | null>(null);
+  useEffect(() => {
+    if (!usuario || !cartelVoz) return setVozMicro(null);
+    let vivo = true;
+    let flujo: MediaStream | null = null;
+    navigator.mediaDevices
+      ?.getUserMedia({
+        audio: {
+          deviceId: micId !== 'default' ? { exact: micId } : undefined,
+          // Con cancelación de eco, el sonido del video que sale por los parlantes no enciende «Hablando».
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        video: false,
+      })
+      .then((f) => {
+        if (!vivo) return f.getTracks().forEach((p) => p.stop());
+        flujo = f;
+        setVozMicro(f);
+      })
+      .catch((e) => console.error('estudio: cartel de voz sin micrófono', e));
+    return () => {
+      vivo = false;
+      flujo?.getTracks().forEach((p) => p.stop());
+    };
+  }, [usuario, micId, cartelVoz]);
+  const vozAnfitrion = useVoz(vozMicro);
+  const vozInvitado = useVoz(cartelVoz && modoInvitado ? remoto : null);
   const marco = useRef<HTMLIFrameElement>(null);
   // Video de la computadora: se reproduce aquí mismo (no se sube a ningún lado).
   const videoLocal = useRef<HTMLVideoElement>(null);
@@ -721,6 +754,16 @@ export function Estudio() {
     setEstado('grabando');
   }
 
+  /** El crédito del video original, para que «Para YouTube» lo ponga solo en la descripción (C-CREDITO). */
+  function creditoDe(): { creador: string; enlace: string } | undefined {
+    if (modoInvitado || !video) return undefined;
+    const creador = (b.valor.creador.trim() || video.creador).slice(0, 61);
+    if (!creador) return undefined;
+    return { creador, enlace: enlaceOriginal(video) };
+  }
+  const creditoRef = useRef(creditoDe);
+  creditoRef.current = creditoDe;
+
   const terminar = useCallback(async () => {
     const g = grabadora.current;
     const s = subidor.current;
@@ -742,7 +785,7 @@ export function Estudio() {
           : (tituloReaccion(b.valor.tema, idioma) ?? tituloAutomatico(g.segmentos, idioma))) ?? undefined;
       await pedir(`/datos/videos/${id}/completar`, {
         method: 'POST',
-        json: { partes, duracion: dur, transcripcion: g.segmentos, titulo },
+        json: { partes, duracion: dur, transcripcion: g.segmentos, titulo, credito: creditoRef.current() },
       });
       if (foto)
         await pedir(`/datos/videos/${id}/miniatura`, {
@@ -1093,6 +1136,7 @@ export function Estudio() {
             <figure className="escenario-tarjeta escenario-camara">
               <div ref={cajaCamara} className="escenario-caja">
                 <video ref={videoCamara} muted playsInline autoPlay aria-hidden="true" />
+                {cartelVoz && <CartelVoz quien="anfitrion" textos={tx} {...vozAnfitrion} />}
               </div>
               {/* En «video vertical grande» los dos carteles van bajo la cámara: el video queda limpio y entero. */}
               {grande ? (
@@ -1121,6 +1165,7 @@ export function Estudio() {
                       autoPlay
                       data-video-invitado
                     />
+                    {remoto && cartelVoz && <CartelVoz quien="invitado" textos={tx} {...vozInvitado} />}
                     {!remoto && (
                       <div className="escenario-vacio invitado-vacio" aria-hidden="true">
                         {codigoSala ? ti.tarjeta[llamada.estado] : ti.invitar}
@@ -1323,6 +1368,14 @@ export function Estudio() {
             />
           </label>
         </div>
+        <label className="estudio-cartel-voz" title={tx.cartelVozAyuda}>
+          <input
+            type="checkbox"
+            checked={cartelVoz}
+            onChange={(e) => b.cambiar('cartelVoz', e.target.checked)}
+          />{' '}
+          💬 {tx.cartelVoz}
+        </label>
         <div className={`estudio-karaoke${karaoke ? ' activo' : ''}`}>
           <button
             type="button"

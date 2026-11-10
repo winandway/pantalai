@@ -85,9 +85,13 @@ export function descripcionYoutube(d: {
   duracion: number;
   hashtags: string[];
   idioma: string;
+  /** Reacción: crédito al creador del video original, ya puesto (C-CREDITO). */
+  credito?: { creador: string; enlace: string } | null;
 }): string {
   const partes: string[] = [];
   if (d.gancho.trim()) partes.push(d.gancho.trim());
+  const credito = d.credito ? lineaCredito(d.credito, d.idioma) : '';
+  if (credito) partes.push(credito);
   if (d.resumen.trim() && d.resumen.trim() !== d.gancho.trim()) partes.push(d.resumen.trim());
   if (capitulosValidos(d.capitulos, d.duracion))
     partes.push(
@@ -98,6 +102,14 @@ export function descripcionYoutube(d: {
     );
   if (d.hashtags.length) partes.push(d.hashtags.join(' '));
   return partes.join('\n\n').slice(0, 5000);
+}
+
+/** «Original video by @creador: enlace» (o en español), para dar el crédito sin escribirlo a mano. */
+export function lineaCredito(c: { creador: string; enlace: string }, idioma: string): string {
+  const creador = c.creador.trim();
+  if (!creador) return '';
+  const base = idioma.startsWith('es') ? `Video original de ${creador}` : `Original video by ${creador}`;
+  return c.enlace ? `${base}: ${c.enlace}` : base;
 }
 
 /** El resumen y los capítulos tal como se ven en la página, para copiarlos de un clic. */

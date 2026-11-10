@@ -355,8 +355,13 @@ export function PaginaVideo({ id, embebido = false }: { id: string; embebido?: b
             {video.es_dueno && ia && <Tareas tareas={ia.tareas} />}
           </section>
         )}
-        {video.es_dueno && ia?.cerebro && (video.descripcion || ia.youtube) && (
-          <ParaYoutube video={video} kit={ia.youtube} cambiar={(k) => setIa({ ...ia, youtube: k })} />
+        {video.es_dueno && ((ia?.cerebro && (video.descripcion || ia.youtube)) || video.credito) && (
+          <ParaYoutube
+            video={video}
+            kit={ia?.youtube}
+            puedeEscribir={Boolean(ia?.cerebro)}
+            cambiar={(k) => setIa((x) => (x ? { ...x, youtube: k } : x))}
+          />
         )}
         {generando && (
           <Generar

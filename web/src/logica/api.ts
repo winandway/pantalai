@@ -55,6 +55,8 @@ export type Superposicion = {
 
 export type Video = {
   id: string;
+  /** Reacción del Estudio: el creador del video original y su enlace (solo lo recibe el dueño). */
+  credito?: { creador: string; enlace: string } | null;
   tiene_mp4?: boolean;
   marca?: boolean;
   /** La marca de agua ya va grabada dentro de la imagen. */

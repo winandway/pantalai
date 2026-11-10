@@ -6770,3 +6770,56 @@ html.con-shorts body {
   color: var(--neon-a);
   padding-left: 0;
 }
+
+/* ---------- cartel «Hablando / Escuchando» con barras de sonido (C-HABLANDO, fase 4) ---------- */
+.cartel-voz {
+  position: absolute;
+  left: calc(1 * var(--u));
+  top: calc(1 * var(--u));
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.6 * var(--u));
+  padding: calc(0.45 * var(--u)) calc(1 * var(--u));
+  border-radius: 99px;
+  font-size: calc(1.2 * var(--u));
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: rgba(17, 24, 39, 0.62);
+  transition: background-color 0.15s;
+}
+/* Hablando = verde de éxito (está saliendo bien), nunca rojo. */
+.cartel-voz.hablando {
+  background: #16a34a;
+  box-shadow: 0 0 calc(1.2 * var(--u)) rgba(22, 163, 74, 0.6);
+}
+.barras-voz {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.22 * var(--u));
+  height: calc(1.4 * var(--u));
+}
+.barras-voz i {
+  display: block;
+  width: calc(0.32 * var(--u));
+  height: 100%;
+  border-radius: 99px;
+  background: currentColor;
+  transform-origin: center;
+  transition: transform 0.08s linear;
+}
+.formato-vertical .cartel-voz {
+  font-size: calc(0.9 * var(--u));
+}
+.estudio-cartel-voz {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.estudio.grabando .estudio-cartel-voz {
+  display: none;
+}
