@@ -1,3 +1,4 @@
+import { expect, type Page } from '@playwright/test';
 // Cada archivo de pruebas llega desde su propia dirección de internet de mentira, para no gastar entre todos el límite
 // de 5 registros cada 15 minutos. Solo en local y en la compuerta: contra el sitio real (URL_BASE) no se manda,
 // porque Cloudflare pone la dirección real y rechaza esa cabecera si viene del navegador. Un URL_BASE local (otro
@@ -79,3 +80,44 @@ export async function examinarVideo(archivo: Buffer) {
   };
   return { medidas: [...medidas], cuadro, picoDb };
 }
+
+/**
+ * Espera a que el video recién grabado tenga su archivo DEFINITIVO en la página. Al terminar de grabar, el navegador
+ * reordena el MP4 de fondo (C-INDICE-MP4) y, al reemplazarlo, el reproductor cambia de dirección y monta un <video>
+ * NUEVO (C-SONIDO-RECIEN-GRABADO). Una prueba que agarra el <video> antes de ese cambio se queda con uno desmontado,
+ * a medio cargar, que nunca llega a tener medidas («The source width is 0»). Era la prueba inestable del Short del
+ * Estudio (10 nov 2026). Aquí se espera (1) a que la nube tenga el archivo con el índice al principio, si es MP4, y
+ * (2) a que el reproductor de la página apunte a esa versión. Recién entonces se puede mirar el <video>.
+ */
+export async function esperarArchivoFinal(page: Page, id: string): Promise<void> {
+  const { cajasDeArriba } = await import('../web/src/logica/cajasMp4');
+  const datos = async () =>
+    (
+      (await (await page.request.get(`/datos/videos/${id}`)).json()) as {
+        video: { tipo: string; bytes: number; version_archivo?: string | null };
+      }
+    ).video;
+  if ((await datos()).tipo.startsWith('video/mp4'))
+    await expect
+      .poll(
+        async () => {
+          const r = await page.request.get(`/media/${id}/video?formato=webm`, {
+            headers: { range: 'bytes=0-65535' },
+          });
+          return cajasDeArriba(new Uint8Array(await r.body())).join(',');
+        },
+        { timeout: 60_000 },
+      )
+      .toMatch(/^ftyp,(free,)?moov(,mdat)?$/);
+  const v = await datos();
+  const version = encodeURIComponent(v.version_archivo ?? String(v.bytes));
+  await expect(page.locator('.reproductor video source').first()).toHaveAttribute(
+    'src',
+    new RegExp(`[?&]v=${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
+    { timeout: 30_000 },
+  );
+}
+
+/** Correo de prueba que no choca aunque dos pruebas arranquen en el mismo milisegundo (--repeat-each en paralelo). */
+export const correoDePrueba = (prefijo: string): string =>
+  `e2e.${prefijo}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`;

@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { cabecerasDePrueba } from './ayuda';
+import { cabecerasDePrueba, esperarArchivoFinal } from './ayuda';
 
 test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
@@ -78,6 +78,7 @@ test('grabar un Short vertical para reaccionar', async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByRole('button', { name: /Finish/ }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
+  await esperarArchivoFinal(page, new URL(page.url()).pathname.split('/')[2]!);
 
   // 4) El video es vertical y la cámara (verde en la cámara de prueba) está ABAJO.
   await page.locator('.reproductor video').waitFor();

@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { cabecerasDePrueba, examinarVideo } from './ayuda';
+import { cabecerasDePrueba, correoDePrueba, esperarArchivoFinal, examinarVideo } from './ayuda';
 
 test.use({ extraHTTPHeaders: cabecerasDePrueba(), viewport: { width: 1280, height: 900 } });
 
@@ -42,7 +42,7 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   const puede = await page.evaluate(() => 'CropTarget' in window);
   test.skip(!puede, 'Este navegador no tiene Region Capture.');
   await page.getByLabel('Your name').fill('Soporte E2E');
-  await page.getByLabel('Email').fill(`e2e.estudio.${Date.now()}@example.com`);
+  await page.getByLabel('Email').fill(correoDePrueba('estudio'));
   await page.getByLabel('Password', { exact: true }).fill(`Prueba-${Date.now()}`);
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page).toHaveURL(/\/library/);
@@ -112,6 +112,7 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   await page.waitForTimeout(1000);
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
+  await esperarArchivoFinal(page, new URL(page.url()).pathname.split('/')[2]!);
 
   // El archivo grabado: sus medidas y sus colores (con la ventana de vuelta a su tamaño para leerlo bien).
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -260,6 +261,7 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
+  await esperarArchivoFinal(page, new URL(page.url()).pathname.split('/')[2]!);
   await page.locator('.reproductor video').waitFor();
   const r = await page.evaluate(
     async ({ centro, afuera }) => {
@@ -315,7 +317,7 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
   const puede = await page.evaluate(() => 'CropTarget' in window);
   test.skip(!puede, 'Este navegador no tiene Region Capture.');
   await page.getByLabel('Your name').fill('Soporte E2E');
-  await page.getByLabel('Email').fill(`e2e.estudio.vertical.${Date.now()}@example.com`);
+  await page.getByLabel('Email').fill(correoDePrueba('estudio.vertical'));
   await page.getByLabel('Password', { exact: true }).fill(`Prueba-${Date.now()}`);
   await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page).toHaveURL(/\/library/);
@@ -344,6 +346,7 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
+  await esperarArchivoFinal(page, new URL(page.url()).pathname.split('/')[2]!);
   await page.locator('.reproductor video').waitFor();
   const r = await page.evaluate(async (centro) => {
     const v = document.querySelector('.reproductor video') as HTMLVideoElement;

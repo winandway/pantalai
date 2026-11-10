@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { cabecerasDePrueba } from './ayuda';
+import { cabecerasDePrueba, esperarArchivoFinal } from './ayuda';
 
 test.use({ extraHTTPHeaders: cabecerasDePrueba() });
 
@@ -40,6 +40,7 @@ test('grabar solo el área marcada', async ({ page }) => {
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: /Finish/ }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
+  await esperarArchivoFinal(page, new URL(page.url()).pathname.split('/')[2]!);
 
   // El archivo grabado mide lo del rectángulo (la mitad), no lo de todo lo compartido.
   await page.locator('.reproductor video').waitFor({ timeout: 30_000 });

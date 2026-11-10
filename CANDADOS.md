@@ -933,6 +933,14 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Pruebas: `e2e/sonido-recien-grabado.spec.ts` (graba de verdad, espera el proceso y exige que suene y pase de 4 s) y
   `pruebas/servidor.test.ts` › C-SONIDO-RECIEN-GRABADO. Las dos comprobadas en ROJO el 9 nov 2026.
 - No tocar: el `&v=` de las fuentes del reproductor ni el 416.
+- Prueba inestable (10 nov 2026): «el estudio graba un Short vertical 9:16» fallaba 2 de cada 10 veces con «The
+  source width is 0». Causa: la prueba agarraba el `<video>` del reproductor ANTES de que terminara el reordenado de
+  fondo; al llegar la versión nueva, el reproductor monta otro `<video>` (este candado) y la prueba se quedaba mirando
+  el viejo, desmontado y a medio cargar (la traza mostraba la dirección `&v=` vieja, la nueva y un 416). El producto
+  hacía lo correcto. Arreglo en las pruebas: `esperarArchivoFinal` (`e2e/ayuda.ts`) espera el índice en la nube y que
+  la página apunte a esa versión antes de mirar el video; lo usan `estudio.spec.ts`, `grabar-short.spec.ts` y
+  `grabar-area.spec.ts`. Comprobado: sin el ayudante 2 fallos en 10 repeticiones; con él 20 de 20 en verde.
+  Toda prueba nueva que mire el `<video>` de un video recién grabado debe llamar antes a `esperarArchivoFinal`.
 
 ## C-MOVIL: Videos al 100 % en el celular (9 nov 2026)
 
