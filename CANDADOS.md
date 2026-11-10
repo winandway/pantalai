@@ -996,3 +996,25 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
   `imagenAceptable` + `achicarImagen` (lado largo 512, PNG o WebP).
 - Prueba: `pruebas/subir-imagen.test.tsx` revisa TODAS las pantallas de `web/src`: un `<input type="file">` que acepte
   imágenes fuera de SubirImagen la pone en rojo. Comprobada en ROJO el 10 nov 2026 con una casilla suelta de prueba.
+
+## C-HABLANDO y C-CREDITO: cartel «Hablando», barras de sonido y crédito para YouTube (10 nov 2026, fase 4)
+
+- C-HABLANDO: sobre la cámara del anfitrión (y sobre la tarjeta del invitado remoto, con su voz) va un cartel
+  «Escuchando» que se pone VERDE con «Hablando» cuando suena la voz, con 4 barras que siguen el nivel. Va DENTRO del
+  escenario: sale en la grabación (16:9, 9:16, con invitado). Casilla «Cartel Hablando / Escuchando y barras de sonido»
+  (encendida por defecto, guardada en el borrador del Estudio).
+- Cómo: `useVoz` (`web/src/componentes/CartelVoz.tsx`) escucha APARTE (analizador propio; no toca la mezcla ni la
+  grabadora) el micrófono elegido, con cancelación de eco y supresión de ruido (el sonido del video por los parlantes
+  no lo enciende). `DetectorVoz` (`web/src/logica/voz.ts`): se enciende con nivel ≥ 0,12, sigue mientras ≥ 0,07 y se
+  apaga tras 450 ms de silencio (no parpadea entre sílabas). Repinta como mucho 20 veces por segundo y solo si cambió.
+- C-CREDITO: al terminar una reacción, el Estudio manda `credito` (creador del cartel y enlace original de YouTube o
+  TikTok; zod solo acepta `https://(www.)youtube.com/…` o `tiktok.com/…`). Tabla nueva `video_credito` (1 fila por
+  reacción; se copia al duplicar y se borra con el video). `GET /datos/videos/:id` lo da SOLO al dueño. «Para YouTube»
+  muestra la línea lista para copiar (aunque la IA no esté) y la pone en la descripción (`lineaCredito`).
+- Pruebas: `pruebas/voz.test.ts` (nivel, histéresis, barras, línea del crédito, servidor y zod) y
+  `e2e/estudio-hablando.spec.ts` (micrófono de prueba → «Speaking»; la casilla lo quita y lo vuelve a poner; graba y
+  busca en el MP4 el verde del cartel, distinto del verde de la cámara de prueba porque lleva azul; y en la página del
+  video está «Original video by @…»). Comprobadas en ROJO el 10 nov 2026: sin sostener la voz falla la unitaria; con
+  el cartel gris en vez de verde falla la e2e «cuadros con el cartel Hablando en verde»; y el primer intento devolvía el
+  crédito fuera de `video` (la unitaria lo atrapó).
+- Fuera de esta fase: transmitir en vivo a YouTube (no estaba en la línea de PENDIENTES; gastaría y pide decisión de Richard).

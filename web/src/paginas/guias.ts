@@ -1075,6 +1075,38 @@ export const GUIAS: Guia[] = [
     },
   },
   {
+    slug: 'speaking-sign-and-creator-credit',
+    seccion: 'grabar',
+    icono: '💬',
+    imagen: 'hablando',
+    en: {
+      titulo: 'The “Speaking” sign, sound bars and the creator credit, ready for YouTube',
+      resumen:
+        'In the Reaction Studio, a small sign over your camera lights up green when you talk, with bars that move with your voice. And when you finish, “For YouTube” already has the credit to the original creator.',
+      cuerpo: [
+        'Open the Reaction Studio. Over your camera you see a small sign: it says “Listening” while you are quiet and turns green with “Speaking” when you talk. The little bars next to it move with your voice. It is part of the stage, so it is in your recording, like on a live show.',
+        'When the second card is a remote guest, your guest has their own sign over their card, so viewers always know who is talking.',
+        'The sign listens to your microphone on its own: it does not change your sound or the recording. Short pauses between words do not make it blink; it turns off after a moment of silence. The video’s sound coming out of your speakers does not turn it on.',
+        'Do you prefer a cleaner stage? Uncheck “Speaking / Listening sign and sound bars” under the stage. Your choice is saved for next time.',
+        'Credit to the creator: when you react to a YouTube or TikTok video (or write the creator’s @ for a video from your computer), Pantalay saves who made the original video. On your video’s page, “For YouTube” shows the credit line ready to copy, and it goes into the description it writes for you, with the link to the original.',
+        'Always react with your own commentary and credit the creator. What you publish is your responsibility.',
+      ],
+    },
+    es: {
+      titulo: 'El cartel «Hablando», las barras de sonido y el crédito al creador, listo para YouTube',
+      resumen:
+        'En el Estudio de reacciones, un cartelito sobre tu cámara se pone verde cuando hablas, con barras que se mueven con tu voz. Y al terminar, «Para YouTube» ya trae el crédito al creador del video original.',
+      cuerpo: [
+        'Abre el Estudio de reacciones. Sobre tu cámara ves un cartelito: dice «Escuchando» mientras estás callado y se pone verde con «Hablando» cuando hablas. Las barritas de al lado se mueven con tu voz. Es parte del escenario, así que sale en tu grabación, como en un programa en vivo.',
+        'Cuando la segunda tarjeta es un invitado a distancia, tu invitado tiene su propio cartel sobre su tarjeta, para que quien mire sepa siempre quién está hablando.',
+        'El cartel escucha tu micrófono aparte: no cambia tu sonido ni la grabación. Las pausas cortas entre palabras no lo hacen parpadear; se apaga después de un momento de silencio. El sonido del video que sale por tus parlantes no lo enciende.',
+        '¿Prefieres un escenario más limpio? Desmarca «Cartel Hablando / Escuchando y barras de sonido» debajo del escenario. Tu elección queda guardada para la próxima vez.',
+        'Crédito al creador: cuando reaccionas a un video de YouTube o de TikTok (o escribes el @ del creador para un video de tu computadora), Pantalay guarda quién hizo el video original. En la página de tu video, «Para YouTube» muestra la línea del crédito lista para copiar, y la pone en la descripción que te escribe, con el enlace al original.',
+        'Reacciona siempre con comentarios propios y dale el crédito al creador. Lo que publicas es tu responsabilidad.',
+      ],
+    },
+  },
+  {
     slug: 'publish-to-videos',
     seccion: 'compartir',
     icono: '📣',
