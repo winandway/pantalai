@@ -68,6 +68,10 @@ test('el cartel «Hablando» se enciende con el micrófono y sale en la grabaci�
     y: (caja.y + caja.height / 2 - total.y) / total.height,
   }));
   await page.getByRole('button', { name: 'Start recording' }).click();
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await page.waitForTimeout(4000);
   await page.getByRole('button', { name: 'Finish' }).click();

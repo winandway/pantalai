@@ -43,6 +43,10 @@ async function puntos(page: Page) {
 
 async function grabar(page: Page) {
   await page.getByRole('button', { name: 'Start recording' }).click();
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await page.waitForTimeout(2500);
   await page.getByRole('button', { name: 'Finish' }).click();

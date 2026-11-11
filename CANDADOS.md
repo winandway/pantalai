@@ -1150,3 +1150,16 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
   arrastraba de lado; ahora baja de línea. La e2e del plan B exige `scrollWidth` ≤ 375 (rojo sin el arreglo).
 - Capturas de Docs: `node scripts/capturas-miniatura.mjs <video.mp4>` con el sitio local (guía `youtube-thumbnail`).
 - No tocar: el tope de 2 MB, la medida 1280 × 720, que no se guarde en el servidor y que la marca siga `video.marca`.
+
+## C-REVISION-GRABAR: revisión antes de grabar en el Estudio (10 nov 2026)
+
+- Lo que pasó: una entrevista con invitado salió con el título del video anterior (el «Tema» queda guardado y en la
+  entrevista no hay video que lo cambie) y con efecto de cantante porque el Karaoke había quedado encendido.
+- Arreglo: los dos «Grabar» del Estudio (el de abajo y el de arriba) abren `RevisionGrabar`: título (con «Se guarda
+  como»), programa, nombre del cartel (campo nuevo `anfitrion`, manda sobre el de la máscara), creador o invitado, y
+  el estado del Karaoke con botón para apagarlo o encenderlo. Avisos de `avisosAntesDeGrabar`: título que puso solo el
+  video anterior (campo `temaAuto`) en una entrevista, título vacío, Karaoke encendido, invitado sin conectar. Todo
+  se corrige ahí y se ve al instante en el escenario; la grabación arranca solo con «Todo bien, grabar».
+- Pruebas: `pruebas/revision-grabar.test.ts` y `e2e/revision-grabar.spec.ts` (el caso exacto: video anterior +
+  Karaoke + entrevista). Comprobada en ROJO el 10 nov 2026 (con «Grabar» directo, sin revisión, falla).
+- Las demás pruebas del Estudio confirman la revisión con «All good, record».

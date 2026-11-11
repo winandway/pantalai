@@ -2,6 +2,8 @@
 // graba SOLO el escenario de la máscara «Podcast» (la propia pestaña recortada con Region Capture). Los botones quedan
 // fuera de lo que se graba. Plan: docs/PLAN-ESTUDIO-DE-REACCIONES.md · Candado: C-ESTUDIO-RECORTE.
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { RevisionGrabar } from '../componentes/RevisionGrabar';
+import { avisosAntesDeGrabar } from '../logica/revisionGrabar';
 import { efectoValido, KARAOKE_DEFECTO } from '../logica/karaoke';
 import fixWebmDuration from 'fix-webm-duration';
 import { useAviso } from '../componentes/Aviso';
@@ -109,6 +111,10 @@ export function Estudio() {
     mascara: ELECCION_DEFECTO,
     // Cartel «Hablando / Escuchando» y barras de sonido (C-HABLANDO): encendido por defecto.
     cartelVoz: true,
+    // Revisión antes de grabar (C-REVISION-GRABAR): el nombre del cartel escrito aquí manda sobre el de la máscara, y
+    // «temaAuto» recuerda el último tema que puso SOLO un video (para avisar si una entrevista lo heredó).
+    anfitrion: '',
+    temaAuto: '',
   });
   const cartelVoz = b.valor.cartelVoz !== false;
   const [vistaMascara, setVistaMascara] = useState<MascaraVista>(() => vistaDePlantilla('podcast'));
@@ -146,6 +152,7 @@ export function Estudio() {
   const confirmado = useRef(false);
   const vigilante = useRef<number | null>(null);
   const [camara, setCamara] = useState<MediaStream | null>(null);
+  const [revisando, setRevisando] = useState(false);
   const [llamada, setLlamada] = useState<{ estado: EstadoLlamada; nombre: string | null }>({
     estado: 'esperando',
     nombre: null,
@@ -398,7 +405,12 @@ export function Estudio() {
           setAvisoVideo(null);
           tiempo.current = 0;
           duracion.current = 0;
-          if (rellenar) b.setValor((x) => ({ ...x, tema: x.tema || d.video.titulo }));
+          if (rellenar)
+            b.setValor((x) => ({
+              ...x,
+              tema: x.tema || d.video.titulo,
+              temaAuto: x.tema ? x.temaAuto : d.video.titulo,
+            }));
         } catch {
           setVideo(null);
           setError({ texto: tx.noExiste });
@@ -435,7 +447,12 @@ export function Estudio() {
         }
         if (!v.id && d.id) setVideo({ ...v, id: d.id, creador: d.creador } as VideoPegado);
         if (rellenar)
-          b.setValor((x) => ({ ...x, creador: d.creador || x.creador, tema: d.titulo || x.tema }));
+          b.setValor((x) => ({
+            ...x,
+            creador: d.creador || x.creador,
+            tema: d.titulo || x.tema,
+            temaAuto: d.titulo || x.temaAuto,
+          }));
       } catch (e) {
         if (e instanceof ErrorApi && e.codigo === 'no_existe') {
           setVideo(null);
@@ -557,7 +574,13 @@ export function Estudio() {
       setAvisoVideo(null);
       tiempo.current = 0;
       duracion.current = 0;
-      b.setValor((x) => ({ ...x, enlace: '', creador: '', tema: temaDeArchivo(archivo.name) }));
+      b.setValor((x) => ({
+        ...x,
+        enlace: '',
+        creador: '',
+        tema: temaDeArchivo(archivo.name),
+        temaAuto: temaDeArchivo(archivo.name),
+      }));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [tx],
@@ -819,16 +842,24 @@ export function Estudio() {
     }
   }
 
+  // Los dos «Grabar» (el de abajo y el de arriba) primero abren la revisión; la grabación arranca con «Todo bien».
   arrancarArriba.current = () => {
-    if (estado === 'listo' && !clavado) void empezar();
+    if (estado === 'listo' && !clavado) abrirRevision();
   };
+  function abrirRevision() {
+    setError(null);
+    if (!video && !modoInvitado) return setError({ texto: tx.sinVideo });
+    if (!recorte) return setError({ texto: tx.sinRecorte, grabar: true });
+    setRevisando(true);
+  }
 
   if (!usuario) return null;
   const m = armarMascara({
     idioma,
     programa: b.valor.programa.trim() || vistaMascara.programa,
     anfitrion: usuario.nombre,
-    nombreCartel: vistaMascara.anfitrion,
+    nombreCartel:
+      (typeof b.valor.anfitrion === 'string' && b.valor.anfitrion.trim()) || vistaMascara.anfitrion,
     rolAnfitrion: vistaMascara.rol,
     creador: modoInvitado ? (llamada.nombre ?? '') : b.valor.creador,
     tema: b.valor.tema,
@@ -1273,12 +1304,7 @@ export function Estudio() {
         </div>
         <div className="estudio-grabacion">
           {estado === 'listo' && (
-            <button
-              type="button"
-              className="boton grabar-boton"
-              onClick={() => void empezar()}
-              disabled={!recorte}
-            >
+            <button type="button" className="boton grabar-boton" onClick={abrirRevision} disabled={!recorte}>
               <span className="punto-rojo" aria-hidden="true" /> {tx.grabar}
             </button>
           )}
@@ -1503,6 +1529,39 @@ export function Estudio() {
       <p className="estudio-ayuda">{tx.atajos}</p>
       <p className="estudio-ayuda">{tx.consejo}</p>
       <p className="estudio-ayuda">{tx.derechos}</p>
+      {revisando && (
+        <RevisionGrabar
+          tx={tx}
+          avisos={avisosAntesDeGrabar({
+            invitado: modoInvitado,
+            tema: b.valor.tema,
+            temaAuto: typeof b.valor.temaAuto === 'string' ? b.valor.temaAuto : '',
+            karaoke,
+            estadoLlamada: llamada.estado,
+          })}
+          invitado={modoInvitado}
+          tema={b.valor.tema}
+          tituloFinal={
+            modoInvitado
+              ? b.valor.tema.trim() || ti.temaInvitado
+              : (tituloReaccion(b.valor.tema, idioma) ?? '')
+          }
+          programa={b.valor.programa}
+          programaDefecto={m.programa}
+          anfitrion={typeof b.valor.anfitrion === 'string' ? b.valor.anfitrion : ''}
+          anfitrionDefecto={m.anfitrion}
+          creador={b.valor.creador}
+          nombreInvitado={llamada.nombre}
+          karaoke={karaoke}
+          cambiar={(campo, valor) => b.cambiar(campo, valor)}
+          alternarKaraoke={() => b.cambiar('karaoke', !karaoke)}
+          grabar={() => {
+            setRevisando(false);
+            void empezar();
+          }}
+          cerrar={() => setRevisando(false)}
+        />
+      )}
     </div>
   );
 }

@@ -92,6 +92,10 @@ test('reaccionar a un video de la computadora', async ({ page }) => {
   };
   await page.getByRole('button', { name: /Back 5 s/ }).click(); // vuelve al principio (el video dura 4 s)
   await page.getByRole('button', { name: 'Start recording' }).click();
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await page.waitForTimeout(2500);
   await page.getByRole('button', { name: 'Finish' }).click();

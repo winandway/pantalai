@@ -1018,6 +1018,7 @@ export const GUIAS: Guia[] = [
       resumen:
         'Paste a YouTube or TikTok link, play it right inside Pantalay and record your reaction in a podcast frame with your name, the creator and the topic. Choose the layout. Only the stage is recorded.',
       cuerpo: [
+        'Before recording, Pantalay shows you a quick check: the video title, the show name, your name on the card, the creator or guest, and whether Karaoke is on. It warns you if the title comes from a previous video or if Karaoke is still on. Fix anything right there (you see it on the stage at once) and press “All good, record”.',
         'Open the Reaction Studio with the 🎙️ Reactions button in the top menu, or in Record choose “React to a video”. It works in Chrome and Edge on a computer. Your camera turns on inside the stage so you can see how you look.',
         'Or upload a video from your computer: press “Upload a video from my computer” and choose the file (MP4, MOV or WebM). It plays from your computer inside the stage, it is not uploaded anywhere, and it always starts. You can also paste the link of a video from your Pantalay library (pantalay.com/v/…). Write the creator’s @ in “Creator” so the credit shows.',
         'YouTube plays without an account. TikTok only plays inside other sites if you are signed in to TikTok in the same browser: if a TikTok does not start, sign in at tiktok.com, come back and load the video again. Pantalay reminds you with a link to sign in.',
@@ -1040,6 +1041,7 @@ export const GUIAS: Guia[] = [
       resumen:
         'Pega un enlace de YouTube o de TikTok, reprodúcelo dentro de Pantalay y graba tu reacción en un marco de podcast con tu nombre, el creador y el tema. Elige la posición. Solo se graba el escenario.',
       cuerpo: [
+        'Antes de grabar, Pantalay te muestra una revisión rápida: el título del video, el nombre del programa, tu nombre en el cartel, el creador o el invitado, y si el Karaoke está encendido. Te avisa si el título viene de un video anterior o si quedó el Karaoke encendido. Corrige ahí mismo lo que haga falta (se ve al instante en el escenario) y toca «Todo bien, grabar».',
         'Abre el Estudio de reacciones con el botón 🎙️ Reacciones del menú de arriba, o en Grabar elige «Reaccionar a un video». Funciona en Chrome y Edge de computadora. Tu cámara se enciende dentro del escenario para que veas cómo sales.',
         'O sube un video de tu computadora: toca «Subir un video de mi computadora» y elige el archivo (MP4, MOV o WebM). Se reproduce desde tu computadora dentro del escenario, no se sube a ningún lado y arranca siempre. También puedes pegar el enlace de un video de tu biblioteca de Pantalay (pantalay.com/v/…). Escribe el @ del creador en «Creador» para que el crédito quede a la vista.',
         'YouTube se reproduce sin cuenta. TikTok solo se reproduce dentro de otras páginas si tienes tu sesión de TikTok iniciada en el mismo navegador: si un TikTok no arranca, inicia sesión en tiktok.com, vuelve y carga el video otra vez. Pantalay te lo recuerda con un enlace para iniciar sesión.',

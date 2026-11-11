@@ -34,6 +34,10 @@ test('grabar con Karaoke en el Estudio', async ({ page }) => {
 
   await page.getByRole('button', { name: /Play/ }).click();
   await page.getByRole('button', { name: 'Start recording' }).click();
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   // Mientras se graba, el botón no se puede cambiar, pero el efecto sí.
   await expect(page.getByRole('button', { name: /Karaoke/ })).toBeDisabled();

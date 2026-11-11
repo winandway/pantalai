@@ -6926,3 +6926,56 @@ html.con-shorts body {
     min-width: 0;
   }
 }
+
+/* Revisión antes de grabar del Estudio (C-REVISION-GRABAR) */
+.revision-grabar {
+  display: grid;
+  gap: 12px;
+}
+.revision-grabar .ayuda {
+  margin: 0;
+}
+.revision-fila {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.revision-avisos {
+  list-style: none;
+  margin: 0;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  border-radius: var(--radio);
+  background: #fff7e6;
+  border: 1px solid #f5c26b;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.revision-invitado {
+  margin: 0;
+}
+.revision-karaoke {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--radio);
+  background: var(--fondo-suave);
+  font-size: 0.92rem;
+}
+.revision-karaoke.encendido {
+  background: linear-gradient(135deg, rgba(255, 62, 165, 0.12), rgba(167, 139, 250, 0.16));
+  border: 1px solid #ff3ea5;
+  font-weight: 700;
+}
+.revision-grabar .fila-botones {
+  justify-content: flex-end;
+}
+@media (max-width: 560px) {
+  .revision-fila {
+    grid-template-columns: 1fr;
+  }
+}

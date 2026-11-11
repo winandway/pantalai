@@ -119,6 +119,10 @@ test('el anfitrión graba a su invitado remoto en la segunda tarjeta, y la graba
   // Solo la voz del invitado en la grabación: el micrófono del anfitrión va en 0.
   await page.getByRole('slider', { name: 'Microphone in the recording' }).fill('0');
   await page.getByRole('button', { name: 'Start recording' }).click();
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await page.waitForTimeout(2500);
 

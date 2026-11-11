@@ -94,6 +94,10 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   // CANDADO C-MEZCLA-SIN-SATURAR: con el micrófono al doble, la grabación no satura (el limitador la contiene).
   await page.getByRole('slider', { name: 'Microphone in the recording' }).fill('200');
   await page.getByRole('button', { name: 'Start recording' }).click();
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await page.waitForTimeout(1500);
   // CANDADO C-ESTUDIO-MEDIDA-FIJA: a mitad de la grabación la ventana se achica (el escenario cambia de tamaño).
@@ -257,6 +261,11 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
   const afuera = { x: (caja.x - 12 - total.x) / total.width, y: centro.y };
 
   await page.getByRole('button', { name: 'Start recording' }).click();
+
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: 'Finish' }).click();
@@ -340,6 +349,10 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
   };
   // El «Record» de arriba arranca la grabación del Estudio igual que el de abajo (Richard, 9 nov 2026).
   await page.locator('.encabezado .grabar-boton').click();
+  await page
+    .getByRole('dialog', { name: 'Check before recording' })
+    .getByRole('button', { name: 'All good, record' })
+    .click();
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
   await expect(page.locator('.encabezado .grabar-boton')).toContainText('Recording');
   await expect(page).toHaveURL(/\/studio$/);
