@@ -1163,3 +1163,13 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
 - Pruebas: `pruebas/revision-grabar.test.ts` y `e2e/revision-grabar.spec.ts` (el caso exacto: video anterior +
   Karaoke + entrevista). Comprobada en ROJO el 10 nov 2026 (con «Grabar» directo, sin revisión, falla).
 - Las demás pruebas del Estudio confirman la revisión con «All good, record».
+
+## C-CUENTA-VISIBLE: la cuenta 3, 2, 1 del Estudio se ve (10 nov 2026)
+
+- Lo que pasaba: la cuenta salía chiquita en la barra de abajo, a la derecha, y Richard no la veía para saber cuándo
+  empezar a hablar.
+- Arreglo: `.escenario-cuenta`, número grande en un círculo rojo en el centro, ENCIMA del escenario pero fuera de él
+  (hermano dentro de `.escenario-marco`: lo que se graba es solo el escenario), con «Prepárate… empieza a hablar
+  cuando desaparezca el número». Se quita (`setCuenta(0)` y dos cuadros) ANTES de `g.empezar`: nunca sale en el video.
+- Prueba: `e2e/cuenta-visible.spec.ts` (grande, centrado, a la vista, fuera del escenario y sin el círculo rojo en el
+  primer cuadro). Comprobada en ROJO el 10 nov 2026.

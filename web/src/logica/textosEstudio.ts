@@ -100,6 +100,7 @@ const en = {
   terminar: 'Finish',
   descartar: 'Discard',
   grabando: 'Recording',
+  cuentaPreparate: 'Get ready… start talking when the number disappears',
   enPausa: 'Paused',
   subiendo: 'Uploading…',
   consejo:
@@ -258,6 +259,7 @@ const es: typeof en = {
   terminar: 'Terminar',
   descartar: 'Descartar',
   grabando: 'Grabando',
+  cuentaPreparate: 'Prepárate… empieza a hablar cuando desaparezca el número',
   enPausa: 'En pausa',
   subiendo: 'Subiendo…',
   consejo:

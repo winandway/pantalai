@@ -766,6 +766,10 @@ export function Estudio() {
       await new Promise((ok) => setTimeout(ok, 1000));
       if (grabadora.current !== g) return; // se descartó durante la cuenta
     }
+    // El número grande se quita ANTES de empezar a grabar (C-CUENTA-VISIBLE): nunca sale en el video.
+    setCuenta(0);
+    await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+    if (grabadora.current !== g) return;
     g.empezar(flujo);
     window.setTimeout(() => {
       if (grabadora.current === g)
@@ -1141,6 +1145,13 @@ export function Estudio() {
 
       {/* El escenario: lo ÚNICO que se graba. Nada de botones aquí adentro. */}
       <div className="escenario-marco">
+        {/* Cuenta 3, 2, 1 grande y en el centro, ENCIMA del escenario pero fuera de él (no se graba). C-CUENTA-VISIBLE */}
+        {estado === 'cuenta' && cuenta > 0 && (
+          <div className="escenario-cuenta" role="status" aria-live="assertive" data-cuenta={cuenta}>
+            <span key={cuenta}>{cuenta}</span>
+            <small>{tx.cuentaPreparate}</small>
+          </div>
+        )}
         <div
           ref={escenario}
           className={
@@ -1308,7 +1319,7 @@ export function Estudio() {
               <span className="punto-rojo" aria-hidden="true" /> {tx.grabar}
             </button>
           )}
-          {estado === 'cuenta' && <span className="estudio-cuenta">{cuenta}</span>}
+          {estado === 'cuenta' && cuenta > 0 && <span className="estudio-cuenta">{cuenta}</span>}
           {(estado === 'grabando' || estado === 'pausa') && (
             <>
               <span className="indicador">{estado === 'pausa' ? tx.enPausa : tx.grabando}</span>

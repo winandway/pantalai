@@ -4459,6 +4459,7 @@ main {
   margin: 0;
 }
 .escenario-marco {
+  position: relative;
   display: flex;
   justify-content: center;
 }
@@ -6977,5 +6978,59 @@ html.con-shorts body {
 @media (max-width: 560px) {
   .revision-fila {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Cuenta 3, 2, 1 del Estudio (C-CUENTA-VISIBLE): grande, en el centro y encima del escenario (fuera de él: no se graba). */
+.escenario-cuenta {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  pointer-events: none;
+  background: rgba(8, 6, 20, 0.45);
+  border-radius: 18px;
+}
+.escenario-cuenta span {
+  display: grid;
+  place-items: center;
+  width: min(34vw, 220px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--rojo);
+  color: #fff;
+  font-size: min(20vw, 140px);
+  font-weight: 900;
+  line-height: 1;
+  box-shadow:
+    0 0 0 10px rgba(255, 255, 255, 0.25),
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: cuenta-pulso 1s ease-out;
+}
+.escenario-cuenta small {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+@keyframes cuenta-pulso {
+  from {
+    transform: scale(1.35);
+    opacity: 0.2;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .escenario-cuenta span {
+    animation: none;
   }
 }
