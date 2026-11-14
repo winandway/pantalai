@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
 import { SubirVideo } from '../componentes/SubirVideo';
@@ -299,6 +300,7 @@ export function Biblioteca() {
 
       {renombrandoCarpeta && (
         <Renombrar
+          formulario={`renombrar-carpeta-${renombrandoCarpeta.id}`}
           inicial={renombrandoCarpeta.nombre}
           etiqueta={t('nombreCarpeta')}
           maximo={80}
@@ -314,6 +316,7 @@ export function Biblioteca() {
       )}
       {renombrando && (
         <Renombrar
+          formulario={`renombrar-video-${renombrando.id}`}
           inicial={renombrando.titulo}
           etiqueta={t('titulo')}
           maximo={200}
@@ -406,12 +409,14 @@ export function Biblioteca() {
 
 /** Ventanita para cambiar un nombre (título de un video o nombre de una carpeta), en vez del cuadro del navegador. */
 function Renombrar({
+  formulario,
   inicial,
   etiqueta,
   maximo,
   cerrar,
   guardar,
 }: {
+  formulario: string;
   inicial: string;
   etiqueta: string;
   maximo: number;
@@ -419,15 +424,25 @@ function Renombrar({
   guardar: (t: string) => void;
 }) {
   const { t } = useIdioma();
-  const [titulo, setTitulo] = useState(inicial);
+  const { usuario } = useSesion();
+  const b = useBorrador(llaveBorrador(formulario, usuario?.id), { titulo: inicial });
+  const titulo = b.valor.titulo;
+  const setTitulo = (v: string) => b.cambiar('titulo', v);
+  const cancelar = () => {
+    b.limpiar();
+    cerrar();
+  };
   return (
-    <Modal titulo={t('renombrar')} cerrar={cerrar} ancho={460}>
+    <Modal titulo={t('renombrar')} cerrar={cancelar} ancho={460}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (titulo.trim()) guardar(titulo.trim());
+          if (!titulo.trim()) return;
+          b.limpiar();
+          guardar(titulo.trim());
         }}
       >
+        <AvisoBorrador b={b} />
         <div className="campo">
           <label htmlFor="renombrar">{etiqueta}</label>
           <input
@@ -439,7 +454,7 @@ function Renombrar({
           />
         </div>
         <div className="fila-botones">
-          <button type="button" className="boton secundario" onClick={cerrar}>
+          <button type="button" className="boton secundario" onClick={cancelar}>
             {t('cancelar')}
           </button>
           <button className="boton">{t('guardar')}</button>
@@ -481,14 +496,7 @@ function NuevaCarpeta({
       ancho={420}
     >
       <form onSubmit={enviar}>
-        {b.recuperado && (
-          <p className="recuperado">
-            {t('recuperado')}{' '}
-            <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-              {t('empezarDeNuevo')}
-            </button>
-          </p>
-        )}
+        <AvisoBorrador b={b} />
         <div className="campo">
           <label htmlFor="carpeta">{t('nombreCarpeta')}</label>
           <input

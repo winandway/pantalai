@@ -2,6 +2,7 @@
 // título y autor arriba, reproductor, resumen y capítulos debajo, y el panel lateral
 // con Actividad y Transcripción (más Estadísticas para el dueño).
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { EVENTO_ARCHIVO_CAMBIO } from '../logica/indice';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
@@ -664,6 +665,7 @@ function PanelActividad({
       </div>
       {video.permitir_comentarios || video.es_dueno ? (
         <form className="comentar" onSubmit={enviar}>
+          <AvisoBorrador b={b} />
           {!usuario && (
             <input
               value={b.valor.nombre}

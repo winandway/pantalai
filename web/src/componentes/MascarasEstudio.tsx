@@ -2,6 +2,7 @@
 // máscaras guardadas de la cuenta; crear y editar una con nombre del programa, logo y colores. El formulario guarda lo
 // escrito mientras se escribe (borrador) y el escenario muestra la vista previa tal como se va a grabar.
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AvisoBorrador } from './AvisoBorrador';
 import { ErrorApi, pedir } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import { textoError, useIdioma } from '../logica/idioma';
@@ -220,14 +221,7 @@ export function MascarasEstudio({
         )}
       </div>
 
-      {f.recuperado && editando && (
-        <p className="recuperado">
-          {t('recuperado')}{' '}
-          <button type="button" className="enlace" onClick={f.empezarDeNuevo}>
-            {t('empezarDeNuevo')}
-          </button>
-        </p>
-      )}
+      {editando && <AvisoBorrador b={f} />}
 
       {editando && (
         <form

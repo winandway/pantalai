@@ -2,6 +2,7 @@
 // crear un equipo y la de «Compartir con un equipo» (de un video o de una carpeta entera, C-CARPETAS-EQUIPO), y la
 // página de una carpeta compartida. Las acciones que quitan algo viven SOLO en el menú de tres puntos.
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos, type Opcion } from '../componentes/MenuPuntos';
 import { Confirmar, Modal } from '../componentes/Modal';
@@ -439,14 +440,7 @@ function Invitar({ equipo, cuenta, invitada }: { equipo: string; cuenta: string;
   return (
     <form className="tarjeta equipo-invitar" onSubmit={enviar}>
       <h2>{t('invitarGente')}</h2>
-      {b.recuperado && (
-        <p className="recuperado">
-          {t('recuperado')}{' '}
-          <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-            {t('empezarDeNuevo')}
-          </button>
-        </p>
-      )}
+      <AvisoBorrador b={b} />
       <div className="campo">
         <label htmlFor="correo-invitado">{t('correoInvitado')}</label>
         <input
@@ -517,14 +511,7 @@ function NombreEquipo({
   return (
     <Modal titulo={titulo} cerrar={cerrar} ancho={420}>
       <form onSubmit={enviar}>
-        {b.recuperado && (
-          <p className="recuperado">
-            {t('recuperado')}{' '}
-            <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-              {t('empezarDeNuevo')}
-            </button>
-          </p>
-        )}
+        <AvisoBorrador b={b} />
         <div className="campo">
           <label htmlFor="nombre-equipo">{t('nombreEquipo')}</label>
           <input

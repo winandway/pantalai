@@ -1,10 +1,13 @@
 // Partes del superadmin para operar: pagos de Stripe, ficha completa de cada cliente (con suspender y bloquear IP)
 // y seguridad (direcciones IP bloqueadas y las que más golpean la puerta del panel).
 import { useCallback, useEffect, useState } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { MenuPuntos } from '../componentes/MenuPuntos';
 import { Confirmar } from '../componentes/Modal';
 import { pedir } from '../logica/api';
+import { llaveBorrador, useBorrador } from '../logica/borrador';
 import { haceCuanto, useIdioma } from '../logica/idioma';
+import { useSesion } from '../logica/sesion';
 import { formatoTiempo } from '../logica/tiempo';
 
 /** El servidor exige la dirección secreta en cada pedido del panel: la página la toma de su propia dirección. */
@@ -447,8 +450,9 @@ export function PestanaSeguridad() {
     bloqueadas: { ip: string; motivo: string; momento: number; admin: string | null }[];
     intentos: { ip: string; n: number; ultimo: number }[];
   } | null>(null);
-  const [ip, setIp] = useState('');
-  const [motivo, setMotivo] = useState('');
+  const { usuario } = useSesion();
+  const b = useBorrador(llaveBorrador('admin-bloquear-ip', usuario?.id), { ip: '', motivo: '' });
+  const { ip, motivo } = b.valor;
   const [error, setError] = useState('');
   const cargar = useCallback(() => {
     void pedir<NonNullable<typeof d>>('/datos/admin/ips', { headers: panel() }).then(setD);
@@ -456,7 +460,7 @@ export function PestanaSeguridad() {
   useEffect(cargar, [cargar]);
   const bloquear = (x: string, m: string) =>
     pedir('/datos/admin/ips', { method: 'POST', headers: panel(), json: { ip: x, motivo: m } })
-      .then(() => (setIp(''), setMotivo(''), setError(''), cargar()))
+      .then(() => (b.setValor({ ip: '', motivo: '' }), b.limpiar(), setError(''), cargar()))
       .catch(() =>
         setError(es ? 'Revisa la IP (y no puede ser la tuya).' : 'Check the IP (it can’t be yours).'),
       );
@@ -470,13 +474,24 @@ export function PestanaSeguridad() {
           if (ip.trim()) void bloquear(ip.trim(), motivo);
         }}
       >
+        <AvisoBorrador b={b} />
         <div className="campo">
           <label htmlFor="ip">{es ? 'Bloquear una dirección IP' : 'Block an IP address'}</label>
-          <input id="ip" value={ip} placeholder="203.0.113.7" onChange={(e) => setIp(e.target.value)} />
+          <input
+            id="ip"
+            value={ip}
+            placeholder="203.0.113.7"
+            onChange={(e) => b.cambiar('ip', e.target.value)}
+          />
         </div>
         <div className="campo">
           <label htmlFor="ip-motivo">{es ? 'Motivo' : 'Reason'}</label>
-          <input id="ip-motivo" value={motivo} maxLength={300} onChange={(e) => setMotivo(e.target.value)} />
+          <input
+            id="ip-motivo"
+            value={motivo}
+            maxLength={300}
+            onChange={(e) => b.cambiar('motivo', e.target.value)}
+          />
         </div>
         <button type="submit" className="boton">
           {es ? 'Bloquear' : 'Block'}

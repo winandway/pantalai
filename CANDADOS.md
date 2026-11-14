@@ -33,6 +33,12 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 - Protege: ningún formulario pierde lo escrito (registro, entrar, carpeta, comentario, editor). Nunca guarda
   contraseñas ni datos de tarjeta; se borra al guardar, al cancelar y al cerrar sesión; la llave lleva la cuenta.
 - Prueba: `pruebas/borrador.test.tsx`. Comprobada en rojo el 18 oct 2026.
+- 14 nov 2026 (turno de noche): el aviso «Recuperamos lo que estabas escribiendo» con «Empezar de nuevo» es UNA pieza,
+  `web/src/componentes/AvisoBorrador.tsx`, usada por todos los formularios. Se sumaron al borrador la denuncia de un
+  video, renombrar video o carpeta y bloquear una IP del superadmin. `pruebas/reglas-globales.test.ts` parte cada
+  pantalla en sus componentes: un `<form>` o `<textarea>` sin `useBorrador`, o un `useBorrador` sin `<AvisoBorrador>`,
+  la pone en rojo. Las excepciones viven en `SIN_BORRADOR` con su motivo (solo contraseñas, buscador). Comprobada en
+  ROJO el 14 nov 2026: 17 fallos reales antes del arreglo.
 
 ## C-SESION
 
@@ -44,6 +50,9 @@ Cada candado: qué protege, cómo se comprueba y qué no tocar. Commit de refere
 ## C-SELECTOR-IDIOMA, C-OJITO, C-BORRAR-EN-TRES-PUNTOS
 
 - Prueba: `pruebas/componentes.test.tsx`.
+- 14 nov 2026: además `pruebas/reglas-globales.test.ts` revisa TODAS las pantallas y la extensión: ninguna casilla
+  `type="password"` fuera de `CampoClave`, ninguna bandera de México ni de otro país de América, y nadie más que
+  `SelectorIdioma` dibuja la lista de idiomas. Comprobada en ROJO el 14 nov 2026 con un archivo de prueba suelto.
 
 ## C-ENTRADA-WORKER
 

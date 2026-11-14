@@ -134,6 +134,12 @@
       C-LEGAL, C-CUENTA, C-SEO-IA).
 - [x] Subir un archivo de video desde la computadora (8 nov 2026, C-SUBIR-VIDEO).
 - [x] Renombrar carpeta con una ventanita propia (8 nov 2026, C-RENOMBRAR-CARPETA).
+- [x] Reglas globales en TODAS las pantallas (14 nov 2026, turno de noche): aviso único «Recuperamos lo que estabas
+      escribiendo» (AvisoBorrador) en todos los formularios; borrador sumado a denunciar, renombrar y bloquear IP; candado
+      que revisa cada pantalla para borrador, ojito y selector de idioma (C-BORRADOR, C-OJITO). «Tomar foto» ya tenía el
+      suyo (C-CAMARA-FOTO). Guía nueva en Docs «Nunca pierdes lo que escribes».
+- [x] (14 nov 2026) Panel del video que se pasaba 3 píxeles en el celular: no se reproduce; a 375 píxeles ninguna página
+      pública se sale de ancho (video, red, portada y Docs).
 - [x] Verificar el correo al registrarse (8 nov 2026, C-VERIFICAR-CORREO): franja, sin pagar sin confirmar y tope de 7 días.
 - [ ] Borrar cuenta y volver a registrarse con el mismo correo da otra prueba gratis: decidir si se guarda una huella.
 - [x] Recortador acelerado: 20 s de cada punta al instante y tira de fotos que ya no sale negra (23 oct 2026, C-RECORTE-ACELERADO).

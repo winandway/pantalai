@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { CampoClave } from '../componentes/CampoClave';
 import { ErrorApi, pedir, type Usuario } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
@@ -99,14 +100,7 @@ export function Entrar({ registro }: { registro: boolean }) {
     <section className="pagina-angosta">
       <form className="tarjeta formulario" onSubmit={enviar}>
         <h1>{registro ? t('crearCuenta') : t('entrar')}</h1>
-        {b.recuperado && (
-          <p className="recuperado">
-            {t('recuperado')}{' '}
-            <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-              {t('empezarDeNuevo')}
-            </button>
-          </p>
-        )}
+        <AvisoBorrador b={b} />
         {registro && (
           <div className="campo">
             <label htmlFor="nombre">{t('nombre')}</label>
@@ -205,6 +199,7 @@ export function Recuperar() {
     <section className="pagina-angosta">
       <form className="tarjeta formulario" onSubmit={enviar}>
         <h1>{t('recuperarTitulo')}</h1>
+        <AvisoBorrador b={b} />
         {listo ? (
           <p className="exito-caja" role="status">
             ✉️ {t('recuperarEnviado')}

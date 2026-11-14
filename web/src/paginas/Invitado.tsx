@@ -2,6 +2,7 @@
 // incluido), escribe su nombre, ve su cámara, y se conecta directo con el anfitrión que lo graba en su Estudio.
 // CANDADO C-INVITADO.
 import { useEffect, useRef, useState } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { ErrorApi, pedir } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import { useIdioma } from '../logica/idioma';
@@ -25,7 +26,7 @@ function asientoDe(codigo: string): string {
 }
 
 export function PaginaInvitado({ codigo }: { codigo: string }) {
-  const { idioma, t } = useIdioma();
+  const { idioma } = useIdioma();
   const tx = TEXTOS_INVITADO[idioma];
   const b = useBorrador(llaveBorrador(`invitado-${codigo}`, null), { nombre: '' });
   const [sala, setSala] = useState<Sala | null>(null);
@@ -240,14 +241,7 @@ export function PaginaInvitado({ codigo }: { codigo: string }) {
               onChange={(e) => b.cambiar('nombre', e.target.value)}
             />
           </div>
-          {b.recuperado && (
-            <p className="recuperado">
-              {t('recuperado')}{' '}
-              <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-                {t('empezarDeNuevo')}
-              </button>
-            </p>
-          )}
+          <AvisoBorrador b={b} />
           <p className="invitado-audifonos">🎧 {tx.audifonos}</p>
           <button type="submit" className="boton" disabled={!local || !b.valor.nombre.trim()}>
             {tx.entrar}

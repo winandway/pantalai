@@ -2,6 +2,7 @@
 // graba SOLO el escenario de la máscara «Podcast» (la propia pestaña recortada con Region Capture). Los botones quedan
 // fuera de lo que se graba. Plan: docs/PLAN-ESTUDIO-DE-REACCIONES.md · Candado: C-ESTUDIO-RECORTE.
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { RevisionGrabar } from '../componentes/RevisionGrabar';
 import { avisosAntesDeGrabar } from '../logica/revisionGrabar';
 import { efectoValido, KARAOKE_DEFECTO } from '../logica/karaoke';
@@ -1021,14 +1022,7 @@ export function Estudio() {
             {tx.entrarTiktok}
           </a>
         </p>
-        {b.recuperado && (
-          <p className="recuperado">
-            {t('recuperado')}{' '}
-            <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-              {t('empezarDeNuevo')}
-            </button>
-          </p>
-        )}
+        <AvisoBorrador b={b} />
       </form>
 
       {error && (

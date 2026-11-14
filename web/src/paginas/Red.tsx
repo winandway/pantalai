@@ -3,9 +3,11 @@
 // más videos), con la marca y los colores de Pantalay. Candado C-RED-VIDEOS.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAviso } from '../componentes/Aviso';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { Modal } from '../componentes/Modal';
 import { Reproductor } from '../componentes/Reproductor';
 import { ErrorApi, pedir, visitante, type Video } from '../logica/api';
+import { llaveBorrador, useBorrador } from '../logica/borrador';
 import { haceCuanto, useIdioma } from '../logica/idioma';
 import { alClicEnlace, navegar } from '../logica/ruta';
 import { useSesion } from '../logica/sesion';
@@ -423,14 +425,20 @@ function Denunciar({ id, cerrar }: { id: string; cerrar: () => void }) {
   const { idioma } = useIdioma();
   const tx = TEXTOS_RED[idioma];
   const avisar = useAviso();
-  const [motivo, setMotivo] = useState<keyof typeof tx.motivos>('derechos');
-  const [detalle, setDetalle] = useState('');
-  const [correo, setCorreo] = useState('');
+  const { usuario } = useSesion();
+  const b = useBorrador(llaveBorrador(`denuncia-${id}`, usuario?.id), {
+    motivo: 'derechos' as keyof typeof tx.motivos,
+    detalle: '',
+    correo: '',
+  });
+  const { motivo, detalle, correo } = b.valor;
   const [error, setError] = useState('');
   async function enviar() {
     setError('');
     try {
       await pedir(`/datos/red/${id}/denunciar`, { method: 'POST', json: { motivo, detalle, correo } });
+      // Solo después de la confirmación se borra lo escrito.
+      b.limpiar();
       avisar(tx.gracias);
       cerrar();
     } catch (e) {
@@ -439,10 +447,16 @@ function Denunciar({ id, cerrar }: { id: string; cerrar: () => void }) {
   }
   return (
     <Modal titulo={tx.denunciarTitulo} cerrar={cerrar}>
+      <AvisoBorrador b={b} />
       <fieldset className="red-motivos">
         {(Object.keys(tx.motivos) as (keyof typeof tx.motivos)[]).map((m) => (
           <label key={m}>
-            <input type="radio" name="motivo" checked={motivo === m} onChange={() => setMotivo(m)} />{' '}
+            <input
+              type="radio"
+              name="motivo"
+              checked={motivo === m}
+              onChange={() => b.cambiar('motivo', m)}
+            />{' '}
             {tx.motivos[m]}
           </label>
         ))}
@@ -453,7 +467,7 @@ function Denunciar({ id, cerrar }: { id: string; cerrar: () => void }) {
           id="den-detalle"
           value={detalle}
           maxLength={2000}
-          onChange={(e) => setDetalle(e.target.value)}
+          onChange={(e) => b.cambiar('detalle', e.target.value)}
         />
       </div>
       <div className="campo">
@@ -463,12 +477,19 @@ function Denunciar({ id, cerrar }: { id: string; cerrar: () => void }) {
           type="email"
           placeholder="correo@ejemplo.com"
           value={correo}
-          onChange={(e) => setCorreo(e.target.value)}
+          onChange={(e) => b.cambiar('correo', e.target.value)}
         />
       </div>
       {error && <p className="error">{error}</p>}
       <div className="fila-botones">
-        <button type="button" className="boton secundario" onClick={cerrar}>
+        <button
+          type="button"
+          className="boton secundario"
+          onClick={() => {
+            b.limpiar();
+            cerrar();
+          }}
+        >
           {tx.cancelar}
         </button>
         <button type="button" className="boton" onClick={() => void enviar()}>

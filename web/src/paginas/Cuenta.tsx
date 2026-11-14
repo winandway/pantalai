@@ -1,6 +1,7 @@
 // «Mi cuenta»: nombre, contraseña, plan (ver, cancelar o mantener) y borrar la cuenta.
 // Borrar vive SOLO dentro del menú de tres puntos y pide la contraseña (reglas globales).
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { CampoClave } from '../componentes/CampoClave';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
@@ -247,14 +248,7 @@ function Perfil({
   return (
     <form className="tarjeta formulario" onSubmit={enviar}>
       <h2>{t('cta.perfil')}</h2>
-      {b.recuperado && (
-        <p className="recuperado">
-          {t('recuperado')}{' '}
-          <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-            {t('empezarDeNuevo')}
-          </button>
-        </p>
-      )}
+      <AvisoBorrador b={b} />
       <div className="campo">
         <label htmlFor="cuenta-nombre">{t('cta.nombre')}</label>
         <input

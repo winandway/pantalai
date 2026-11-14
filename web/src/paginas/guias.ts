@@ -818,6 +818,34 @@ export const GUIAS: Guia[] = [
     },
   },
   {
+    slug: 'never-lose-what-you-type',
+    imagen: 'borrador-recuperado',
+    seccion: 'cuenta',
+    icono: '💾',
+    en: {
+      titulo: 'Never lose what you type',
+      resumen: 'Every form in Pantalay keeps what you write, even if the page closes.',
+      cuerpo: [
+        'Every form in Pantalay saves what you write as you type: signing up, logging in, comments, folder and video names, team invites, the Studio, the editor and reports. You do not need to press Save for that.',
+        'If the window closes, the internet drops, you press Back or the computer restarts, open the same page again and your text is right where you left it. A small line tells you: “We recovered what you were typing.”',
+        'Want a clean form? Press “Start over” in that line and everything goes back to empty.',
+        'Passwords, codes and card numbers are never saved; those boxes stay empty. What you write is kept only in your own browser and only for your account, so nobody else sees it on a shared computer.',
+        'When you save, cancel on purpose or log out, the saved text is erased so it never shows up again on top of new information.',
+      ],
+    },
+    es: {
+      titulo: 'Nunca pierdes lo que escribes',
+      resumen: 'Todos los formularios de Pantalay guardan lo que escribes, aunque la página se cierre.',
+      cuerpo: [
+        'Todos los formularios de Pantalay guardan lo que escribes mientras escribes: registrarte, entrar, comentarios, nombres de videos y carpetas, invitaciones al equipo, el Estudio, el editor y las denuncias. No hace falta tocar Guardar para eso.',
+        'Si se cierra la ventana, se va el internet, tocas Atrás o la computadora se reinicia, abre la misma página y lo que escribiste está en su sitio. Una línea pequeña te lo dice: «Recuperamos lo que estabas escribiendo».',
+        '¿Quieres el formulario limpio? Toca «Empezar de nuevo» en esa línea y todo vuelve a quedar vacío.',
+        'Las contraseñas, los códigos y los números de tarjeta nunca se guardan; esas casillas quedan vacías. Lo que escribes se queda solo en tu navegador y solo para tu cuenta, así nadie más lo ve en una computadora compartida.',
+        'Cuando guardas, cancelas a propósito o cierras sesión, lo guardado se borra para que nunca reaparezca encima de datos nuevos.',
+      ],
+    },
+  },
+  {
     slug: 'library-and-folders',
     seccion: 'cuenta',
     icono: '📁',

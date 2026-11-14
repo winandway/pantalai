@@ -3,6 +3,7 @@
 // texto grande con un estilo de alto contraste, y sale en 1280 × 720, JPG, por debajo de 2 MB. No se guarda en el
 // servidor: no gasta ninguna escritura. La marca de agua sigue la misma regla que el video (`video.marca`).
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AvisoBorrador } from './AvisoBorrador';
 import { archivoVideo, pedir, type Video } from '../logica/api';
 import { llaveBorrador, useBorrador } from '../logica/borrador';
 import { LectorCuadros, type CuadroSuelto } from '../logica/cuadros';
@@ -215,14 +216,7 @@ export function MiniaturaYoutube({ video, tituloSugerido }: { video: Video; titu
           )}
         </div>
         <div className="miniatura-yt-ajustes">
-          {b.recuperado && (
-            <p className="recuperado">
-              {t('recuperado')}{' '}
-              <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-                {t('empezarDeNuevo')}
-              </button>
-            </p>
-          )}
+          <AvisoBorrador b={b} />
           <fieldset className="selector-modo miniatura-yt-opciones">
             {(['video', 'foto'] as const).map((f) => (
               <label key={f} className={v.fuente === f ? 'activo' : ''}>

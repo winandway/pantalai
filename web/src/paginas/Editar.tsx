@@ -1,6 +1,7 @@
 // Editor del video. Todo es «no destructivo»: se guarda qué partes saltar y qué mostrar encima,
 // y el reproductor lo aplica. El archivo original nunca se toca, así que todo se puede deshacer.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AvisoBorrador } from '../componentes/AvisoBorrador';
 import { useAviso } from '../componentes/Aviso';
 import { MenuPuntos } from '../componentes/MenuPuntos';
 import { CuadroPrevio, Recortador } from '../componentes/Recortador';
@@ -306,14 +307,7 @@ function Editor({ video, cuenta }: { video: Video; cuenta: string }) {
             </button>
           </div>
         </section>
-        {b.recuperado && (
-          <p className="recuperado">
-            {t('recuperado')}{' '}
-            <button type="button" className="enlace" onClick={b.empezarDeNuevo}>
-              {t('empezarDeNuevo')}
-            </button>
-          </p>
-        )}
+        <AvisoBorrador b={b} />
         <p className="ayuda">{t('noDestructivo')}</p>
         <div className="editor-guardar">
           {error && <p className="error">{error}</p>}
