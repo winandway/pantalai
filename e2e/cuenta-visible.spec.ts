@@ -34,7 +34,13 @@ test('la cuenta 3, 2, 1 se ve grande en el centro y no sale en el video', async 
   const cy = numero.y + numero.height / 2;
   expect(Math.abs(cx - (esc.x + esc.width / 2))).toBeLessThan(esc.width * 0.1);
   expect(Math.abs(cy - (esc.y + esc.height / 2))).toBeLessThan(esc.height * 0.15);
-  await expect(cuenta.locator('span')).toBeInViewport({ ratio: 1 });
+  // A la vista entera, medido con la MISMA caja: la cuenta dura 3 s y en una máquina lenta ya no existe si se
+  // vuelve a preguntar al navegador (así falló en GitHub el 14 nov 2026 con «element(s) not found»).
+  const vista = page.viewportSize()!;
+  expect(numero.x).toBeGreaterThanOrEqual(0);
+  expect(numero.y).toBeGreaterThanOrEqual(0);
+  expect(numero.x + numero.width).toBeLessThanOrEqual(vista.width);
+  expect(numero.y + numero.height).toBeLessThanOrEqual(vista.height);
   // Fuera del escenario (lo que se graba es el escenario).
   expect(await page.locator('[data-escenario] .escenario-cuenta').count()).toBe(0);
 

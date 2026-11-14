@@ -1182,3 +1182,6 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
   cuando desaparezca el número». Se quita (`setCuenta(0)` y dos cuadros) ANTES de `g.empezar`: nunca sale en el video.
 - Prueba: `e2e/cuenta-visible.spec.ts` (grande, centrado, a la vista, fuera del escenario y sin el círculo rojo en el
   primer cuadro). Comprobada en ROJO el 10 nov 2026.
+- 14 nov 2026: la prueba fallaba a veces en GitHub con «element(s) not found» en la comprobación «a la vista»: la
+  cuenta dura 3 s y, en la máquina lenta, ya había desaparecido cuando la prueba volvía a preguntar. Ahora «a la vista»
+  se mide con la misma caja tomada antes, contra el tamaño de la ventana. Comprobado: 10 de 10 en verde en local.
