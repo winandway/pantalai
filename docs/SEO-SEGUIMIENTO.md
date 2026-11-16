@@ -48,3 +48,7 @@ descripción de las páginas con muchas impresiones y pocos clics, y corregir lo
 - Mes 3 en adelante: clics constantes si se sigue publicando (videos en la red y guías nuevas).
 - Lo que más ayuda: publicar videos en la red seguido (cada uno es una página nueva que Google puede mostrar) y
   conseguir enlaces desde otros sitios (redes, directorios de herramientas, artículos).
+
+## Bitácora
+
+- 2026-11-16 (lunes): todo en orden. 17 páginas en 200 sin noindex, robots y sitemaps bien, /es con lang y hreflang, 5 videos con VideoObject y miniatura 200, salud en 9707d5e igual a main.
