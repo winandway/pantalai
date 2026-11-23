@@ -52,3 +52,4 @@ descripción de las páginas con muchas impresiones y pocos clics, y corregir lo
 ## Bitácora
 
 - 2026-11-16 (lunes): todo en orden. 17 páginas en 200 sin noindex, robots y sitemaps bien, /es con lang y hreflang, 5 videos con VideoObject y miniatura 200, salud en 9707d5e igual a main.
+- 2026-11-23 (lunes): todo en orden. 17 páginas en 200 sin noindex, robots y sitemaps bien, /es con lang y hreflang, 5 videos con VideoObject y miniatura 200, salud en 9707d5e igual a main.
