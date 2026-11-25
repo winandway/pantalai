@@ -157,6 +157,8 @@ const en = {
   formatoShortTituloAyuda:
     'You on top, your title on a white band, and the vertical video you are commenting on below. Great for reacting to Shorts.',
   shortTitulo: 'Title on the video',
+  shortPrepararAyudaTitulo:
+    'Check how it looks, fix the title, adjust the camera size or reframe. Nothing is recorded until you press Start recording.',
   shortTituloEjemplo: 'Write the title of your Short',
   shortCamara: 'Camera',
   shortCamaraArriba: 'Camera on top',
@@ -779,6 +781,8 @@ const es: Record<Clave, string> = {
   formatoShortTituloAyuda:
     'Tú arriba, tu título en una franja blanca y abajo el video vertical que comentas. Ideal para reaccionar a Shorts.',
   shortTitulo: 'Título dentro del video',
+  shortPrepararAyudaTitulo:
+    'Mira cómo queda, corrige el título, ajusta el tamaño de la cámara o vuelve a encuadrar. No se graba nada hasta que tocas Empezar a grabar.',
   shortTituloEjemplo: 'Escribe el título de tu Short',
   shortCamara: 'Cámara',
   shortCamaraArriba: 'Cámara arriba',

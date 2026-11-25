@@ -1006,6 +1006,7 @@ export const GUIAS: Guia[] = [
     slug: 'record-a-vertical-short',
     seccion: 'grabar',
     icono: '📱',
+    imagenes: [null, null, null, null, null, null, null, 'short-titulo'],
     en: {
       titulo: 'Record a vertical Short to react to a video',
       resumen:

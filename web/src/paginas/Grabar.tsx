@@ -881,7 +881,7 @@ export function Grabar() {
           {estado === 'preparando' && (
             <div className="tarjeta short-preparar">
               <h2>{t('shortPrepararTitulo')}</h2>
-              <p className="ayuda">{t('shortPrepararAyuda')}</p>
+              <p className="ayuda">{t(conTitulo ? 'shortPrepararAyudaTitulo' : 'shortPrepararAyuda')}</p>
               {conTitulo && (
                 <div className="campo">
                   <label htmlFor="titulo-short-previa">{t('shortTitulo')}</label>
