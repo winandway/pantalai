@@ -153,6 +153,11 @@ const en = {
   formatoShort: 'Vertical Short (9:16)',
   formatoShortAyuda:
     'For reactions on Shorts, TikTok and Reels: what you share fills one half and your camera the other. You frame it and arrange it before recording.',
+  formatoShortTitulo: 'Short with title',
+  formatoShortTituloAyuda:
+    'You on top, your title on a white band, and the vertical video you are commenting on below. Great for reacting to Shorts.',
+  shortTitulo: 'Title on the video',
+  shortTituloEjemplo: 'Write the title of your Short',
   shortCamara: 'Camera',
   shortCamaraArriba: 'Camera on top',
   shortCamaraAbajo: 'Camera at the bottom',
@@ -770,6 +775,11 @@ const es: Record<Clave, string> = {
   formatoShort: 'Short vertical (9:16)',
   formatoShortAyuda:
     'Para reacciones en Shorts, TikTok y Reels: lo que compartes llena una mitad y tu cámara la otra. Lo encuadras y lo acomodas antes de grabar.',
+  formatoShortTitulo: 'Short con título',
+  formatoShortTituloAyuda:
+    'Tú arriba, tu título en una franja blanca y abajo el video vertical que comentas. Ideal para reaccionar a Shorts.',
+  shortTitulo: 'Título dentro del video',
+  shortTituloEjemplo: 'Escribe el título de tu Short',
   shortCamara: 'Cámara',
   shortCamaraArriba: 'Cámara arriba',
   shortCamaraAbajo: 'Cámara abajo',

@@ -1018,6 +1018,7 @@ export const GUIAS: Guia[] = [
         'Press Start recording when everything is ready. After a 3-second countdown, react: play and pause the clip, talk, point with your finger or draw with the pencils. Use Pause and Resume as many times as you need, and Finish when you are done.',
         'Your Short comes out at 1080 × 1920, with your camera sharp and your microphone and computer sound together. Download it as MP4 and upload it to YouTube Shorts, TikTok or Instagram Reels. Use “For YouTube” for its titles, description and tags.',
         'Tip: if the floating window is on, it shows your Short as it is being recorded, so you can keep an eye on it while you react in the other tab.',
+        'Short with title: to comment on a vertical video (a YouTube Short, a TikTok or a Reel), choose “Short with title” under Format. You appear on top, your title goes on a white band in bold letters right below you, and the vertical video fills the rest. Write the title in “Title on the video”; it fits itself in one or two lines, and you can still fix it on the arrange screen before recording. The camera size slider lets you give the video more or less room, and your video is saved with that same title.',
       ],
     },
     es: {
@@ -1032,6 +1033,7 @@ export const GUIAS: Guia[] = [
         'Toca Empezar a grabar cuando todo esté listo. Después de la cuenta de 3 segundos, reacciona: reproduce y pausa el clip, habla, señala con el dedo o dibuja con los lápices. Usa Pausar y Continuar las veces que quieras, y Terminar cuando acabes.',
         'Tu Short sale en 1080 × 1920, con tu cámara nítida y tu micrófono y el sonido de la computadora juntos. Descárgalo en MP4 y súbelo a YouTube Shorts, TikTok o Reels de Instagram. Usa «Para YouTube» para sus títulos, descripción y etiquetas.',
         'Consejo: si la ventanita flotante está encendida, muestra tu Short mientras se graba, así lo vigilas mientras reaccionas en la otra pestaña.',
+        'Short con título: para comentar un video vertical (un Short de YouTube, un TikTok o un Reel), elige «Short con título» en Formato. Tú sales arriba, tu título va en una franja blanca con letras gruesas justo debajo de ti, y el video vertical ocupa el resto. Escribe el título en «Título dentro del video»; se acomoda solo en una o dos líneas, y lo puedes corregir en la pantalla de acomodar antes de grabar. Con el control del tamaño de la cámara le das más o menos espacio al video, y tu video queda guardado con ese mismo título.',
       ],
     },
   },

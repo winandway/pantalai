@@ -18,7 +18,9 @@ import {
   type Ajustes,
   type Area,
   proporcionPantallaVertical,
-  REPARTO_INICIAL,
+  repartoDe,
+  REPARTO_MIN_TITULO,
+  TITULO_SHORT_MAX,
   REPARTO_MAX,
   REPARTO_MIN,
 } from '../logica/grabadora';
@@ -90,6 +92,14 @@ export function Grabar() {
   // Short vertical: la preparación espera a que la persona toque «Empezar a grabar» (o cancele).
   const preparacion = useRef<((seguir: boolean) => void) | null>(null);
   const corto = a.modo === 'pantalla_camara' && !!a.vertical;
+  // Short con título: la cámara arriba, la franja blanca con el título y el video abajo.
+  const conTitulo = corto && !!a.conTitulo;
+  const arriba = conTitulo || (a.camaraArriba ?? true);
+  const tituloShort = (a.tituloShort ?? '').trim();
+  useEffect(() => {
+    // La letra gruesa del título tiene que estar cargada antes de pintarla en el video.
+    if (conTitulo) void document.fonts?.load('800 80px Inter').catch(() => undefined);
+  }, [conTitulo]);
   const grabadora = useRef<Grabadora | null>(null);
   const subidor = useRef<Subidor | null>(null);
   const videoId = useRef<string | null>(null);
@@ -271,7 +281,7 @@ export function Grabar() {
     // empezar. Con la pestaña de YouTube, por ejemplo, queda solo el reproductor.
     if (corto && g.pantallaCruda) {
       // Short: siempre se encuadra lo que se va a reaccionar, con la forma exacta de su mitad.
-      const elegida = await encuadrar(g, ajustes.calidad, a.reparto ?? REPARTO_INICIAL, a.areaVertical);
+      const elegida = await encuadrar(g, ajustes.calidad, a.areaVertical);
       g.fijarArea(elegida);
     } else if (a.modo !== 'camara' && a.elegirArea && g.pantallaCruda) {
       const flujoPantalla = g.pantallaCruda;
@@ -391,7 +401,10 @@ export function Grabar() {
           ? fixWebmDuration(b, Math.round(duracion * 1000), { logger: false })
           : Promise.resolve(b),
       );
-      const titulo = tituloAutomatico(segmentos, a.idiomaVoz.startsWith('es') ? 'es' : 'en') ?? undefined;
+      // En el Short con título, el video se llama como el título que la persona escribió.
+      const titulo =
+        (g.esVertical() && a.conTitulo && tituloShort) ||
+        (tituloAutomatico(segmentos, a.idiomaVoz.startsWith('es') ? 'es' : 'en') ?? undefined);
       await pedir(`/datos/videos/${id}/completar`, {
         method: 'POST',
         json: { partes, duracion, transcripcion: segmentos, titulo },
@@ -422,7 +435,7 @@ export function Grabar() {
       console.error('subida', e);
       setEstado('fallo');
     }
-  }, [a.idiomaVoz, avisar, limpiar, t, reporte, idioma]);
+  }, [a.idiomaVoz, a.conTitulo, tituloShort, avisar, limpiar, t, reporte, idioma]);
   terminarRef.current = terminar;
   pausarRef.current = () => {
     grabadora.current?.pausar();
@@ -439,7 +452,6 @@ export function Grabar() {
   async function encuadrar(
     g: Grabadora,
     calidad: Ajustes['calidad'],
-    reparto: number,
     inicial: Area | null | undefined,
   ): Promise<Area | null> {
     const flujoPantalla = g.pantallaCruda!;
@@ -447,7 +459,7 @@ export function Grabar() {
       setEligiendo({
         flujo: flujoPantalla,
         listo,
-        proporcion: proporcionPantallaVertical(calidad, reparto),
+        proporcion: proporcionPantallaVertical(calidad, a),
         inicial,
       }),
     );
@@ -576,26 +588,47 @@ export function Grabar() {
                 <legend>{t('formato')}</legend>
                 {(
                   [
-                    [false, t('formatoHorizontal'), '▭'],
-                    [true, t('formatoShort'), '▯'],
+                    ['horizontal', t('formatoHorizontal'), '▭'],
+                    ['short', t('formatoShort'), '▯'],
+                    ['titulo', t('formatoShortTitulo'), '▤'],
                   ] as const
-                ).map(([v, etiqueta, icono]) => (
-                  <label key={String(v)} className={!!a.vertical === v ? 'activo' : ''}>
-                    <input
-                      type="radio"
-                      name="formato"
-                      checked={!!a.vertical === v}
-                      onChange={() => cambiar('vertical', v)}
-                    />
-                    <span className="modo-icono" aria-hidden="true">
-                      {icono}
-                    </span>
-                    {etiqueta}
-                  </label>
-                ))}
+                ).map(([v, etiqueta, icono]) => {
+                  const actual = !a.vertical ? 'horizontal' : a.conTitulo ? 'titulo' : 'short';
+                  return (
+                    <label key={v} className={actual === v ? 'activo' : ''}>
+                      <input
+                        type="radio"
+                        name="formato"
+                        checked={actual === v}
+                        onChange={() =>
+                          setA((x) => ({ ...x, vertical: v !== 'horizontal', conTitulo: v === 'titulo' }))
+                        }
+                      />
+                      <span className="modo-icono" aria-hidden="true">
+                        {icono}
+                      </span>
+                      {etiqueta}
+                    </label>
+                  );
+                })}
               </fieldset>
             )}
-            {corto && <p className="ayuda">{t('formatoShortAyuda')}</p>}
+            {corto && (
+              <p className="ayuda">{t(conTitulo ? 'formatoShortTituloAyuda' : 'formatoShortAyuda')}</p>
+            )}
+            {conTitulo && (
+              <div className="campo">
+                <label htmlFor="titulo-short">{t('shortTitulo')}</label>
+                <input
+                  id="titulo-short"
+                  type="text"
+                  maxLength={TITULO_SHORT_MAX}
+                  placeholder={t('shortTituloEjemplo')}
+                  value={a.tituloShort ?? ''}
+                  onChange={(e) => cambiar('tituloShort', e.target.value)}
+                />
+              </div>
+            )}
 
             {a.modo !== 'pantalla' && (
               <div className="campo">
@@ -720,13 +753,17 @@ export function Grabar() {
           <section className="tarjeta grabar-previa-ajustes">
             <h2>{t('vistaPrevia')}</h2>
             {corto ? (
-              <div className={`maqueta-short ${(a.camaraArriba ?? true) ? 'arriba' : 'abajo'}`}>
-                <div
-                  className="maqueta-short-camara"
-                  style={{ flexBasis: `${(a.reparto ?? REPARTO_INICIAL) * 100}%` }}
-                >
+              <div
+                className={`maqueta-short ${arriba ? 'arriba' : 'abajo'} ${conTitulo ? 'con-titulo' : ''}`}
+              >
+                <div className="maqueta-short-camara" style={{ flexBasis: `${repartoDe(a) * 100}%` }}>
                   <video ref={camaraPrevia} autoPlay muted playsInline className="camara-previa" />
                 </div>
+                {conTitulo && (
+                  <div className={`maqueta-short-titulo ${tituloShort ? '' : 'vacio'}`}>
+                    {tituloShort || t('shortTituloEjemplo')}
+                  </div>
+                )}
                 <div className="maqueta-short-pantalla">
                   <span>▶</span>
                 </div>
@@ -753,7 +790,7 @@ export function Grabar() {
                 )}
               </div>
             )}
-            {corto && (
+            {corto && !conTitulo && (
               <div className="fila-botones izquierda" role="group" aria-label={t('shortCamara')}>
                 <button
                   type="button"
@@ -845,7 +882,28 @@ export function Grabar() {
             <div className="tarjeta short-preparar">
               <h2>{t('shortPrepararTitulo')}</h2>
               <p className="ayuda">{t('shortPrepararAyuda')}</p>
-              <div className="fila-botones izquierda" role="group" aria-label={t('shortCamara')}>
+              {conTitulo && (
+                <div className="campo">
+                  <label htmlFor="titulo-short-previa">{t('shortTitulo')}</label>
+                  <input
+                    id="titulo-short-previa"
+                    type="text"
+                    maxLength={TITULO_SHORT_MAX}
+                    placeholder={t('shortTituloEjemplo')}
+                    value={a.tituloShort ?? ''}
+                    onChange={(e) => {
+                      cambiar('tituloShort', e.target.value);
+                      grabadora.current?.ajustarVertical({ tituloShort: e.target.value });
+                    }}
+                  />
+                </div>
+              )}
+              <div
+                className="fila-botones izquierda"
+                role="group"
+                aria-label={t('shortCamara')}
+                style={conTitulo ? { display: 'none' } : undefined}
+              >
                 <button
                   type="button"
                   className={`boton chico ${(a.camaraArriba ?? true) ? '' : 'secundario'}`}
@@ -871,19 +929,20 @@ export function Grabar() {
               </div>
               <div className="campo">
                 <label htmlFor="reparto">
-                  {t('shortReparto')}: {Math.round((a.reparto ?? REPARTO_INICIAL) * 100)} %
+                  {t('shortReparto')}: {Math.round(repartoDe(a) * 100)} %
                 </label>
                 <input
                   id="reparto"
                   type="range"
-                  min={REPARTO_MIN}
+                  min={conTitulo ? REPARTO_MIN_TITULO : REPARTO_MIN}
                   max={REPARTO_MAX}
                   step={0.01}
-                  value={a.reparto ?? REPARTO_INICIAL}
+                  value={repartoDe(a)}
                   onChange={(e) => {
                     const r = Number(e.target.value);
-                    cambiar('reparto', r);
-                    grabadora.current?.ajustarVertical({ reparto: r });
+                    const cual = conTitulo ? 'repartoTitulo' : 'reparto';
+                    cambiar(cual, r);
+                    grabadora.current?.ajustarVertical({ [cual]: r });
                   }}
                 />
               </div>
@@ -893,9 +952,7 @@ export function Grabar() {
                 onClick={() => {
                   const g = grabadora.current;
                   if (!g) return;
-                  void encuadrar(g, a.calidad, a.reparto ?? REPARTO_INICIAL, a.areaVertical).then((x) =>
-                    g.fijarArea(x),
-                  );
+                  void encuadrar(g, a.calidad, a.areaVertical).then((x) => g.fijarArea(x));
                 }}
               >
                 ⬚ {t('shortReencuadrar')}

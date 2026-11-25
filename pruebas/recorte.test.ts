@@ -190,6 +190,37 @@ describe('CANDADO C-SHORT: el Short vertical se arma bien', () => {
     expect(partesVertical(1080, 1920, true, 0.9).camara.h).toBe(Math.round(1920 * REPARTO_MAX));
   });
 
+  it('CANDADO C-SHORT-TITULO: cámara arriba, franja con el título y el video abajo, sin huecos', async () => {
+    const { disenoShort, partirTitulo, altoFranjaTitulo, REPARTO_MIN_TITULO } =
+      await import('../web/src/logica/grabadora');
+    const medir = (x: string, px: number) => x.length * px * 0.62;
+    // Un título corto va en una línea; uno largo, en dos líneas parejas, siempre en mayúsculas y dentro del ancho.
+    expect(partirTitulo('  hola   mundo ', 1080, medir)).toEqual({ lineas: ['HOLA MUNDO'], px: 80 });
+    const dos = partirTitulo('Cuando una niña te alegra el día', 1080, medir);
+    expect(dos.lineas).toEqual(['CUANDO UNA NIÑA', 'TE ALEGRA EL DÍA']);
+    const largo = partirTitulo('x'.repeat(200), 1080, medir);
+    for (const l of largo.lineas) expect(medir(l, largo.px)).toBeLessThanOrEqual(1080 * 0.9);
+    expect(partirTitulo('   ', 1080, medir).lineas).toEqual([]);
+    // Las tres partes llenan todo el alto, en orden: cámara, franja, video.
+    const a = { conTitulo: true, tituloShort: 'Cuando una niña te alegra el día', camaraArriba: false };
+    const d = disenoShort(a, 1080, 1920, medir);
+    expect(d.camara).toEqual({ x: 0, y: 0, w: 1080, h: 480 });
+    expect(d.franja).toEqual({ x: 0, y: 480, w: 1080, h: altoFranjaTitulo(d.titulo) });
+    expect(d.pantalla.y).toBe(480 + d.franja!.h);
+    expect(d.pantalla.y + d.pantalla.h).toBe(1920);
+    // El video se queda con más de la mitad del alto: es el protagonista.
+    expect(d.pantalla.h / 1920).toBeGreaterThan(0.55);
+    // Sin título escrito no hay franja; y la cámara no baja del mínimo de este formato.
+    expect(disenoShort({ conTitulo: true, tituloShort: '' }, 1080, 1920, medir).franja).toBeNull();
+    expect(disenoShort({ conTitulo: true, repartoTitulo: 0.05 }, 1080, 1920, medir).camara.h).toBe(
+      Math.round(1920 * REPARTO_MIN_TITULO),
+    );
+    // El Short de siempre no cambia: sin franja y con su propio tamaño de cámara.
+    const viejo = disenoShort({ tituloShort: 'No sale', reparto: 0.45 }, 1080, 1920, medir);
+    expect(viejo.franja).toBeNull();
+    expect(viejo.camara.h).toBe(864);
+  });
+
   it('llenar un recuadro recorta al centro sin deformar', async () => {
     const { cubrir } = await import('../web/src/logica/grabadora');
     // Cámara 1920×1080 en un recuadro de 1080×864: se usa el centro, 1350×1080.

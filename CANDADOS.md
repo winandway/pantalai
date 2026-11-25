@@ -1185,3 +1185,19 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
 - 14 nov 2026: la prueba fallaba a veces en GitHub con «element(s) not found» en la comprobación «a la vista»: la
   cuenta dura 3 s y, en la máquina lenta, ya había desaparecido cuando la prueba volvía a preguntar. Ahora «a la vista»
   se mide con la misma caja tomada antes, contra el tamaño de la ventana. Comprobado: 10 de 10 en verde en local.
+
+## C-SHORT-TITULO (25 nov 2026)
+
+- Qué es: formato nuevo en Grabar, «Short con título» (pedido de Richard con una captura de referencia): la cámara
+  arriba (25 % del alto por defecto, de 20 a 60 %), una franja blanca con el título en letras negras gruesas y en
+  mayúsculas, y lo compartido (pensado para un video vertical) en el resto. El Short de siempre y el horizontal no
+  cambian.
+- Cómo está hecho: `disenoShort`, `partirTitulo`, `altoFranjaTitulo` y `partesVertical` (con franja) en
+  `web/src/logica/grabadora.ts`; ajustes nuevos `conTitulo`, `tituloShort` y `repartoTitulo` (cada formato recuerda su
+  tamaño de cámara). El título se parte en una o dos líneas y se achica o se corta con puntos suspensivos: nunca se
+  sale de la franja. El encuadre usa la proporción del espacio que queda para el video. El título se puede corregir en
+  la pantalla de preparación y el video queda guardado con ese título.
+- No escribe nada nuevo en el servidor: es dibujo en el navegador.
+- Pruebas: `pruebas/recorte.test.ts` (CANDADO C-SHORT-TITULO) y `e2e/grabar-short-titulo.spec.ts` (graba de verdad y
+  mira cámara, franja blanca con letras y video). La e2e no puede pasar sin la función (no existe el formato).
+- Qué NO tocar: `partesVertical` sin franja tiene que seguir dando lo mismo que antes (lo fija C-SHORT).

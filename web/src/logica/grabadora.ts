@@ -44,6 +44,12 @@ export type Ajustes = {
   reparto?: number;
   /** Última área elegida para el Short (tiene otra forma que la del video horizontal). */
   areaVertical?: Area | null;
+  /** Short con título: la cámara arriba (más baja), una franja blanca con el título y lo compartido abajo. */
+  conTitulo?: boolean;
+  /** El título que sale en la franja blanca del Short con título. */
+  tituloShort?: string;
+  /** En el Short con título: qué parte del alto ocupa la cámara (0,2 a 0,6). */
+  repartoTitulo?: number;
   /**
    * Ajuste automático de ganancia del navegador para el micrófono (por defecto sí). En el Estudio va apagado: con el
    * micrófono cerca de la boca subía solo y saturaba (Richard, 9 nov 2026).
@@ -149,24 +155,115 @@ export const REPARTO_MIN = 0.3;
 export const REPARTO_MAX = 0.6;
 export const REPARTO_INICIAL = 0.45;
 
-/** Las dos partes del Short: la cámara y lo compartido, una arriba de la otra, sin huecos. */
+/** Short con título: la cámara puede ser más baja, para darle protagonismo al video. */
+export const REPARTO_MIN_TITULO = 0.2;
+export const REPARTO_TITULO_INICIAL = 0.25;
+export const TITULO_SHORT_MAX = 80;
+export const LETRA_TITULO = (px: number) => `800 ${px}px Inter, "Arial Black", system-ui, sans-serif`;
+
+export type Medir = (texto: string, px: number) => number;
+
+let ctxMedir: CanvasRenderingContext2D | null | undefined;
+/** Mide el ancho de un texto con la letra del título (con un cálculo aproximado donde no hay lienzo). */
+export const medirTitulo: Medir = (texto, px) => {
+  if (ctxMedir === undefined) {
+    try {
+      ctxMedir = document.createElement('canvas').getContext('2d');
+    } catch {
+      ctxMedir = null;
+    }
+  }
+  if (!ctxMedir) return texto.length * px * 0.66;
+  ctxMedir.font = LETRA_TITULO(px);
+  return ctxMedir.measureText(texto).width;
+};
+
+/**
+ * El título del Short en una o dos líneas, en mayúsculas, con el tamaño de letra que hace que quepa en el ancho.
+ * Si aun achicando no cabe, se corta con puntos suspensivos: nunca se sale de la franja.
+ */
+export function partirTitulo(
+  texto: string | undefined,
+  ancho: number,
+  medir: Medir = medirTitulo,
+): { lineas: string[]; px: number } {
+  const limpio = (texto ?? '').replace(/\s+/g, ' ').trim().slice(0, TITULO_SHORT_MAX).toUpperCase();
+  if (!limpio) return { lineas: [], px: 0 };
+  const base = Math.round(ancho * 0.074);
+  const tope = ancho * 0.9;
+  if (medir(limpio, base) <= tope) return { lineas: [limpio], px: base };
+  const palabras = limpio.split(' ');
+  let lineas = [limpio];
+  let mejor = Infinity;
+  for (let i = 1; i < palabras.length; i++) {
+    const dos = [palabras.slice(0, i).join(' '), palabras.slice(i).join(' ')];
+    const mayor = Math.max(medir(dos[0]!, base), medir(dos[1]!, base));
+    if (mayor < mejor) {
+      mejor = mayor;
+      lineas = dos;
+    }
+  }
+  const mayor = Math.max(...lineas.map((l) => medir(l, base)));
+  const px = Math.round(base * Math.max(0.6, Math.min(1, tope / mayor)));
+  lineas = lineas.map((l) => {
+    let x = l;
+    while (x.length > 1 && medir(x === l ? x : `${x}…`, px) > tope) x = x.slice(0, -1).trimEnd();
+    return x === l ? l : `${x}…`;
+  });
+  return { lineas, px };
+}
+
+/** Alto de la franja blanca del título, en pixeles del video (0 si no hay título). */
+export function altoFranjaTitulo(t: { lineas: string[]; px: number }): number {
+  return t.lineas.length ? Math.round(t.lineas.length * t.px * 1.18 + t.px * 0.9) : 0;
+}
+
+type AjustesShort = Pick<Ajustes, 'conTitulo' | 'tituloShort' | 'reparto' | 'repartoTitulo' | 'camaraArriba'>;
+
+/** El tamaño de la cámara que toca según el formato (cada formato recuerda el suyo). */
+export function repartoDe(a: AjustesShort): number {
+  return a.conTitulo ? (a.repartoTitulo ?? REPARTO_TITULO_INICIAL) : (a.reparto ?? REPARTO_INICIAL);
+}
+
+/** Todo el Short armado: cámara, franja del título (si la hay) y lo compartido. Lo usan la grabadora y la pantalla. */
+export function disenoShort(a: AjustesShort, ancho: number, alto: number, medir: Medir = medirTitulo) {
+  const titulo = a.conTitulo ? partirTitulo(a.tituloShort, ancho, medir) : { lineas: [], px: 0 };
+  const partes = partesVertical(
+    ancho,
+    alto,
+    a.conTitulo ? true : (a.camaraArriba ?? true),
+    repartoDe(a),
+    altoFranjaTitulo(titulo),
+    a.conTitulo ? REPARTO_MIN_TITULO : REPARTO_MIN,
+  );
+  return { ...partes, titulo };
+}
+
+/** Las partes del Short: la cámara, la franja del título (si mide algo) y lo compartido, una sobre otra, sin huecos. */
 export function partesVertical(
   ancho: number,
   alto: number,
   camaraArriba: boolean,
   reparto: number,
-): { camara: Rect; pantalla: Rect } {
-  const r = Math.min(REPARTO_MAX, Math.max(REPARTO_MIN, reparto));
+  franjaAlto = 0,
+  minimo = REPARTO_MIN,
+): { camara: Rect; pantalla: Rect; franja: Rect | null } {
+  const r = Math.min(REPARTO_MAX, Math.max(minimo, reparto));
   const hc = Math.round(alto * r);
+  const hf = Math.max(0, Math.round(franjaAlto));
   const camara = { x: 0, y: camaraArriba ? 0 : alto - hc, w: ancho, h: hc };
-  const pantalla = { x: 0, y: camaraArriba ? hc : 0, w: ancho, h: alto - hc };
-  return { camara, pantalla };
+  const franja = hf ? { x: 0, y: camaraArriba ? hc : alto - hc - hf, w: ancho, h: hf } : null;
+  const pantalla = { x: 0, y: camaraArriba ? hc + hf : 0, w: ancho, h: alto - hc - hf };
+  return { camara, pantalla, franja };
 }
 
 /** Proporción (ancho / alto) de la parte de lo compartido en el Short: así se encuadra con la forma exacta. */
-export function proporcionPantallaVertical(calidad: Calidad, reparto: number): number {
+export function proporcionPantallaVertical(calidad: Calidad, reparto: number | AjustesShort): number {
   const { ancho, alto } = medidaVertical(calidad);
-  const { pantalla } = partesVertical(ancho, alto, true, reparto);
+  const { pantalla } =
+    typeof reparto === 'number'
+      ? partesVertical(ancho, alto, true, reparto)
+      : disenoShort(reparto, ancho, alto);
   return pantalla.w / pantalla.h;
 }
 
@@ -702,8 +799,8 @@ export class Grabadora {
   ) {
     const W = ctx.canvas.width;
     const H = ctx.canvas.height;
-    const arriba = this.a.camaraArriba ?? true;
-    const { camara, pantalla } = partesVertical(W, H, arriba, this.a.reparto ?? REPARTO_INICIAL);
+    const { camara, pantalla, franja, titulo } = disenoShort(this.a, W, H);
+    const arriba = camara.y === 0;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
     const r = recorte ?? { sx: 0, sy: 0, sw: fuente.width, sh: fuente.height };
@@ -718,6 +815,21 @@ export class Grabadora {
       ctx.scale(-1, 1);
       ctx.drawImage(vc, c.x, c.y, c.w, c.h, 0, 0, camara.w, camara.h);
       ctx.restore();
+    }
+    if (franja) {
+      // Short con título: franja blanca con el título en letras negras, entre la cámara y lo compartido.
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(franja.x, franja.y, franja.w, franja.h);
+      ctx.fillStyle = '#111';
+      ctx.font = LETRA_TITULO(titulo.px);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const paso = titulo.px * 1.18;
+      const y0 = franja.y + franja.h / 2 - ((titulo.lineas.length - 1) * paso) / 2;
+      titulo.lineas.forEach((l, i) => ctx.fillText(l, W / 2, y0 + i * paso + titulo.px * 0.04));
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+      return;
     }
     // Línea fina entre las dos partes: separa sin robar espacio.
     const linea = Math.max(2, Math.round(H * 0.002));
@@ -745,7 +857,7 @@ export class Grabadora {
     const zona = z
       ? { x: z.x * W, y: z.y * H, w: z.w * W, h: z.h * H }
       : vertical
-        ? partesVertical(W, H, this.a.camaraArriba ?? true, this.a.reparto ?? REPARTO_INICIAL).camara
+        ? disenoShort(this.a, W, H).camara
         : { x: 0, y: 0, w: W, h: H };
     pintarPildoraMarca(
       ctx,
@@ -757,7 +869,12 @@ export class Grabadora {
   }
 
   /** En la preparación del Short: cámara arriba o abajo y cuánto ocupa (se ve al instante). */
-  ajustarVertical(cambios: { camaraArriba?: boolean; reparto?: number }) {
+  ajustarVertical(cambios: {
+    camaraArriba?: boolean;
+    reparto?: number;
+    repartoTitulo?: number;
+    tituloShort?: string;
+  }) {
     this.a = { ...this.a, ...cambios };
   }
 

@@ -152,6 +152,7 @@
 - [ ] Los videos grabados ANTES del 24 oct no la tienen dentro (solo en el reproductor).
 - [x] Grabar solo una parte de la pantalla y cámara dentro del video al compartir una pestaña (24 oct 2026, C-AREA, C-CAMARA-EN-PESTANA).
 - [x] Short vertical para reacciones: encuadre, cámara arriba o abajo, preparación antes de grabar (24 oct 2026, C-SHORT).
+- [x] Short con título: cámara arriba, franja blanca con el título y el video vertical abajo (25 nov 2026, C-SHORT-TITULO).
 - [x] Almacenamiento a 500 GB (YaDominios, 24 oct 2026) y `ALMACEN_LIMITE_GB=500` puesto.
 
 - ✅ (hecho el 9 nov 2026, C-KARAOKE) [para: desarrollador] Construir el botón Karaoke del Estudio siguiendo docs/investigacion-rea/FICHA-KARAOKE.md (sección 6, plan de 12 pasos; decisión en sección 7). Motivo: la ficha ya trae cadena, valores y pruebas de aceptación.

@@ -4156,6 +4156,26 @@ main {
   object-fit: cover;
   transform: scaleX(-1);
 }
+.maqueta-short-titulo {
+  flex: 0 0 auto;
+  padding: 7px 8px;
+  background: #fff;
+  color: #111;
+  font-weight: 800;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.maqueta-short-titulo.vacio {
+  color: #9aa0aa;
+  font-weight: 600;
+  text-transform: none;
+}
+.maqueta-short.con-titulo .maqueta-short-pantalla {
+  border-top: 0;
+}
 .maqueta-short-pantalla {
   flex: 1;
   display: grid;
