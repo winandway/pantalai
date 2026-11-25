@@ -1,7 +1,7 @@
 // Capturas ORIGINALES del «Short con título» (inglés y español) para Docs.
 // Uso: con el sitio local corriendo, `node scripts/capturas-short-titulo.mjs`.
 // La cámara y el video compartido son ilustraciones neutras: no sale contenido de nadie.
-/* global navigator, document, setInterval, localStorage -- el guion de adentro corre en la página */
+/* global navigator, setInterval -- el guion de adentro corre en la página */
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 
