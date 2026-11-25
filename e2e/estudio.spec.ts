@@ -50,7 +50,7 @@ test('el estudio graba solo el escenario con el video y la cámara', async ({ pa
   await page.goto('/studio');
   await expect(page.getByRole('heading', { name: 'Reaction Studio' })).toBeVisible();
   await page
-    .getByLabel('YouTube, TikTok or Pantalay link')
+    .getByLabel('YouTube, TikTok, Facebook or Pantalay link')
     .fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
   await page.getByRole('button', { name: 'Load video' }).click();
   // Nombre del creador y título automáticos (oEmbed).
@@ -213,7 +213,7 @@ test('el estudio reacciona a un TikTok vertical', async ({ page }) => {
 
   await page.goto('/studio');
   await page
-    .getByLabel('YouTube, TikTok or Pantalay link')
+    .getByLabel('YouTube, TikTok, Facebook or Pantalay link')
     .fill('https://www.tiktok.com/@creadora.prueba/video/7691731841765690645?_r=1&_t=ZS-9BGPBWAFyug');
   await page.getByRole('button', { name: 'Load video' }).click();
   await expect(page.locator('.cartel-video')).toContainText('@creadora.prueba');
@@ -334,7 +334,7 @@ test('el estudio graba un Short vertical 9:16', async ({ page }) => {
   await page.getByText('Vertical 9:16').click();
   await expect(page.locator('.estudio-posiciones')).toHaveCount(0);
   await page
-    .getByLabel('YouTube, TikTok or Pantalay link')
+    .getByLabel('YouTube, TikTok, Facebook or Pantalay link')
     .fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
   await page.getByRole('button', { name: 'Load video' }).click();
   await expect(page.locator('.escenario-tema')).toHaveText('Tema vertical');
@@ -429,7 +429,7 @@ test('si el video no arranca, se avisa y se ofrece abrirlo', async ({ page }) =>
   await expect(page).toHaveURL(/\/library/);
   await page.goto('/studio');
   await page
-    .getByLabel('YouTube, TikTok or Pantalay link')
+    .getByLabel('YouTube, TikTok, Facebook or Pantalay link')
     .fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
   await page.getByRole('button', { name: 'Load video' }).click();
   await expect(page.locator('.escenario iframe')).toBeVisible();
@@ -466,7 +466,7 @@ test('el estudio está a la vista en el menú, en Grabar y en la portada', async
   await page.goto('/record');
   await page.getByRole('link', { name: /React to a video/ }).click();
   await expect(page).toHaveURL(/\/studio$/);
-  await expect(page.getByText('YouTube plays without an account')).toBeVisible();
+  await expect(page.getByText('play without an account')).toBeVisible();
 });
 
 test('el estudio pide sesión y no se indexa', async ({ page, request }) => {

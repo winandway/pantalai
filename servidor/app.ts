@@ -59,7 +59,8 @@ import {
   tipoDeImagen,
   type FilaMascara,
 } from './mascaras';
-import { arrobaDe, videoDeTiktok, videoDeYoutube } from '../web/src/logica/estudio';
+import { arrobaDe, videoDeFacebook, videoDeTiktok, videoDeYoutube } from '../web/src/logica/estudio';
+import { cspFacebook, padreFacebook, paginaFacebook } from './facebook';
 import { buscarEnRed, sugerencias, textoDeTranscripcion } from '../web/src/logica/busquedaRed';
 import { REGISTROS_MAX_BYTES, esquemaRegistros, limpiarEnServidor } from './registros';
 import {
@@ -392,6 +393,8 @@ app.use('*', async (c, next) => {
   for (const [k, v] of Object.entries(CABECERAS_SEGURIDAD)) {
     if (!c.res.headers.has(k)) c.res.headers.set(k, v);
   }
+  // La página del reproductor de Facebook trae su propia política (más cerrada) y solo se deja insertar en el Estudio.
+  if (new URL(c.req.url).pathname.startsWith('/media/facebook/')) c.res.headers.delete('X-Frame-Options');
   if (new URL(c.req.url).pathname.startsWith('/embed/')) {
     // El reproductor para insertar se puede mostrar dentro de otras páginas.
     c.res.headers.delete('X-Frame-Options');
@@ -1049,8 +1052,64 @@ async function oembedTiktok(c: C, texto: string) {
   });
 }
 
+/**
+ * Facebook: su oEmbed pide una aplicación registrada, así que no se le pregunta el título ni el creador. Lo único que
+ * hace el servidor es convertir un enlace para compartir (fb.watch/…, facebook.com/share/…) en el del video,
+ * siguiendo su redirección (hasta 3 saltos, solo dentro de Facebook).
+ */
+async function oembedFacebook(c: C, texto: string) {
+  let f = videoDeFacebook(texto);
+  if (!f) return err(c, 400, 'enlace');
+  for (let salto = 0; f?.corto && salto < 3; salto++) {
+    try {
+      const r = await fetch(f.corto, {
+        redirect: 'manual',
+        headers: { 'user-agent': 'Mozilla/5.0 (compatible; Pantalay/1.0)', 'accept-language': 'en' },
+      });
+      f = videoDeFacebook(r.headers.get('location') ?? '');
+    } catch (e) {
+      console.error('oembed: el enlace para compartir de Facebook no respondió', e);
+      f = null;
+    }
+  }
+  if (!f || f.corto || !f.id) return err(c, 404, 'no_existe');
+  return c.json({
+    plataforma: 'facebook',
+    id: f.id,
+    vertical: f.reel,
+    insertable: true,
+    titulo: '',
+    autor: '',
+    creador: '',
+  });
+}
+
+// La página que envuelve al reproductor oficial de Facebook (ver servidor/facebook.ts). No lee ni escribe nada.
+app.get('/media/facebook/:id', (c) => {
+  const id = c.req.param('id');
+  if (!/^\d{8,25}$/.test(id)) return c.notFound();
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const padre = padreFacebook(c.req.query('o'), new URL(c.req.url).origin);
+  return c.html(
+    paginaFacebook({
+      id,
+      reel: c.req.query('r') === '1',
+      padre,
+      nonce,
+      es: (c.req.header('accept-language') ?? '').toLowerCase().startsWith('es'),
+    }),
+    200,
+    {
+      'Content-Security-Policy': cspFacebook(nonce, padre),
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    },
+  );
+});
+
 app.get('/datos/oembed', requiereSesion, async (c) => {
   if (videoDeTiktok(c.req.query('url') ?? '')) return oembedTiktok(c, c.req.query('url') ?? '');
+  if (videoDeFacebook(c.req.query('url') ?? '')) return oembedFacebook(c, c.req.query('url') ?? '');
   const v = videoDeYoutube(c.req.query('url') ?? '');
   if (!v) return err(c, 400, 'enlace');
   const pedido = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${v.id}`)}`;
@@ -2421,7 +2480,7 @@ const esquemaCompletar = z.object({
           .string()
           .url()
           .max(300)
-          .regex(/^https:\/\/(www\.)?(youtube\.com|tiktok\.com)\//),
+          .regex(/^https:\/\/(www\.)?(youtube\.com|tiktok\.com|facebook\.com)\//),
       ]),
     })
     .optional(),

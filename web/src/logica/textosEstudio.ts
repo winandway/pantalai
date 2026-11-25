@@ -4,12 +4,12 @@ import type { Idioma } from './idioma';
 const en = {
   titulo: 'Reaction Studio',
   intro:
-    'Paste a YouTube or TikTok link, react with your camera and record only the stage: no browser bar, no tabs, no desktop.',
-  enlace: 'YouTube, TikTok or Pantalay link',
+    'Paste a YouTube, TikTok or Facebook link, react with your camera and record only the stage: no browser bar, no tabs, no desktop.',
+  enlace: 'YouTube, TikTok, Facebook or Pantalay link',
   enlacePlaceholder: 'https://www.youtube.com/watch?v=… or https://www.tiktok.com/@…/video/…',
   cargar: 'Load video',
   enlaceMalo:
-    'That does not look like a YouTube, TikTok or Pantalay video link. Paste the full link of the video, or upload it from your computer.',
+    'That does not look like a YouTube, TikTok, Facebook or Pantalay video link. Paste the full link of the video, or upload it from your computer.',
   noExiste: 'We could not find that video. Check the link.',
   ocupado:
     'TikTok is not letting this video play here. It almost always means you are not signed in to TikTok in this browser: sign in at tiktok.com, then load the video again.',
@@ -19,7 +19,7 @@ const en = {
   noArrancoTiktok:
     'The TikTok did not start. TikTok only plays inside other sites if you are signed in to TikTok in this browser: sign in at tiktok.com, come back and load the video again.',
   ayudaPlataformas:
-    'YouTube plays without an account. TikTok asks you to be signed in to TikTok in this same browser.',
+    'YouTube and public Facebook videos and Reels play without an account. TikTok asks you to be signed in to TikTok in this same browser.',
   entrarTiktok: 'Sign in to TikTok',
   volumenVideo: 'Video volume',
   o: 'or',
@@ -69,6 +69,7 @@ const en = {
   volumenAyudaTiktok:
     'TikTok does not let other sites change its volume: this slider sets how loud the TikTok sounds in your recording (at 0 it is muted). The microphone volume changes only how loud you sound in the recording.',
   abrirTiktok: 'Open on TikTok',
+  abrirFacebook: 'Open on Facebook',
   abrirYoutube: 'Open on YouTube',
   formato: 'Format',
   formatos: { horizontal: 'Horizontal 16:9 (YouTube)', vertical: 'Vertical 9:16 (Shorts, TikTok, Reels)' },
@@ -85,6 +86,8 @@ const en = {
   },
   noInsertable:
     'The owner of this video does not allow it to play outside YouTube. Use Record → “Choose area” and share the YouTube tab instead.',
+  noInsertableFacebook:
+    'Facebook is not letting this video play here. It only works with public videos and Reels: if it is private or from a group, download it and use “Upload a video from my computer”.',
   irGrabar: 'Open Record',
   creador: 'Creator',
   tema: "Today's topic",
@@ -163,12 +166,12 @@ const en = {
 const es: typeof en = {
   titulo: 'Estudio de reacciones',
   intro:
-    'Pega un enlace de YouTube o de TikTok, reacciona con tu cámara y graba solo el escenario: sin barra del navegador, sin pestañas y sin escritorio.',
-  enlace: 'Enlace de YouTube, TikTok o Pantalay',
+    'Pega un enlace de YouTube, de TikTok o de Facebook, reacciona con tu cámara y graba solo el escenario: sin barra del navegador, sin pestañas y sin escritorio.',
+  enlace: 'Enlace de YouTube, TikTok, Facebook o Pantalay',
   enlacePlaceholder: 'https://www.youtube.com/watch?v=… o https://www.tiktok.com/@…/video/…',
   cargar: 'Cargar video',
   enlaceMalo:
-    'Eso no parece el enlace de un video de YouTube, TikTok o Pantalay. Pega el enlace completo del video, o súbelo desde tu computadora.',
+    'Eso no parece el enlace de un video de YouTube, TikTok, Facebook o Pantalay. Pega el enlace completo del video, o súbelo desde tu computadora.',
   noExiste: 'No encontramos ese video. Revisa el enlace.',
   ocupado:
     'TikTok no deja reproducir este video aquí. Casi siempre es porque no has iniciado sesión en TikTok en este navegador: entra a tiktok.com, inicia sesión y vuelve a cargar el video.',
@@ -178,7 +181,7 @@ const es: typeof en = {
   noArrancoTiktok:
     'El TikTok no arrancó. TikTok solo se reproduce dentro de otras páginas si tienes tu sesión de TikTok iniciada en este navegador: inicia sesión en tiktok.com, vuelve y carga el video otra vez.',
   ayudaPlataformas:
-    'YouTube se reproduce sin cuenta. TikTok pide que tengas tu sesión de TikTok iniciada en este mismo navegador.',
+    'YouTube y los videos y Reels públicos de Facebook se reproducen sin cuenta. TikTok pide que tengas tu sesión de TikTok iniciada en este mismo navegador.',
   entrarTiktok: 'Iniciar sesión en TikTok',
   volumenVideo: 'Volumen del video',
   o: 'o',
@@ -228,6 +231,7 @@ const es: typeof en = {
   volumenAyudaTiktok:
     'TikTok no deja que otras páginas cambien su volumen: esta barra ajusta qué tan fuerte suena el TikTok en tu grabación (en 0 se silencia). El del micrófono cambia solo qué tan fuerte sales tú en la grabación.',
   abrirTiktok: 'Abrir en TikTok',
+  abrirFacebook: 'Abrir en Facebook',
   abrirYoutube: 'Abrir en YouTube',
   formato: 'Formato',
   formatos: { horizontal: 'Horizontal 16:9 (YouTube)', vertical: 'Vertical 9:16 (Shorts, TikTok, Reels)' },
@@ -244,6 +248,8 @@ const es: typeof en = {
   },
   noInsertable:
     'El dueño de este video no deja reproducirlo fuera de YouTube. Usa Grabar → «Elegir qué parte» y comparte la pestaña de YouTube.',
+  noInsertableFacebook:
+    'Facebook no deja reproducir este video aquí. Solo funciona con videos y Reels públicos: si es privado o de un grupo, descárgalo y usa «Subir un video de mi computadora».',
   irGrabar: 'Abrir Grabar',
   creador: 'Creador',
   tema: 'Tema de hoy',

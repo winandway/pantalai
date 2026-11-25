@@ -35,7 +35,7 @@ test('Short 9:16 con un TikTok: el video es el protagonista', async ({ page }) =
   await page.goto('/studio');
   await page.getByText('Vertical 9:16').click();
   await page
-    .getByLabel('YouTube, TikTok or Pantalay link')
+    .getByLabel('YouTube, TikTok, Facebook or Pantalay link')
     .fill('https://www.tiktok.com/@creadora.prueba/video/7691731841765690645');
   await page.getByRole('button', { name: 'Load video' }).click();
   await expect(page.getByRole('radio', { name: /Video in the spotlight/ })).toBeChecked();
@@ -111,7 +111,7 @@ test('reaccionar a un video de la computadora', async ({ page }) => {
   // Y el enlace de un video de Pantalay (de la propia biblioteca) también se puede pegar en el Estudio.
   const enlace = page.url();
   await page.goto('/studio');
-  await page.getByLabel('YouTube, TikTok or Pantalay link').fill(enlace);
+  await page.getByLabel('YouTube, TikTok, Facebook or Pantalay link').fill(enlace);
   await page.getByRole('button', { name: 'Load video' }).click();
   await expect(page.locator('.escenario video.video-local')).toHaveAttribute('src', `/media/${id}/video`);
   await expect(page.locator('.estudio-archivo')).toContainText('Pantalay library');

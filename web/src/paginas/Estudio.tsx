@@ -31,6 +31,10 @@ import {
   errorDeVideo,
   leerMensajeTiktok,
   leerMensajeYoutube,
+  ordenFacebook,
+  origenReproductorFacebook,
+  leerMensajeFacebook,
+  urlReproductorFacebook,
   ordenTiktok,
   ordenYoutube,
   puedeRecortarPestana,
@@ -69,9 +73,11 @@ import {
 const ORIGEN_YT = 'https://www.youtube-nocookie.com';
 const ORIGEN_TT = 'https://www.tiktok.com';
 const ENTRAR_TIKTOK = 'https://www.tiktok.com/login';
+// Nuestra página del reproductor de Facebook: en el sitio público vive en la dirección secundaria (otro origen).
+const ORIGEN_FB = origenReproductorFacebook(location.origin);
 type Estado = 'listo' | 'cuenta' | 'grabando' | 'pausa' | 'subiendo' | 'fallo';
 type Oembed = {
-  plataforma?: 'youtube' | 'tiktok';
+  plataforma?: 'youtube' | 'tiktok' | 'facebook';
   id: string;
   vertical?: boolean;
   insertable: boolean;
@@ -477,12 +483,15 @@ export function Estudio() {
   useEffect(() => {
     const oir = (e: MessageEvent) => {
       if (e.source !== marco.current?.contentWindow) return;
+      // Facebook va primero: en local su página comparte origen con el Estudio y se reconoce por su marca.
+      const deFacebook = e.origin === ORIGEN_FB ? leerMensajeFacebook(e.data) : null;
       const m =
-        e.origin === ORIGEN_YT
+        deFacebook ??
+        (e.origin === ORIGEN_YT
           ? leerMensajeYoutube(e.data)
           : e.origin === ORIGEN_TT
             ? leerMensajeTiktok(e.data)
-            : null;
+            : null);
       if (!m) return;
       if (m.tipo === 'listo' || m.tipo === 'info') setListo(true);
       if (m.tipo === 'info') {
@@ -495,12 +504,19 @@ export function Estudio() {
           if (anda) setAvisoVideo(null);
         }
       } else if (m.tipo === 'error') {
-        const problema = errorDeVideo(e.origin === ORIGEN_TT ? 'tiktok' : 'youtube', m.codigo);
+        const problema = errorDeVideo(
+          deFacebook ? 'facebook' : e.origin === ORIGEN_TT ? 'tiktok' : 'youtube',
+          m.codigo,
+        );
         if (problema === 'ocupado') setError({ texto: tx.ocupado, abrir: true });
         else if (problema) {
           setVideo(null);
           setError(
-            problema === 'no_existe' ? { texto: tx.noExiste } : { texto: tx.noInsertable, grabar: true },
+            problema === 'no_existe'
+              ? { texto: tx.noExiste }
+              : deFacebook
+                ? { texto: tx.noInsertableFacebook }
+                : { texto: tx.noInsertable, grabar: true },
           );
         }
       }
@@ -522,7 +538,8 @@ export function Estudio() {
       }
       const w = marco.current?.contentWindow;
       if (!w) return;
-      if (plataforma === 'tiktok') w.postMessage(ordenTiktok(accionVideo, segundo), ORIGEN_TT);
+      if (plataforma === 'facebook') w.postMessage(ordenFacebook(accionVideo, segundo), ORIGEN_FB);
+      else if (plataforma === 'tiktok') w.postMessage(ordenTiktok(accionVideo, segundo), ORIGEN_TT);
       else if (accionVideo === 'seekTo')
         w.postMessage(ordenYoutube('seekTo', [segundo ?? 0, true]), ORIGEN_YT);
       else w.postMessage(ordenYoutube(accionVideo === 'play' ? 'playVideo' : 'pauseVideo'), ORIGEN_YT);
@@ -538,7 +555,12 @@ export function Estudio() {
     const w = marco.current?.contentWindow;
     if (w && listo)
       for (const o of ordenes) {
-        if (video.plataforma === 'tiktok') w.postMessage(ordenTiktok(o as 'mute' | 'unMute'), ORIGEN_TT);
+        if (video.plataforma === 'facebook')
+          w.postMessage(
+            typeof o === 'object' ? ordenFacebook('setVolume', o.setVolume) : ordenFacebook(o),
+            ORIGEN_FB,
+          );
+        else if (video.plataforma === 'tiktok') w.postMessage(ordenTiktok(o as 'mute' | 'unMute'), ORIGEN_TT);
         else if (typeof o === 'object') w.postMessage(ordenYoutube('setVolume', [o.setVolume]), ORIGEN_YT);
         else w.postMessage(ordenYoutube(o), ORIGEN_YT);
       }
@@ -595,7 +617,7 @@ export function Estudio() {
 
   const alCargarMarco = useCallback(() => {
     // TikTok avisa solo; a YouTube hay que pedirle que avise su estado.
-    if (plataforma === 'tiktok') return;
+    if (plataforma === 'tiktok' || plataforma === 'facebook') return;
     // Se le pide varias veces: el primer mensaje a veces llega antes de que esté escuchando.
     let n = 0;
     const id = window.setInterval(() => {
@@ -1248,12 +1270,14 @@ export function Estudio() {
                     ref={marco}
                     title={m.tema}
                     src={
-                      video.plataforma === 'tiktok'
-                        ? urlReproductorTiktok(video.id)
-                        : urlReproductor(
-                            { id: video.id, short: video.vertical, inicio: video.inicio },
-                            location.origin,
-                          )
+                      video.plataforma === 'facebook'
+                        ? urlReproductorFacebook(video.id, video.vertical, location.origin)
+                        : video.plataforma === 'tiktok'
+                          ? urlReproductorTiktok(video.id)
+                          : urlReproductor(
+                              { id: video.id, short: video.vertical, inicio: video.inicio },
+                              location.origin,
+                            )
                     }
                     allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                     referrerPolicy="strict-origin-when-cross-origin"
@@ -1459,7 +1483,11 @@ export function Estudio() {
               : tx.noArranco}{' '}
           {video.plataforma !== 'archivo' && (
             <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
-              {video.plataforma === 'tiktok' ? tx.abrirTiktok : tx.abrirYoutube}
+              {video.plataforma === 'tiktok'
+                ? tx.abrirTiktok
+                : video.plataforma === 'facebook'
+                  ? tx.abrirFacebook
+                  : tx.abrirYoutube}
             </a>
           )}
           {video.plataforma === 'tiktok' && (

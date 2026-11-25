@@ -211,13 +211,104 @@ export function leerMensajeTiktok(dato: unknown): MensajeYoutube | null {
   return null;
 }
 
-// ---------- Las dos plataformas juntas ----------
+// ---------- Facebook (reproductor oficial insertado, developers.facebook.com/docs/plugins/embedded-video-player) ----------
+
+export type VideoFacebook = {
+  id: string;
+  /** true si es un Reel (vertical). */
+  reel: boolean;
+  /** Enlace para compartir (fb.watch/…, facebook.com/share/…): el servidor lo convierte en el del video. */
+  corto?: string;
+};
+
+const HOSTS_FACEBOOK = new Set(['facebook.com', 'www.facebook.com', 'm.facebook.com', 'web.facebook.com']);
+const ID_FACEBOOK = /^\d{8,25}$/;
+
+/** Reconoce un enlace de Facebook: un Reel, un video (watch, /videos/…, video.php) o uno para compartir. */
+export function videoDeFacebook(texto: string): VideoFacebook | null {
+  const limpio = texto.trim();
+  if (!limpio) return null;
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(limpio) ? limpio : `https://${limpio}`);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+  const partes = url.pathname.split('/').filter(Boolean);
+  const corto = `https://${host === 'fb.watch' ? 'fb.watch' : 'www.facebook.com'}${url.pathname}`;
+  if (host === 'fb.watch') return partes[0] ? { id: '', reel: false, corto } : null;
+  if (!HOSTS_FACEBOOK.has(host)) return null;
+  const id = (x: string | null | undefined) => (ID_FACEBOOK.test(x ?? '') ? x! : null);
+  if (partes[0] === 'reel') return id(partes[1]) ? { id: partes[1]!, reel: true } : null;
+  if (
+    partes[0] === 'share' &&
+    (partes[1] === 'r' || partes[1] === 'v') &&
+    /^[\w-]{4,40}$/.test(partes[2] ?? '')
+  )
+    return { id: '', reel: partes[1] === 'r', corto };
+  if (partes[0] === 'watch' || partes[0] === 'video.php') {
+    const v = id(url.searchParams.get('v'));
+    return v ? { id: v, reel: false } : null;
+  }
+  const i = partes.indexOf('videos');
+  if (i >= 0) {
+    // /pagina/videos/123 o /pagina/videos/un-titulo/123
+    const v = id(partes[i + 1]) ?? id(partes[i + 2]);
+    return v ? { id: v, reel: false } : null;
+  }
+  return null;
+}
+
+/** La dirección de Facebook del video, la que entiende su reproductor oficial. */
+export function enlaceFacebook(id: string, reel: boolean): string {
+  return reel ? `https://www.facebook.com/reel/${id}` : `https://www.facebook.com/watch/?v=${id}`;
+}
+
+/**
+ * Dónde vive nuestra página del reproductor de Facebook. En el sitio público va en la dirección secundaria: así el
+ * código de Facebook corre en OTRO origen y no puede tocar la sesión ni los datos de Pantalay (C-FACEBOOK).
+ */
+export function origenReproductorFacebook(origenPagina: string): string {
+  return /^https:\/\/(www\.)?pantalay\.com$/.test(origenPagina)
+    ? 'https://pantalai.sitios.dev'
+    : origenPagina;
+}
+
+export function urlReproductorFacebook(id: string, reel: boolean, origenPagina: string): string {
+  const q = new URLSearchParams({ r: reel ? '1' : '0', o: origenPagina });
+  return `${origenReproductorFacebook(origenPagina)}/media/facebook/${id}?${q.toString()}`;
+}
+
+/** Orden para nuestra página del reproductor de Facebook. */
+export function ordenFacebook(
+  tipo: 'play' | 'pause' | 'seekTo' | 'mute' | 'unMute' | 'setVolume',
+  valor?: number,
+) {
+  return { pantalayFacebook: true, orden: tipo, valor };
+}
+
+/** Interpreta un mensaje de nuestra página del reproductor de Facebook. */
+export function leerMensajeFacebook(dato: unknown): MensajeYoutube | null {
+  if (!dato || typeof dato !== 'object' || !(dato as { pantalayFacebook?: unknown }).pantalayFacebook)
+    return null;
+  const { tipo, anda, tiempo, duracion } = dato as Record<string, unknown>;
+  const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : undefined);
+  if (tipo === 'listo') return { tipo: 'listo' };
+  if (tipo === 'estado') return { tipo: 'info', estado: anda ? 1 : 2 };
+  if (tipo === 'tiempo') return { tipo: 'info', tiempo: num(tiempo), duracion: num(duracion) };
+  if (tipo === 'error') return { tipo: 'error', codigo: 1 };
+  return null;
+}
+
+// ---------- Las plataformas juntas ----------
 
 /** «archivo»: un video de la computadora de la persona (no se sube a ningún lado: se reproduce desde ella). */
-export type Plataforma = 'youtube' | 'tiktok' | 'archivo';
+export type Plataforma = 'youtube' | 'tiktok' | 'facebook' | 'archivo';
 export type VideoPegado =
   | { plataforma: 'youtube'; id: string; vertical: boolean; inicio: number; creador: string }
   | { plataforma: 'tiktok'; id: string; vertical: true; inicio: 0; creador: string; corto?: string }
+  | { plataforma: 'facebook'; id: string; vertical: boolean; inicio: 0; creador: string; corto?: string }
   | {
       plataforma: 'archivo';
       id: string;
@@ -272,6 +363,9 @@ export function videoDeEnlace(texto: string): VideoPegado | null {
   const t = videoDeTiktok(texto);
   if (t)
     return { plataforma: 'tiktok', id: t.id, vertical: true, inicio: 0, creador: t.creador, corto: t.corto };
+  const f = videoDeFacebook(texto);
+  if (f)
+    return { plataforma: 'facebook', id: f.id, vertical: f.reel, inicio: 0, creador: '', corto: f.corto };
   return null;
 }
 
@@ -326,14 +420,22 @@ export function errorDeVideo(
   codigo: number,
 ): 'no_insertable' | 'no_existe' | 'ocupado' | null {
   if (plataforma === 'youtube') return noInsertable(codigo) ? 'no_insertable' : null;
+  // Facebook: nuestra página avisa con un solo código cuando el reproductor no llegó a cargar (privado o borrado).
+  if (plataforma === 'facebook') return codigo === 1 ? 'no_insertable' : null;
   if (codigo === 1001) return 'no_existe';
   if (codigo === 2001 || codigo === 2005) return 'ocupado';
   return null;
 }
 
 /** La página original del video, para abrirla cuando no se deja reproducir aquí (plan B). */
-export function enlaceOriginal(v: { plataforma: Plataforma; id: string; creador?: string }): string {
+export function enlaceOriginal(v: {
+  plataforma: Plataforma;
+  id: string;
+  creador?: string;
+  vertical?: boolean;
+}): string {
   if (v.plataforma === 'archivo') return '';
+  if (v.plataforma === 'facebook') return enlaceFacebook(v.id, Boolean(v.vertical));
   if (v.plataforma === 'youtube') return `https://www.youtube.com/watch?v=${v.id}`;
   return v.creador?.startsWith('@')
     ? `https://www.tiktok.com/${v.creador}/video/${v.id}`
@@ -358,7 +460,8 @@ export function volumenDelVideo(
   volumen: number,
 ): { ordenes: ('mute' | 'unMute' | { setVolume: number })[]; enGrabacion: number } {
   const v = Math.round(Math.min(100, Math.max(0, Number.isFinite(volumen) ? volumen : 100)));
-  if (plataforma === 'youtube')
+  // YouTube y Facebook dejan cambiar su volumen desde afuera.
+  if (plataforma === 'youtube' || plataforma === 'facebook')
     return { ordenes: v === 0 ? ['mute'] : ['unMute', { setVolume: v }], enGrabacion: 1 };
   // Archivo: la página le baja el volumen al propio reproductor (se oye y se graba así).
   if (plataforma === 'archivo') return { ordenes: [], enGrabacion: 1 };

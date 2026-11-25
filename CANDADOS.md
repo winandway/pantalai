@@ -1201,3 +1201,24 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
 - Pruebas: `pruebas/recorte.test.ts` (CANDADO C-SHORT-TITULO) y `e2e/grabar-short-titulo.spec.ts` (graba de verdad y
   mira cámara, franja blanca con letras y video). La e2e no puede pasar sin la función (no existe el formato).
 - Qué NO tocar: `partesVertical` sin franja tiene que seguir dando lo mismo que antes (lo fija C-SHORT).
+
+## C-FACEBOOK (25 nov 2026)
+
+- Qué pasaba: al pegar un Reel de Facebook en el Estudio salía «Eso no parece el enlace de un video de YouTube,
+  TikTok o Pantalay» (Richard, con `facebook.com/reel/…`). Facebook no estaba conectado.
+- Qué se hizo: el Estudio reconoce enlaces de Facebook (`videoDeFacebook` en `web/src/logica/estudio.ts`: `/reel/ID`,
+  `/watch/?v=ID`, `/pagina/videos/ID`, `/video.php?v=ID`, y los de compartir `fb.watch/…` y `/share/r|v/…`, que el
+  servidor convierte siguiendo la redirección en `/datos/oembed`). Se reproduce con el reproductor oficial insertado
+  de Facebook, que solo se deja manejar con su propio código («SDK», `connect.facebook.net/…/sdk.js`, sin aplicación
+  registrada). Comprobado el 25 nov 2026 con un Reel real: play, pausa, adelantar, tiempo y duración responden.
+- Lo que NO hay que tocar (seguridad): ese código de Facebook NUNCA se carga en las páginas de Pantalay. Vive en una
+  página aparte, `/media/facebook/:id` (`servidor/facebook.ts`), que en el sitio público se pide desde la dirección
+  secundaria `pantalai.sitios.dev` (otro origen: sin la cookie de sesión ni los datos de pantalay.com). Tiene su
+  propia política cerrada (`cspFacebook`), solo se deja insertar por el Estudio y solo acepta y manda mensajes al
+  origen del Estudio (`padreFacebook`). Probado que en un marco aislado sin origen el código de Facebook no funciona,
+  por eso se usa el origen secundario. La política general de Pantalay solo agrega `frame-src` para esa dirección.
+- No escribe ni lee nada en la base. Facebook no da título ni creador sin aplicación registrada: se escriben a mano.
+- Solo videos públicos: si en 15 s el reproductor no cargó, la página avisa y el Estudio dice que lo descargue y lo
+  suba desde la computadora.
+- Pruebas: `pruebas/estudio.test.ts` y `pruebas/facebook-ruta.test.ts` (CANDADO C-FACEBOOK) y
+  `e2e/estudio-facebook.spec.ts` (con un código de Facebook de prueba; no se llama a Facebook).

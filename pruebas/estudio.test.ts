@@ -366,3 +366,101 @@ describe('estudio: enlaces de la propia biblioteca de Pantalay', () => {
     expect(videoDePantalay('https://pantalay.com/v/2n66xa7ztx51799afu7a/edit')).toBeNull();
   });
 });
+
+describe('CANDADO C-FACEBOOK: los videos y Reels de Facebook entran al Estudio', () => {
+  it('reconoce los enlaces de Facebook y rechaza los que no son de un video', async () => {
+    const { videoDeFacebook, enlaceFacebook } = await import('../web/src/logica/estudio');
+    expect(videoDeFacebook('https://www.facebook.com/reel/1699340011899306')).toEqual({
+      id: '1699340011899306',
+      reel: true,
+    });
+    expect(videoDeFacebook('facebook.com/reel/1699340011899306/?s=single_unit')?.id).toBe('1699340011899306');
+    expect(videoDeFacebook('https://www.facebook.com/watch/?v=1234567890123')).toEqual({
+      id: '1234567890123',
+      reel: false,
+    });
+    expect(videoDeFacebook('https://m.facebook.com/pagina/videos/1234567890123/')?.id).toBe('1234567890123');
+    expect(videoDeFacebook('https://www.facebook.com/pagina/videos/un-titulo/1234567890123')?.id).toBe(
+      '1234567890123',
+    );
+    expect(videoDeFacebook('https://www.facebook.com/video.php?v=1234567890123')?.id).toBe('1234567890123');
+    // Los enlaces para compartir no traen el número: el servidor los convierte.
+    expect(videoDeFacebook('https://fb.watch/abcDEF123/')).toEqual({
+      id: '',
+      reel: false,
+      corto: 'https://fb.watch/abcDEF123/',
+    });
+    expect(videoDeFacebook('https://www.facebook.com/share/r/1AbcDefGhi/')?.corto).toBe(
+      'https://www.facebook.com/share/r/1AbcDefGhi/',
+    );
+    for (const malo of [
+      'https://www.facebook.com/',
+      'https://www.facebook.com/unapagina',
+      'https://www.facebook.com/reel/abc',
+      'https://facebook.com.evil.example/reel/1699340011899306',
+      'https://example.com/reel/1699340011899306',
+    ])
+      expect(videoDeFacebook(malo)).toBeNull();
+    expect(videoDeEnlace('https://www.facebook.com/reel/1699340011899306')).toMatchObject({
+      plataforma: 'facebook',
+      vertical: true,
+    });
+    expect(enlaceFacebook('123456789', true)).toBe('https://www.facebook.com/reel/123456789');
+    expect(enlaceOriginal({ plataforma: 'facebook', id: '123456789', vertical: false })).toBe(
+      'https://www.facebook.com/watch/?v=123456789',
+    );
+  });
+
+  it('en el sitio público el reproductor vive en OTRO origen, lejos de la sesión', async () => {
+    const { urlReproductorFacebook, origenReproductorFacebook, leerMensajeFacebook, ordenFacebook } =
+      await import('../web/src/logica/estudio');
+    expect(origenReproductorFacebook('https://pantalay.com')).toBe('https://pantalai.sitios.dev');
+    expect(origenReproductorFacebook('https://www.pantalay.com')).toBe('https://pantalai.sitios.dev');
+    expect(origenReproductorFacebook('http://127.0.0.1:8787')).toBe('http://127.0.0.1:8787');
+    expect(urlReproductorFacebook('123456789', true, 'https://pantalay.com')).toBe(
+      'https://pantalai.sitios.dev/media/facebook/123456789?r=1&o=https%3A%2F%2Fpantalay.com',
+    );
+    expect(leerMensajeFacebook({ pantalayFacebook: true, tipo: 'listo' })).toEqual({ tipo: 'listo' });
+    expect(leerMensajeFacebook({ pantalayFacebook: true, tipo: 'estado', anda: true })).toEqual({
+      tipo: 'info',
+      estado: 1,
+    });
+    expect(leerMensajeFacebook({ pantalayFacebook: true, tipo: 'tiempo', tiempo: 3, duracion: 81 })).toEqual({
+      tipo: 'info',
+      tiempo: 3,
+      duracion: 81,
+    });
+    expect(leerMensajeFacebook({ tipo: 'listo' })).toBeNull();
+    expect(leerMensajeFacebook('{"event":"onReady"}')).toBeNull();
+    expect(errorDeVideo('facebook', 1)).toBe('no_insertable');
+    expect(ordenFacebook('seekTo', 20)).toEqual({ pantalayFacebook: true, orden: 'seekTo', valor: 20 });
+    expect(volumenDelVideo('facebook', 40)).toEqual({
+      ordenes: ['unMute', { setVolume: 40 }],
+      enGrabacion: 1,
+    });
+  });
+
+  it('la página del reproductor es cerrada: solo habla con el Estudio y solo carga a Facebook', async () => {
+    const { padreFacebook, cspFacebook, paginaFacebook } = await import('../servidor/facebook');
+    expect(padreFacebook('https://pantalay.com', 'https://pantalai.sitios.dev')).toBe('https://pantalay.com');
+    expect(padreFacebook('https://evil.example', 'https://pantalai.sitios.dev')).toBe(
+      'https://pantalai.sitios.dev',
+    );
+    expect(padreFacebook(undefined, 'http://127.0.0.1:8787')).toBe('http://127.0.0.1:8787');
+    const csp = cspFacebook('abc', 'https://pantalay.com');
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain("script-src 'nonce-abc' https://connect.facebook.net");
+    expect(csp).toContain("frame-ancestors 'self' https://pantalay.com");
+    expect(csp).not.toContain("'unsafe-eval'");
+    const html = paginaFacebook({
+      id: '1699340011899306',
+      reel: true,
+      padre: 'https://pantalay.com',
+      nonce: 'abc',
+      es: true,
+    });
+    expect(html).toContain('"href":"https://www.facebook.com/reel/1699340011899306"');
+    expect(html).toContain('e.origin!==D.padre');
+    expect(html).toContain('connect.facebook.net/es_LA/sdk.js');
+  });
+});
