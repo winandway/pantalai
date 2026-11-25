@@ -1480,7 +1480,9 @@ export function Estudio() {
             ? tx.tocarTiktok
             : video.plataforma === 'tiktok'
               ? tx.noArrancoTiktok
-              : tx.noArranco}{' '}
+              : video.plataforma === 'facebook'
+                ? tx.noArrancoFacebook
+                : tx.noArranco}{' '}
           {video.plataforma !== 'archivo' && (
             <a href={enlaceOriginal(video)} target="_blank" rel="noopener noreferrer">
               {video.plataforma === 'tiktok'

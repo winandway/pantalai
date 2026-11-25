@@ -46,6 +46,14 @@ export function paginaFacebook(o: { id: string; reel: boolean; padre: string; no
   v.setAttribute('data-width',String(base));
   v.setAttribute('data-show-text','false');
   v.setAttribute('data-allowfullscreen','false');
+  // El código de Facebook crea su marco sin permiso de reproducir con sonido desde afuera: nuestro botón Reproducir
+  // solo arrancaba el video en silencio. Se le da el permiso apenas aparece y se vuelve a cargar con él.
+  new MutationObserver(function(){
+    var f=caja.querySelector('iframe');
+    if(!f||/autoplay/.test(f.getAttribute('allow')||''))return;
+    f.setAttribute('allow','autoplay; encrypted-media; picture-in-picture');
+    if(f.src)f.src=String(f.src);
+  }).observe(caja,{childList:true,subtree:true});
   caja.appendChild(v);
   var ajustar=function(){
     var w=caja.offsetWidth,h=caja.offsetHeight;

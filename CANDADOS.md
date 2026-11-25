@@ -1222,3 +1222,8 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
   suba desde la computadora.
 - Pruebas: `pruebas/estudio.test.ts` y `pruebas/facebook-ruta.test.ts` (CANDADO C-FACEBOOK) y
   `e2e/estudio-facebook.spec.ts` (con un código de Facebook de prueba; no se llama a Facebook).
+- Sonido al arrancar (25 nov 2026): el código de Facebook crea su marco sin el permiso de reproducir con sonido
+  desde afuera; nuestra página se lo agrega (`allow="autoplay…"`) y lo vuelve a cargar. Dentro del Estudio en local
+  el Reel real arrancó con sonido con nuestro botón; en una página de prueba suelta, no (solo en silencio). Por eso,
+  si a los 4 s no arrancó, el Estudio dice «tócalo una vez, directamente» (`noArrancoFacebook`): después de ese toque
+  los botones funcionan. Falta comprobarlo en el Chrome real de Richard.

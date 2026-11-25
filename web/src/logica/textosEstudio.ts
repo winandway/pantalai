@@ -16,6 +16,8 @@ const en = {
   tocarTiktok:
     'TikTok asks for one tap: tap the video once to start it. After that, use these buttons to play, pause and skip.',
   noArranco: 'The video did not start. Tap the video directly, or open it on its own page.',
+  noArrancoFacebook:
+    'Facebook did not let the video start from here. Tap the video once, directly; after that, the Play, Pause, Back and Forward buttons work.',
   noArrancoTiktok:
     'The TikTok did not start. TikTok only plays inside other sites if you are signed in to TikTok in this browser: sign in at tiktok.com, come back and load the video again.',
   ayudaPlataformas:
@@ -178,6 +180,8 @@ const es: typeof en = {
   tocarTiktok:
     'TikTok pide un toque: toca el video una vez para que arranque. Después lo manejas con estos botones: reproducir, pausar y saltar.',
   noArranco: 'El video no arrancó. Tócalo directamente o ábrelo en su página.',
+  noArrancoFacebook:
+    'Facebook no dejó arrancar el video desde aquí. Tócalo una vez, directamente; después ya funcionan los botones de Reproducir, Pausar, Atrás y Adelante.',
   noArrancoTiktok:
     'El TikTok no arrancó. TikTok solo se reproduce dentro de otras páginas si tienes tu sesión de TikTok iniciada en este navegador: inicia sesión en tiktok.com, vuelve y carga el video otra vez.',
   ayudaPlataformas:
