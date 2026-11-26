@@ -1,6 +1,7 @@
 // Máscaras del Estudio (CANDADO C-MASCARAS, fase 3): lo puro. Tres estilos de base (podcast, noticiero, minimal) y las
 // máscaras que cada cuenta guarda con su nombre de programa, su logo y sus colores. El escenario las pinta con
 // variables de CSS, así lo que se ve es lo que se graba (la grabación es la propia pestaña recortada al escenario).
+import { medirTitulo, partirTitulo, type Medir } from './grabadora';
 
 /** «natural» (25 nov 2026, Richard): los dos videos planos, sin marcos ni carteles, con el título en una franja. */
 export type EstiloMascara = 'podcast' | 'noticiero' | 'minimal' | 'natural';
@@ -176,4 +177,26 @@ export function datosParaGuardar(d: {
     secundario: v.secundario,
     fondo: v.fondo,
   };
+}
+
+/** Máscara Natural en vertical: parte del alto (en %) que ocupa la cámara. Más chata = más protagonismo al video. */
+export const CAMARA_NATURAL = { min: 12, max: 40, inicial: 20 };
+
+export function camaraNaturalDe(x: unknown): number {
+  const n = typeof x === 'number' && Number.isFinite(x) ? Math.round(x) : CAMARA_NATURAL.inicial;
+  return Math.min(CAMARA_NATURAL.max, Math.max(CAMARA_NATURAL.min, n));
+}
+
+/**
+ * El título de la máscara Natural (CANDADO C-TITULO-INTELIGENTE): las líneas y el tamaño de letra, en unidades del
+ * ancho del escenario, a la medida del texto. En vertical, hasta tres líneas; en horizontal, hasta dos.
+ */
+export function tituloDeNatural(
+  tema: string,
+  vertical: boolean,
+  medir: Medir = medirTitulo,
+): { lineas: string[]; letra: string } | null {
+  const o = vertical ? { base: 72, tope: 850, maxLineas: 3 } : { base: 32, tope: 880, maxLineas: 2 };
+  const t = partirTitulo(tema, 1000, medir, { ...o, max: 120, mayusculas: false });
+  return t.lineas.length ? { lineas: t.lineas, letra: `${t.px / 10}cqw` } : null;
 }

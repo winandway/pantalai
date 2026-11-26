@@ -1252,3 +1252,31 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
   el del escenario. Un video vertical llena el ancho y se recorta arriba y abajo.
 - Las otras máscaras no cambian (Minimalista sigue como estaba).
 - Pruebas: `e2e/estudio-natural.spec.ts` y `pruebas/mascaras.test.ts`.
+
+## C-TITULO-INTELIGENTE (25 nov 2026)
+
+**Qué se rompió y cómo se veía.** Richard escribió «¿Sabes cómo se llama este instrumento brasileño? 🇧🇷» como título
+en la máscara Natural (vertical) y salió «¿SABES CÓMO SE LLAMA ESTE…». Además su cámara ocupaba 26 % del alto, fijo, y
+quería darle más espacio al video.
+
+**Causa real.** El título de Natural tenía una sola medida de letra (7,2 % del ancho) y un corte de CSS a dos líneas
+con puntos suspensivos. La cámara era un número fijo en la hoja de estilos.
+
+**Qué se hizo.**
+
+- `partirTitulo` (en `web/src/logica/grabadora.ts`) ahora reparte en una, dos o tres líneas parejas y achica la letra
+  según el texto (mínimo 42 % del tamaño base). Solo corta con «…» una palabra que ni así cabe. Lo usan el Short con
+  título de Grabar (lienzo) y la máscara Natural del Estudio.
+- `tituloDeNatural` (en `web/src/logica/mascaras.ts`) da las líneas y la letra en `cqw`; el Estudio las pinta con la
+  variable `--letra-titulo` y saltos de línea propios (`white-space: pre`). La letra del título es la misma con la que
+  se mide (Inter 800, respaldo Arial Black).
+- Tamaño de la cámara en Natural vertical: ajuste `camaraNatural` del borrador del Estudio (12 a 40 %, 20 % de entrada),
+  variable `--camara-natural`, control «Tamaño de tu cámara» debajo de las máscaras.
+- Short con título de Grabar: la cámara ahora puede bajar hasta 12 % (antes 20 %).
+
+**Cómo se comprueba.** `pruebas/recorte.test.ts` y `pruebas/mascaras.test.ts` (la frase cabe entera, más texto = letra
+más chica) y `e2e/estudio-natural.spec.ts` (la frase entera en pantalla, dentro de la franja, y la cámara se achica con
+el control). La de navegador se comprobó en rojo con el código anterior (la letra no cambiaba).
+
+**Qué no tocar.** No volver a poner `-webkit-line-clamp` ni un `font-size` fijo en `.estilo-natural .escenario-tema`.
+No medir con una letra distinta de la que se pinta.

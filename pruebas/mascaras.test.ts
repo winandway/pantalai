@@ -377,3 +377,33 @@ describe('máscaras (lo puro)', () => {
     });
   });
 });
+
+describe('CANDADO C-TITULO-INTELIGENTE: el título de la máscara Natural se ajusta al texto', () => {
+  const medir = (x: string, px: number) => x.length * px * 0.62;
+
+  it('una frase larga cabe entera, con letra más chica y más líneas', async () => {
+    const { tituloDeNatural } = await import('../web/src/logica/mascaras');
+    const corto = tituloDeNatural('Hola mundo', true, medir)!;
+    expect(corto).toEqual({ lineas: ['Hola mundo'], letra: '7.2cqw' });
+    const frase = '¿Sabes cómo se llama este instrumento brasileño? 🇧🇷';
+    const f = tituloDeNatural(frase, true, medir)!;
+    expect(f.lineas.join(' ')).toBe(frase); // entera, sin puntos suspensivos y como se escribió
+    expect(f.lineas.length).toBeGreaterThan(1);
+    expect(Number.parseFloat(f.letra)).toBeLessThan(7.2);
+    for (const l of f.lineas) expect(medir(l, Number.parseFloat(f.letra) * 10)).toBeLessThanOrEqual(850);
+    const larga = tituloDeNatural('palabra '.repeat(14), true, medir)!;
+    expect(larga.lineas).toHaveLength(3);
+    expect(Number.parseFloat(larga.letra)).toBeLessThan(Number.parseFloat(f.letra));
+    // En horizontal la franja es ancha: como mucho dos líneas.
+    expect(tituloDeNatural('palabra '.repeat(14), false, medir)!.lineas.length).toBeLessThanOrEqual(2);
+    expect(tituloDeNatural('   ', true, medir)).toBeNull();
+  });
+
+  it('la cámara de Natural se queda entre el mínimo y el máximo', async () => {
+    const { camaraNaturalDe, CAMARA_NATURAL } = await import('../web/src/logica/mascaras');
+    expect(camaraNaturalDe(undefined)).toBe(CAMARA_NATURAL.inicial);
+    expect(camaraNaturalDe(3)).toBe(CAMARA_NATURAL.min);
+    expect(camaraNaturalDe(90)).toBe(CAMARA_NATURAL.max);
+    expect(camaraNaturalDe(17.4)).toBe(17);
+  });
+});

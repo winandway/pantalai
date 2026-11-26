@@ -85,7 +85,11 @@ for (const idioma of ['en', 'es']) {
   await p.frameLocator('.escenario iframe').locator('body div').first().waitFor();
   await p
     .locator('#estudio-tema')
-    .fill(idioma === 'es' ? 'El viaje que me alegró el día' : 'The trip that made my day');
+    .fill(
+      idioma === 'es'
+        ? 'El viaje a la montaña que me alegró todo el día'
+        : 'The mountain trip that made my whole day',
+    );
   await p.locator('#estudio-tema').blur();
   await p.locator('.mascaras-lista label', { hasText: 'Natural' }).click();
   await p.locator('.estudio-formatos label').nth(1).click();

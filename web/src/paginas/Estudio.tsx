@@ -63,8 +63,11 @@ import { copiar } from './Biblioteca';
 import { MascarasEstudio } from '../componentes/MascarasEstudio';
 import { CartelVoz, useVoz } from '../componentes/CartelVoz';
 import {
+  CAMARA_NATURAL,
   ELECCION_DEFECTO,
+  camaraNaturalDe,
   claseMascara,
+  tituloDeNatural,
   vistaDePlantilla,
   variablesEscenario,
   type MascaraVista,
@@ -122,6 +125,8 @@ export function Estudio() {
     // «temaAuto» recuerda el último tema que puso SOLO un video (para avisar si una entrevista lo heredó).
     anfitrion: '',
     temaAuto: '',
+    // Máscara Natural en vertical: qué parte del alto ocupa tu cámara (C-TITULO-INTELIGENTE). Más chata = más video.
+    camaraNatural: CAMARA_NATURAL.inicial,
   });
   const cartelVoz = b.valor.cartelVoz !== false;
   const [vistaMascara, setVistaMascara] = useState<MascaraVista>(() => vistaDePlantilla('podcast'));
@@ -893,6 +898,10 @@ export function Estudio() {
     invitado: modoInvitado,
   });
   const enCurso = estado === 'cuenta' || estado === 'grabando' || estado === 'pausa';
+  // Máscara Natural: la letra del título se ajusta sola al texto, y tu cámara mide lo que elijas.
+  const natural = vistaMascara.propia && vistaMascara.estilo === 'natural';
+  const camaraNatural = camaraNaturalDe(b.valor.camaraNatural);
+  const tituloNatural = natural ? tituloDeNatural(m.tema, formato === 'vertical') : null;
 
   return (
     // Mientras se graba, el escenario queda fijo arriba y los botones en una barra fija abajo: bajar la página ya no lo
@@ -1071,6 +1080,23 @@ export function Estudio() {
         deshabilitado={enCurso}
         alCambiarVista={setVistaMascara}
       />
+      {natural && formato === 'vertical' && (
+        <div className="campo estudio-camara-natural">
+          <label htmlFor="camara-natural">
+            {tx.camaraNatural}: {camaraNatural} %
+          </label>
+          <input
+            id="camara-natural"
+            type="range"
+            min={CAMARA_NATURAL.min}
+            max={CAMARA_NATURAL.max}
+            step={1}
+            value={camaraNatural}
+            onChange={(e) => b.cambiar('camaraNatural', Number(e.target.value))}
+          />
+          <small>{tx.camaraNaturalAyuda}</small>
+        </div>
+      )}
 
       <div className="estudio-campos">
         {(
@@ -1173,7 +1199,12 @@ export function Estudio() {
           className={
             claseEscenario(formato, diseno, Boolean(video?.vertical), disenoV) + claseMascara(vistaMascara)
           }
-          style={variablesEscenario(vistaMascara) as CSSProperties}
+          style={
+            {
+              ...variablesEscenario(vistaMascara),
+              ...(natural ? { '--camara-natural': `${camaraNatural}%` } : {}),
+            } as CSSProperties
+          }
           data-escenario
           data-mascara={vistaMascara.propia ? vistaMascara.estilo : undefined}
         >
@@ -1298,7 +1329,13 @@ export function Estudio() {
           </div>
           <div className="escenario-pie">
             <span className="escenario-etiqueta">{m.etiquetaTema}</span>
-            <span className="escenario-tema">{m.tema}</span>
+            <span
+              className="escenario-tema"
+              style={tituloNatural ? ({ '--letra-titulo': tituloNatural.letra } as CSSProperties) : undefined}
+              data-lineas={tituloNatural?.lineas.length}
+            >
+              {tituloNatural ? tituloNatural.lineas.join('\n') : m.tema}
+            </span>
           </div>
         </div>
       </div>

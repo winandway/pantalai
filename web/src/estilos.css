@@ -6919,13 +6919,13 @@ html.con-shorts body {
   text-align: center;
 }
 .estilo-natural .escenario-tema {
-  display: -webkit-box !important;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  white-space: normal !important;
+  /* C-TITULO-INTELIGENTE: las líneas y el tamaño de letra los calcula el Estudio según el texto (--letra-titulo). */
+  display: block !important;
+  overflow: clip visible;
+  white-space: pre !important;
   color: var(--sobre-a) !important;
-  font-size: 3.2cqw !important;
+  font-family: Inter, 'Arial Black', system-ui, sans-serif;
+  font-size: var(--letra-titulo, 3.2cqw) !important;
   font-weight: 800 !important;
   line-height: 1.14 !important;
   letter-spacing: 0;
@@ -6935,7 +6935,7 @@ html.con-shorts body {
 }
 /* Vertical 9:16: tú arriba, el título debajo de ti y el video en todo el resto. */
 .formato-vertical.estilo-natural {
-  grid-template: 26% auto minmax(0, 1fr) / minmax(0, 1fr) !important;
+  grid-template: var(--camara-natural, 20%) auto minmax(0, 1fr) / minmax(0, 1fr) !important;
 }
 .formato-vertical.estilo-natural .escenario-camara {
   grid-area: 1 / 1 !important;
@@ -6948,7 +6948,7 @@ html.con-shorts body {
   grid-area: 3 / 1 !important;
 }
 .formato-vertical.estilo-natural .escenario-tema {
-  font-size: 7.2cqw !important;
+  font-size: var(--letra-titulo, 7.2cqw) !important;
 }
 
 /* Vertical con un video vertical (Short, TikTok, Reel): llena todo el ancho y se recorta arriba y abajo, sin franjas

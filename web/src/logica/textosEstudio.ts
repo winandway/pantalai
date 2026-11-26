@@ -127,6 +127,9 @@ const en = {
   mascara: 'Mask',
   mascaraAyuda:
     'Pick a look for your show. Make it yours with your show name, your logo and your colors, and save as many masks as you need.',
+  camaraNatural: 'Your camera size',
+  camaraNaturalAyuda:
+    'Smaller camera, more room for the video. The title adjusts its letter size to fit on its own.',
   plantillas: { podcast: 'Podcast (neon)', noticiero: 'Newscast', minimal: 'Minimal', natural: 'Natural' },
   nuevaMascara: 'New mask',
   personalizar: 'Customize',
@@ -290,6 +293,9 @@ const es: typeof en = {
   mascara: 'Máscara',
   mascaraAyuda:
     'Elige el aspecto de tu programa. Hazlo tuyo con el nombre del programa, tu logo y tus colores, y guarda todas las máscaras que necesites.',
+  camaraNatural: 'Tamaño de tu cámara',
+  camaraNaturalAyuda:
+    'Cámara más chata, más espacio para el video. El título ajusta solo el tamaño de su letra para caber.',
   plantillas: {
     podcast: 'Podcast (neón)',
     noticiero: 'Noticiero',

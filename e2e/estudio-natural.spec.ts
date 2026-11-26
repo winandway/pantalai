@@ -66,6 +66,44 @@ test('la máscara Natural deja los dos videos planos con el título en una franj
   await expect(page.locator('.escenario-pie')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await page.locator('[data-escenario]').screenshot({ path: test.info().outputPath('natural-vertical.png') });
 
+  // CANDADO C-TITULO-INTELIGENTE (Richard, 25 nov 2026): una frase larga cabe ENTERA. La letra se achica y se reparte
+  // en más líneas; antes tenía una sola medida y la frase se cortaba en «¿SABES CÓMO SE LLAMA ESTE…».
+  const tema = page.locator('.escenario-tema');
+  const letra = () => tema.evaluate((e) => Number.parseFloat(getComputedStyle(e).fontSize));
+  const letraCorta = await letra();
+  const frase = '¿Sabes cómo se llama este instrumento brasileño? 🇧🇷';
+  await page.locator('#estudio-tema').fill(frase);
+  await expect(tema).toHaveText(frase);
+  await expect(tema).not.toContainText('…');
+  expect(await letra()).toBeLessThan(letraCorta);
+  expect(Number(await tema.getAttribute('data-lineas'))).toBeGreaterThan(1);
+  // Nada se sale de la franja: ni a lo ancho ni a lo alto.
+  const cabe = await tema.evaluate((e) => {
+    const pie = e.parentElement!.getBoundingClientRect();
+    const r = document.createRange();
+    r.selectNodeContents(e);
+    const t = r.getBoundingClientRect();
+    return {
+      ancho: e.scrollWidth <= e.clientWidth + 1,
+      alto: t.top >= pie.top && t.bottom <= pie.bottom,
+      lados: t.left >= pie.left && t.right <= pie.right,
+    };
+  });
+  await page.locator('[data-escenario]').screenshot({ path: test.info().outputPath('natural-frase.png') });
+  expect(cabe).toEqual({ ancho: true, alto: true, lados: true });
+
+  // Tu cámara se achica con el control «Your camera size» y el video gana ese espacio.
+  const altoCamara = () =>
+    page.locator('.escenario-camara .escenario-caja').evaluate((e) => e.getBoundingClientRect().height);
+  const altoVideo = () =>
+    page.locator('.escenario-video .escenario-caja').evaluate((e) => e.getBoundingClientRect().height);
+  const antes = { camara: await altoCamara(), video: await altoVideo() };
+  expect(antes.camara / m.H).toBeLessThan(0.22); // de entrada va chata: 20 % del alto
+  await page.getByLabel(/Your camera size/).fill('12');
+  await expect.poll(altoCamara).toBeLessThan(antes.camara - 10);
+  expect(await altoVideo()).toBeGreaterThan(antes.video + 10);
+  await page.locator('[data-escenario]').screenshot({ path: test.info().outputPath('natural-chata.png') });
+
   // El podcast de siempre no cambia: al volver a él, los marcos vuelven.
   await page.locator('.mascaras-lista label', { hasText: 'Podcast' }).click();
   await expect(escenario).not.toHaveClass(/estilo-natural/);

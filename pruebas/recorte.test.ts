@@ -201,6 +201,24 @@ describe('CANDADO C-SHORT: el Short vertical se arma bien', () => {
     const largo = partirTitulo('x'.repeat(200), 1080, medir);
     for (const l of largo.lineas) expect(medir(l, largo.px)).toBeLessThanOrEqual(1080 * 0.9);
     expect(partirTitulo('   ', 1080, medir).lineas).toEqual([]);
+    // CANDADO C-TITULO-INTELIGENTE (Richard, 25 nov 2026): entre más texto, más chica la letra y más líneas. La frase
+    // entera cabe, sin puntos suspensivos (antes se cortaba en «¿SABES CÓMO SE LLAMA ESTE…»).
+    const frase = '¿Sabes cómo se llama este instrumento brasileño? 🇧🇷';
+    const f = partirTitulo(frase, 1080, medir);
+    expect(f.lineas.join(' ')).toBe(frase.toUpperCase());
+    expect(f.lineas).toHaveLength(2);
+    expect(f.px).toBeLessThan(80);
+    for (const l of f.lineas) expect(medir(l, f.px)).toBeLessThanOrEqual(1080 * 0.9);
+    const larga = 'Mira lo que pasa cuando esta niña toca por primera vez un instrumento de Brasil';
+    const g = partirTitulo(larga, 1080, medir);
+    expect(g.lineas.join(' ')).toBe(larga.toUpperCase());
+    expect(g.lineas).toHaveLength(3);
+    expect(g.px).toBeLessThan(f.px);
+    for (const l of g.lineas) expect(medir(l, g.px)).toBeLessThanOrEqual(1080 * 0.9);
+    // Un emoji no se parte por la mitad al recortar el largo máximo.
+    expect(partirTitulo(`${'a'.repeat(79)}🇧🇷`, 1080, medir, { max: 80 }).lineas.join('')).not.toMatch(
+      /\uFFFD/,
+    );
     // Las tres partes llenan todo el alto, en orden: cámara, franja, video.
     const a = { conTitulo: true, tituloShort: 'Cuando una niña te alegra el día', camaraArriba: false };
     const d = disenoShort(a, 1080, 1920, medir);

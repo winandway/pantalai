@@ -156,7 +156,7 @@ export const REPARTO_MAX = 0.6;
 export const REPARTO_INICIAL = 0.45;
 
 /** Short con título: la cámara puede ser más baja, para darle protagonismo al video. */
-export const REPARTO_MIN_TITULO = 0.2;
+export const REPARTO_MIN_TITULO = 0.12;
 export const REPARTO_TITULO_INICIAL = 0.25;
 export const TITULO_SHORT_MAX = 80;
 export const LETRA_TITULO = (px: number) => `800 ${px}px Inter, "Arial Black", system-ui, sans-serif`;
@@ -178,36 +178,79 @@ export const medirTitulo: Medir = (texto, px) => {
   return ctxMedir.measureText(texto).width;
 };
 
+export type OpcionesTitulo = {
+  /** Tamaño de letra más grande (el de un título corto). Por defecto, 7,4 % del ancho. */
+  base?: number;
+  /** Ancho máximo de una línea. Por defecto, 90 % del ancho. */
+  tope?: number;
+  /** Cuántas líneas como mucho. */
+  maxLineas?: number;
+  /** Cuántas letras se aceptan. */
+  max?: number;
+  /** false = las líneas salen como se escribieron (las mayúsculas las pone la pantalla); se mide igual en mayúsculas. */
+  mayusculas?: boolean;
+};
+
+/** La letra no baja de esta parte del tamaño base; y con menos de «CONFORME» se prefiere una línea más. */
+const TITULO_MINIMO = 0.42;
+const TITULO_CONFORME = 0.7;
+
+/** Todas las maneras de repartir las palabras en «n» líneas seguidas; se queda con la de líneas más parejas. */
+function repartirParejo(palabras: string[], n: number, ancho: (l: string) => number) {
+  let mejor: { lineas: string[]; mayor: number } | null = null;
+  const probar = (desde: number, faltan: number, hechas: string[]) => {
+    if (faltan === 1) {
+      const lineas = [...hechas, palabras.slice(desde).join(' ')];
+      const mayor = Math.max(...lineas.map(ancho));
+      if (!mejor || mayor < mejor.mayor) mejor = { lineas, mayor };
+      return;
+    }
+    for (let i = desde + 1; i <= palabras.length - (faltan - 1); i++)
+      probar(i, faltan - 1, [...hechas, palabras.slice(desde, i).join(' ')]);
+  };
+  probar(0, n, []);
+  return mejor! as { lineas: string[]; mayor: number };
+}
+
 /**
- * El título del Short en una o dos líneas, en mayúsculas, con el tamaño de letra que hace que quepa en el ancho.
- * Si aun achicando no cabe, se corta con puntos suspensivos: nunca se sale de la franja.
+ * El título en una, dos o tres líneas, con la letra a la medida del texto (CANDADO C-TITULO-INTELIGENTE): entre más
+ * texto, más chica la letra y más líneas, para que la frase entera quepa. Solo si ni así cabe (una palabra enorme) se
+ * corta con puntos suspensivos: nunca se sale de la franja.
  */
 export function partirTitulo(
   texto: string | undefined,
   ancho: number,
   medir: Medir = medirTitulo,
+  o: OpcionesTitulo = {},
 ): { lineas: string[]; px: number } {
-  const limpio = (texto ?? '').replace(/\s+/g, ' ').trim().slice(0, TITULO_SHORT_MAX).toUpperCase();
+  const mayus = o.mayusculas ?? true;
+  const cortado = Array.from((texto ?? '').replace(/\s+/g, ' ').trim())
+    .slice(0, o.max ?? TITULO_SHORT_MAX)
+    .join('')
+    .trim();
+  const limpio = mayus ? cortado.toUpperCase() : cortado;
   if (!limpio) return { lineas: [], px: 0 };
-  const base = Math.round(ancho * 0.074);
-  const tope = ancho * 0.9;
-  if (medir(limpio, base) <= tope) return { lineas: [limpio], px: base };
+  const base = Math.round(o.base ?? ancho * 0.074);
+  const tope = o.tope ?? ancho * 0.9;
+  const mide = (l: string, px: number) => medir(l.toUpperCase(), px);
   const palabras = limpio.split(' ');
+  const maxLineas = Math.min(o.maxLineas ?? 3, palabras.length);
   let lineas = [limpio];
-  let mejor = Infinity;
-  for (let i = 1; i < palabras.length; i++) {
-    const dos = [palabras.slice(0, i).join(' '), palabras.slice(i).join(' ')];
-    const mayor = Math.max(medir(dos[0]!, base), medir(dos[1]!, base));
-    if (mayor < mejor) {
-      mejor = mayor;
-      lineas = dos;
+  let escala = 0;
+  for (let n = 1; n <= maxLineas; n++) {
+    const r = repartirParejo(palabras, n, (l) => mide(l, base));
+    const e = Math.min(1, tope / r.mayor);
+    if (e > escala) {
+      escala = e;
+      lineas = r.lineas;
     }
+    // Una sola línea solo si cabe con la letra grande; dos, si la letra no baja demasiado; si no, una línea más.
+    if (e >= (n === 1 ? 1 : TITULO_CONFORME)) break;
   }
-  const mayor = Math.max(...lineas.map((l) => medir(l, base)));
-  const px = Math.round(base * Math.max(0.6, Math.min(1, tope / mayor)));
+  const px = Math.max(1, Math.floor(base * Math.max(TITULO_MINIMO, escala)));
   lineas = lineas.map((l) => {
     let x = l;
-    while (x.length > 1 && medir(x === l ? x : `${x}…`, px) > tope) x = x.slice(0, -1).trimEnd();
+    while (x.length > 1 && mide(x === l ? x : `${x}…`, px) > tope) x = x.slice(0, -1).trimEnd();
     return x === l ? l : `${x}…`;
   });
   return { lineas, px };
