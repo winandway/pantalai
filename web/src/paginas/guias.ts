@@ -1137,13 +1137,14 @@ export const GUIAS: Guia[] = [
     seccion: 'grabar',
     icono: '🎭',
     imagen: 'mascara-estudio',
-    imagenes: [null, 'mascara-editor', null, 'mascara-vertical', null, null],
+    imagenes: [null, 'estudio-natural', 'mascara-editor', null, 'mascara-vertical', null, null],
     en: {
       titulo: 'Make the Reaction Studio yours: show name, logo and colors',
       resumen:
         'Choose a podcast, newscast or minimal look, add your show name, your logo and your colors, and save as many masks as you need. They show up in every recording, horizontal or vertical.',
       cuerpo: [
         'Every recording from the Reaction Studio goes out inside a “mask”: the frame around your camera and the video, with your show name, the name cards and today’s topic. In “Mask” you can pick one of three ready-made styles: Podcast (neon, the classic), Newscast (solid bars, like a TV news show) and Minimal (clean, no glow).',
+        'There is also “Natural”, for when you want no frame at all: your camera on top from edge to edge, your title in bold letters on a white band right below you, and the video filling everything else. No header, no borders, no glow and no name cards. Write the title in “Today’s topic”. It is ideal in the vertical 9:16 format for Shorts, TikTok and Reels, and a good way to vary the look of your videos.',
         'To make it yours, press “Customize”. Give the mask a name (for example, “Friday show”), pick a style and write your show name. You can also change the name and the role on your card, for example “Alex · Presenter”. Pick a main color, a second color and a background. The stage below changes as you type, so you see exactly what will be recorded. If the main color is hard to see on the background, we tell you.',
         'Add your logo with “Upload from files” or “Take photo”. On a phone, “Take photo” opens the camera; on a computer, it opens your webcam in a small window. A PNG with a transparent background looks best. The logo goes next to your show name.',
         'Press “Save mask”. It is saved in your account, so it is there on any computer where you sign in. Save one mask per show and switch between them with one tap. To change or delete one, use the three dots next to its name.',
@@ -1157,6 +1158,7 @@ export const GUIAS: Guia[] = [
         'Elige un aspecto de podcast, noticiero o minimalista, ponle el nombre de tu programa, tu logo y tus colores, y guarda todas las máscaras que necesites. Salen en cada grabación, horizontal o vertical.',
       cuerpo: [
         'Cada grabación del Estudio de reacciones sale dentro de una «máscara»: el marco alrededor de tu cámara y del video, con el nombre de tu programa, los carteles con los nombres y el tema de hoy. En «Máscara» eliges uno de tres estilos listos: Podcast (neón, el clásico), Noticiero (franjas sólidas, como un noticiero de televisión) y Minimalista (limpio, sin brillos).',
+        'También está «Natural», para cuando no quieres ningún marco: tu cámara arriba de borde a borde, tu título en letras gruesas sobre una franja blanca justo debajo de ti, y el video ocupando todo lo demás. Sin cabecera, sin bordes, sin brillos y sin carteles. El título lo escribes en «Tema de hoy». Es ideal en el formato vertical 9:16 para Shorts, TikTok y Reels, y una buena forma de variar el aspecto de tus videos.',
         'Para hacerla tuya, toca «Personalizar». Ponle un nombre a la máscara (por ejemplo, «Programa del viernes»), elige un estilo y escribe el nombre de tu programa. También puedes cambiar el nombre y el papel de tu cartel, por ejemplo «Alex · Presentador». Elige un color principal, un segundo color y un fondo. El escenario de abajo cambia mientras escribes, así ves exactamente lo que se va a grabar. Si el color principal casi no se ve sobre el fondo, te lo decimos.',
         'Agrega tu logo con «Subir desde archivos» o «Tomar foto». En el celular, «Tomar foto» abre la cámara; en la computadora, abre tu cámara web en una ventanita. Un PNG con fondo transparente se ve mejor. El logo va al lado del nombre de tu programa.',
         'Toca «Guardar la máscara». Queda guardada en tu cuenta, así que la tienes en cualquier computadora donde entres. Guarda una máscara por programa y cambia entre ellas con un toque. Para cambiar o borrar una, usa los tres puntos al lado de su nombre.',

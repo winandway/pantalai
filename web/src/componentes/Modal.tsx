@@ -12,12 +12,18 @@ export function Modal({
   ancho?: number;
 }) {
   const caja = useRef<HTMLDivElement>(null);
+  // «cerrar» suele ser una función nueva en cada pintada de la página. Si el efecto dependiera de ella, la ventana
+  // se volvería a enfocar en cada pintada y le quitaría el cursor a la casilla donde se está escribiendo: en el
+  // Estudio (que se repinta varias veces por segundo) no se podía escribir (Richard, 25 nov 2026; C-MODAL-FOCO).
+  const alCerrar = useRef(cerrar);
+  alCerrar.current = cerrar;
   useEffect(() => {
-    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && cerrar();
+    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && alCerrar.current();
     document.addEventListener('keydown', tecla);
-    caja.current?.focus();
+    // Solo al abrir, y solo si el cursor no está ya adentro.
+    if (!caja.current?.contains(document.activeElement)) caja.current?.focus();
     return () => document.removeEventListener('keydown', tecla);
-  }, [cerrar]);
+  }, []);
   return (
     <div className="modal-fondo" onMouseDown={(e) => e.target === e.currentTarget && cerrar()}>
       <div

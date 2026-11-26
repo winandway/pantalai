@@ -3,7 +3,7 @@
 import { z } from 'zod';
 
 /** Estilos de máscara: el neón de siempre, un noticiero con franjas sólidas y uno limpio sin brillos. */
-export const ESTILOS_MASCARA = ['podcast', 'noticiero', 'minimal'] as const;
+export const ESTILOS_MASCARA = ['podcast', 'noticiero', 'minimal', 'natural'] as const;
 export type EstiloMascara = (typeof ESTILOS_MASCARA)[number];
 
 /** Una cuenta guarda hasta 12 máscaras (de sobra para varios programas y nadie llena la base). */

@@ -2,8 +2,9 @@
 // máscaras que cada cuenta guarda con su nombre de programa, su logo y sus colores. El escenario las pinta con
 // variables de CSS, así lo que se ve es lo que se graba (la grabación es la propia pestaña recortada al escenario).
 
-export type EstiloMascara = 'podcast' | 'noticiero' | 'minimal';
-export const ESTILOS: EstiloMascara[] = ['podcast', 'noticiero', 'minimal'];
+/** «natural» (25 nov 2026, Richard): los dos videos planos, sin marcos ni carteles, con el título en una franja. */
+export type EstiloMascara = 'podcast' | 'noticiero' | 'minimal' | 'natural';
+export const ESTILOS: EstiloMascara[] = ['podcast', 'noticiero', 'minimal', 'natural'];
 
 export type Colores = { principal: string; secundario: string; fondo: string };
 
@@ -12,6 +13,8 @@ export const PLANTILLAS: Record<EstiloMascara, Colores> = {
   podcast: { principal: '#ff3ea5', secundario: '#22d3ee', fondo: '#0b0a1a' },
   noticiero: { principal: '#d7263d', secundario: '#1d4ed8', fondo: '#0d1b2a' },
   minimal: { principal: '#f8fafc', secundario: '#94a3b8', fondo: '#111111' },
+  // Natural: la franja del título es blanca (principal) y el fondo, negro. Sin más adornos.
+  natural: { principal: '#ffffff', secundario: '#111111', fondo: '#000000' },
 };
 
 export type MascaraGuardada = Colores & {

@@ -1227,3 +1227,28 @@ usuario_id`, cambios = 0 → borra el archivo y 404); y borrar la máscara borra
   el Reel real arrancó con sonido con nuestro botón; en una página de prueba suelta, no (solo en silencio). Por eso,
   si a los 4 s no arrancó, el Estudio dice «tócalo una vez, directamente» (`noArrancoFacebook`): después de ese toque
   los botones funcionan. Falta comprobarlo en el Chrome real de Richard.
+
+## C-MODAL-FOCO (25 nov 2026)
+
+- Qué pasaba: en «Revisa antes de grabar» del Estudio no se podía escribir en las casillas (Richard: «la pantalla
+  no deja escribirse»). Entraba una sola letra y el cursor se iba.
+- Causa real: `Modal.tsx` volvía a enfocar la ventana cada vez que cambiaba la función `cerrar`, y el Estudio le pasa
+  una función nueva en cada pintada (se repinta varias veces por segundo por los medidores de sonido). Cada pintada le
+  quitaba el cursor a la casilla.
+- Arreglo (para TODAS las ventanas): `cerrar` se guarda en una referencia, el efecto corre una sola vez al abrir y
+  solo enfoca la ventana si el cursor no está ya adentro.
+- Prueba: `e2e/revision-grabar.spec.ts` escribe letra por letra con el teclado. Comprobada en ROJO con el `Modal`
+  viejo (quedaba solo «N»).
+- Qué NO tocar: no volver a poner `cerrar` en las dependencias del efecto de `Modal`.
+
+## C-MASCARA-NATURAL (25 nov 2026)
+
+- Qué es: cuarta plantilla de máscara del Estudio, «Natural» (pedido de Richard: «el video natural, sin cosas por
+  los lados»). La cámara arriba de borde a borde, el «Tema de hoy» como título en una franja (blanca por defecto, en
+  mayúsculas y letra gruesa) y el video en todo lo demás. Sin cabecera, marcos, brillos, carteles ni cartel de voz.
+- Cómo: estilo `natural` en `web/src/logica/mascaras.ts` y `servidor/mascaras.ts`; todo el aspecto son reglas de CSS
+  `.estilo-natural` al final de la sección de máscaras de `web/src/estilos.css` (con `!important` a propósito, para
+  ganarle a todas las posiciones del escenario). En «Personalizar», el color principal es el de la franja y el fondo,
+  el del escenario. Un video vertical llena el ancho y se recorta arriba y abajo.
+- Las otras máscaras no cambian (Minimalista sigue como estaba).
+- Pruebas: `e2e/estudio-natural.spec.ts` y `pruebas/mascaras.test.ts`.

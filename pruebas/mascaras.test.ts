@@ -110,6 +110,13 @@ describe('máscaras del Estudio (servidor)', () => {
       programa: 'Night Show',
       estilo: 'minimal',
     });
+    // CANDADO C-MASCARA-NATURAL: el estilo «natural» también se guarda.
+    const n = await ana(`/datos/estudio/mascaras/${m!.id}`, {
+      method: 'PUT',
+      json: { ...DATOS, estilo: 'natural' },
+    });
+    expect(n.status).toBe(200);
+    expect(((await n.json()) as { mascara: MascaraGuardada }).mascara.estilo).toBe('natural');
   });
 
   it('pide sesión, y otra cuenta no ve, no cambia ni borra la máscara ajena', async () => {

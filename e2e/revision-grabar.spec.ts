@@ -42,6 +42,13 @@ test('al grabar, la revisión avisa el título heredado y el Karaoke, y se corri
   await expect(page.locator('.escenario-tema')).toHaveText('Entrevista con Ana'); // se ve al instante
   await expect(revision.locator('[data-aviso="tema_de_otro_video"]')).toHaveCount(0);
   await expect(revision).toContainText('Saved as: Entrevista con Ana');
+  // CANDADO C-MODAL-FOCO: se puede ESCRIBIR con el teclado, letra por letra. Antes la ventana le quitaba el cursor a
+  // la casilla cada vez que el Estudio se repintaba (varias veces por segundo) y no se dejaba escribir.
+  const cartel = revision.getByLabel('Your name on the card');
+  await cartel.click();
+  await page.keyboard.type('Nombre despacio', { delay: 150 });
+  await expect(cartel).toHaveValue('Nombre despacio');
+  await expect(cartel).toBeFocused();
   await revision.getByLabel('Your name on the card').fill('Richard');
   await expect(page.locator('.escenario-camara .cartel b').first()).toHaveText('Richard');
   await revision.getByRole('button', { name: 'Turn Karaoke off' }).click();

@@ -127,7 +127,7 @@ const en = {
   mascara: 'Mask',
   mascaraAyuda:
     'Pick a look for your show. Make it yours with your show name, your logo and your colors, and save as many masks as you need.',
-  plantillas: { podcast: 'Podcast (neon)', noticiero: 'Newscast', minimal: 'Minimal' },
+  plantillas: { podcast: 'Podcast (neon)', noticiero: 'Newscast', minimal: 'Minimal', natural: 'Natural' },
   nuevaMascara: 'New mask',
   personalizar: 'Customize',
   editarMascara: 'Edit',
@@ -290,7 +290,12 @@ const es: typeof en = {
   mascara: 'Máscara',
   mascaraAyuda:
     'Elige el aspecto de tu programa. Hazlo tuyo con el nombre del programa, tu logo y tus colores, y guarda todas las máscaras que necesites.',
-  plantillas: { podcast: 'Podcast (neón)', noticiero: 'Noticiero', minimal: 'Minimalista' },
+  plantillas: {
+    podcast: 'Podcast (neón)',
+    noticiero: 'Noticiero',
+    minimal: 'Minimalista',
+    natural: 'Natural',
+  },
   nuevaMascara: 'Máscara nueva',
   personalizar: 'Personalizar',
   editarMascara: 'Editar',
