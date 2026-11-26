@@ -5526,6 +5526,82 @@ html.estudio-sin-scroll {
   white-space: pre-wrap;
   line-height: 1.55;
 }
+.red-ver-hashtags {
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-weight: 700;
+}
+.red-ver-hashtags a {
+  text-decoration: none;
+}
+.red-ver-hashtags a:hover {
+  text-decoration: underline;
+}
+.red-ver-temas h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.red-ver-temas ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.red-ver-temas a {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  color: inherit;
+  font-size: 0.86rem;
+  text-decoration: none;
+}
+.red-ver-temas a:hover {
+  border-color: currentColor;
+}
+.red-ver-capitulos,
+.red-ver-temas,
+.red-ver-transcripcion {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--fondo-suave);
+  line-height: 1.55;
+}
+.red-ver-capitulos h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.red-ver-capitulos ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.red-ver-capitulos a {
+  color: inherit;
+  text-decoration: none;
+}
+.red-ver-capitulos a:hover {
+  text-decoration: underline;
+}
+.red-ver-capitulos span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  margin-right: 6px;
+}
+.red-ver-transcripcion summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.red-ver-transcripcion p {
+  margin: 10px 0 0;
+}
 .red-ver-lado {
   display: grid;
   gap: 12px;

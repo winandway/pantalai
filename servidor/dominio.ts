@@ -59,7 +59,10 @@ export function rutasPublicas(): string[] {
 }
 
 /** Mapa del sitio con las dos versiones de cada página enlazadas (hreflang), como pide Google; más los videos de la red. */
-export function sitemap(videosRed: { id: string; publicado_en: number }[] = []): string {
+export function sitemap(
+  videosRed: { id: string; publicado_en: number }[] = [],
+  canales: { id: string; publicado_en: number }[] = [],
+): string {
   const urls = rutasPublicas()
     .map((r) => {
       const alternas = alternasIdioma(r)
@@ -71,6 +74,12 @@ export function sitemap(videosRed: { id: string; publicado_en: number }[] = []):
       videosRed.map(
         (v) =>
           `  <url><loc>${DOMINIO}/videos/${v.id}</loc><lastmod>${new Date(v.publicado_en).toISOString().slice(0, 10)}</lastmod></url>`,
+      ),
+    )
+    .concat(
+      canales.map(
+        (k) =>
+          `  <url><loc>${DOMINIO}/channel/${k.id}</loc><lastmod>${new Date(k.publicado_en).toISOString().slice(0, 10)}</lastmod></url>`,
       ),
     )
     .join('\n');
@@ -248,6 +257,10 @@ export function prepararCabecera(html: string, ruta: string, codigos: string[]):
   const extra = [
     alternas,
     meta && !meta.indexar ? '<meta name="robots" content="noindex" />' : '',
+    // Páginas públicas (C-SEO-VIDEOS): Google puede mostrar la imagen grande y el texto sin recortar.
+    meta && meta.indexar
+      ? '<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />'
+      : '',
     etiquetasGoogle(codigos),
     '<link rel="alternate" type="text/plain" title="LLMs" href="/llms.txt" />',
     datosEstructurados(ruta),
@@ -274,6 +287,8 @@ export type VideoParaMapa = {
   publicado_en: number;
   vistas: number;
   tiene_miniatura: boolean;
+  /** Etiquetas de búsqueda del video (las de «Para YouTube»): hasta 32, como pide Google. */
+  etiquetas?: string[];
 };
 
 const xml = (t: string) =>
@@ -304,7 +319,12 @@ export function sitemapVideos(videos: VideoParaMapa[]): string {
       <video:player_loc>${DOMINIO}/embed/${v.id}</video:player_loc>
       <video:duration>${duracion}</video:duration>
       <video:view_count>${Math.max(0, Math.round(v.vistas))}</video:view_count>
-      <video:publication_date>${new Date(v.publicado_en).toISOString()}</video:publication_date>
+      <video:publication_date>${new Date(v.publicado_en).toISOString()}</video:publication_date>${(
+        v.etiquetas ?? []
+      )
+        .slice(0, 32)
+        .map((e) => `\n      <video:tag>${xml(e)}</video:tag>`)
+        .join('')}
       <video:family_friendly>yes</video:family_friendly>
       <video:requires_subscription>no</video:requires_subscription>
       <video:uploader>${xml(v.autor.slice(0, 255))}</video:uploader>

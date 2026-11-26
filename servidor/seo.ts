@@ -136,8 +136,15 @@ export function datosEstructurados(ruta: string): string {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
         name: 'Pantalay',
+        alternateName: ['Pantalay Screen Recorder', 'pantalay.com'],
         url: url('/'),
         inLanguage: idioma,
+        // El buscador de videos del sitio (C-SEO-VIDEOS): Google puede ofrecerlo junto al nombre de la marca.
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: { '@type': 'EntryPoint', urlTemplate: `${DOMINIO}/videos/search?q={search_term_string}` },
+          'query-input': 'required name=search_term_string',
+        },
       },
     );
   }

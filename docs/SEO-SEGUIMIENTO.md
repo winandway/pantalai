@@ -22,7 +22,10 @@ La hace una tarea programada («Pantalay · revisión técnica de SEO»). Solo l
 3. Las páginas en español traen `<html lang="es">` y hreflang; ninguna página pública trae `noindex` por error.
 4. Cada video del mapa de videos abre su página con `VideoObject` y su miniatura responde 200.
 5. `/datos/salud` responde y su commit es el de `main`.
-6. Si algo falla: se dice en una línea qué y dónde, y se arregla en la sesión de PANTALAI (es un candado roto).
+6. (Desde el 25 nov 2026, C-SEO-VIDEOS) Cada página de video trae `og:url` con su propia dirección, `<html lang>` del
+   idioma del video y, si está transcrito, `"transcript"` y la sección de transcripción; la página del canal trae
+   `ProfilePage`; `/llms.txt` lista los videos; y el archivo de la llave de IndexNow responde 200.
+7. Si algo falla: se dice en una línea qué y dónde, y se arregla en la sesión de PANTALAI (es un candado roto).
 
 ## Primer lunes de cada mes (recordatorio): revisión de resultados
 
@@ -53,3 +56,6 @@ descripción de las páginas con muchas impresiones y pocos clics, y corregir lo
 
 - 2026-11-16 (lunes): todo en orden. 17 páginas en 200 sin noindex, robots y sitemaps bien, /es con lang y hreflang, 5 videos con VideoObject y miniatura 200, salud en 9707d5e igual a main.
 - 2026-11-23 (lunes): todo en orden. 17 páginas en 200 sin noindex, robots y sitemaps bien, /es con lang y hreflang, 5 videos con VideoObject y miniatura 200, salud en 9707d5e igual a main.
+- 2026-11-25: C-SEO-VIDEOS. La página de cada video entrega dirección propia, idioma real, transcripción, capítulos,
+  etiquetas y hashtags de «Para YouTube»; canales con página y en el mapa; videos en `/llms.txt`; aviso IndexNow al
+  publicar. Lo que más ayuda desde ahora: transcribir y generar los textos de YouTube ANTES de publicar cada video.

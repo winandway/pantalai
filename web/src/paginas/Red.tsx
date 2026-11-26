@@ -241,11 +241,23 @@ export function PaginaRed() {
   );
 }
 
-type VideoRed = TarjetaRed & { descripcion: string; me_gusta_mio: boolean; es_dueno: boolean };
+/** El segundo donde empezar si el enlace trae «?t=» (los capítulos y los resultados de Google lo usan). */
+function inicioDeEnlace(): number | undefined {
+  const s = Number(new URLSearchParams(location.search).get('t'));
+  return Number.isFinite(s) && s > 0 ? s : undefined;
+}
+
+type VideoRed = TarjetaRed & {
+  descripcion: string;
+  hashtags?: string[];
+  temas?: string[];
+  me_gusta_mio: boolean;
+  es_dueno: boolean;
+};
 
 /** Ver un video de la red: reproductor grande, título, autor, me gusta y descripción; a la derecha, más videos. */
 export function VerVideoRed({ id }: { id: string }) {
-  const { idioma } = useIdioma();
+  const { idioma, t } = useIdioma();
   const tx = TEXTOS_RED[idioma];
   const { usuario } = useSesion();
   const avisar = useAviso();
@@ -339,7 +351,7 @@ export function VerVideoRed({ id }: { id: string }) {
       <div className="red-ver-principal">
         <div className={`red-ver-reproductor${red?.vertical ? ' vertical' : ''}`}>
           {video ? (
-            <Reproductor video={video} alTiempo={alTiempo} atajos />
+            <Reproductor video={video} alTiempo={alTiempo} atajos inicio={inicioDeEnlace()} />
           ) : (
             <span className="red-cargando" />
           )}
@@ -386,6 +398,50 @@ export function VerVideoRed({ id }: { id: string }) {
               </div>
             </div>
             {red.descripcion && <p className="red-ver-descripcion">{red.descripcion}</p>}
+            {red.hashtags && red.hashtags.length > 0 && (
+              <p className="red-ver-hashtags">
+                {red.hashtags.map((h) => (
+                  <a key={h} href={`/videos/search?q=${encodeURIComponent(h)}`} onClick={alClicEnlace}>
+                    #{h}
+                  </a>
+                ))}
+              </p>
+            )}
+            {/* C-SEO-VIDEOS: los capítulos y lo que se dice en el video, a la vista (también para Google y las IA). */}
+            {video && video.capitulos.length > 0 && (
+              <section className="red-ver-capitulos" aria-label={t('capitulos')}>
+                <h2>{t('capitulos')}</h2>
+                <ol>
+                  {video.capitulos.map((c) => (
+                    <li key={c.segundo}>
+                      <a href={`/videos/${id}?t=${Math.floor(c.segundo)}`}>
+                        <span>{formatoTiempo(c.segundo)}</span> {c.titulo}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+            {video && video.transcripcion.length > 0 && (
+              <details className="red-ver-transcripcion">
+                <summary>{t('transcripcion')}</summary>
+                <p>{video.transcripcion.map((x) => x.texto.trim()).join(' ')}</p>
+              </details>
+            )}
+            {red.temas && red.temas.length > 0 && (
+              <section className="red-ver-temas" aria-label={tx.temas}>
+                <h2>{tx.temas}</h2>
+                <ul>
+                  {red.temas.map((e) => (
+                    <li key={e}>
+                      <a href={`/videos/search?q=${encodeURIComponent(e)}`} onClick={alClicEnlace}>
+                        {e}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </>
         )}
       </div>

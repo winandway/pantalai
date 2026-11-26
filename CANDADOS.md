@@ -1280,3 +1280,38 @@ el control). La de navegador se comprobó en rojo con el código anterior (la le
 
 **Qué no tocar.** No volver a poner `-webkit-line-clamp` ni un `font-size` fijo en `.estilo-natural .escenario-tema`.
 No medir con una letra distinta de la que se pinta.
+
+## C-SEO-VIDEOS (25 nov 2026)
+
+**Qué se rompió y cómo se veía.** Richard buscaba «Pantalay» y no veía sus videos posicionados. La página de cada
+video (`/videos/<id>`) le decía a Google y a las redes que su dirección era la portada (`og:url` apuntaba a
+`https://pantalay.com/`), siempre se declaraba en inglés aunque el video fuera en español, y no entregaba ni la
+transcripción, ni los capítulos, ni las etiquetas. Los canales no tenían página para Google ni iban en el mapa.
+
+**Causa real.** La ruta `/videos/:id` solo cambiaba título, resumen e imagen; nunca tocaba `og:url` ni el idioma, y
+no usaba lo que ya estaba guardado en texto (transcripción, capítulos y los textos de «Para YouTube»).
+
+**Qué se hizo** (todo en `servidor/seoVideo.ts`, lectura pura, sin escribir en la base):
+
+- `paginaVideo`: dirección propia (`canonical` y `og:url`), idioma real del video (`idiomaDelTexto`, por su texto),
+  tarjeta completa (`og:video`, medidas, duración, `twitter:*`), vista previa grande (`max-image-preview:large`,
+  `max-video-preview:-1`), `VideoObject` con `inLanguage`, medidas, `transcript`, capítulos como `Clip` con `?t=`,
+  `keywords`, `alternateName`, canal del autor y editor; `BreadcrumbList`; y el contenido escrito en el HTML
+  (título, miniatura, descripción, hashtags, capítulos, transcripción, temas, más videos).
+- Los textos de «Para YouTube» (tabla `video_youtube`: títulos, gancho, etiquetas, hashtags) trabajan para los
+  buscadores: `textosDeBusqueda` los limpia; el gancho es el resumen si no hay descripción; etiquetas y hashtags van
+  en `keywords`, `video:tag`, el mapa de videos (`<video:tag>`, hasta 32) y a la vista en la página.
+- `paginaCanal`: `/channel/<id>` con `ProfilePage` y sus videos; los canales van en `/sitemap.xml`.
+- `/llms.txt` lista los 100 videos públicos más nuevos. `WebSite` declara el buscador de videos (`SearchAction`).
+- Todas las páginas públicas piden vista previa grande.
+- IndexNow: al publicar un video se avisa a Bing y a los buscadores que lo usan (`avisarIndexNow`). La llave es
+  pública por diseño y se sirve en `/<llave>.txt`. Solo sale desde `https://pantalay.com`; en local y en pruebas no.
+- La página del video (React, `web/src/paginas/Red.tsx`) muestra lo mismo: hashtags, capítulos, transcripción y
+  temas, y acepta `?t=<segundo>`.
+
+**Cómo se comprueba.** `pruebas/seo-videos.test.ts` (16 pruebas) y `e2e/red.spec.ts`. En vivo:
+`curl -s https://pantalay.com/videos/<id>` tiene que traer `og:url` con la dirección del video, `"transcript"` si
+el video está transcrito y `<h2>Transcripción</h2>`.
+
+**Qué no tocar.** No volver a armar la cabecera del video dentro de `app.ts`. No quitar el `LEFT JOIN video_youtube`.
+No mandar IndexNow desde otro origen. No poner datos privados en estas páginas: solo videos publicados en la red.

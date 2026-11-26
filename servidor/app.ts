@@ -30,6 +30,17 @@ import {
 } from './dominio';
 import { llmsCompleto, llmsTxt } from './seo';
 import {
+  LLAVE_INDEXNOW,
+  avisarIndexNow,
+  clavesDe,
+  idiomaDelTexto,
+  paginaCanal,
+  paginaVideo,
+  textosDeBusqueda,
+  videosParaIA,
+  type VideoSeo,
+} from './seoVideo';
+import {
   ASIENTO,
   CODIGO_SALA,
   ICE_MAX_ANFITRION,
@@ -318,42 +329,84 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+type FilaMapaVideos = Omit<VideoParaMapa, 'tiene_miniatura' | 'etiquetas'> & {
+  tiene_miniatura: number;
+  youtube: string | null;
+};
+
 // Mapa de videos para Google (pestaña Videos y resultados con video). Solo lee; hasta 5000 videos.
 app.get('/video-sitemap.xml', async (c) => {
   const filas = await c.env.DB.prepare(
     `SELECT v.id, v.titulo, v.descripcion, u.nombre AS autor, v.duracion, r.publicado_en, v.tiene_miniatura,
-       (SELECT COUNT(*) FROM vistas x WHERE x.video_id = v.id) AS vistas
+       (SELECT COUNT(*) FROM vistas x WHERE x.video_id = v.id) AS vistas, y.datos AS youtube
      FROM red_publicaciones r JOIN videos v ON v.id = r.video_id JOIN usuarios u ON u.id = v.usuario_id
+       LEFT JOIN video_youtube y ON y.video_id = v.id
      WHERE r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace' AND v.archivado = 0
      ORDER BY r.publicado_en DESC LIMIT 5000`,
   )
-    .all<Omit<VideoParaMapa, 'tiene_miniatura'> & { tiene_miniatura: number }>()
+    .all<FilaMapaVideos>()
     .catch((e) => {
       console.error('video-sitemap', e);
-      return { results: [] as (Omit<VideoParaMapa, 'tiene_miniatura'> & { tiene_miniatura: number })[] };
+      return { results: [] as FilaMapaVideos[] };
     });
-  const videos = (filas.results ?? []).map((v) => ({ ...v, tiene_miniatura: Boolean(v.tiene_miniatura) }));
+  const videos = (filas.results ?? []).map(({ youtube, ...v }) => {
+    const b = textosDeBusqueda(youtube);
+    return {
+      ...v,
+      // Sin descripción propia, la primera línea que la IA escribió para YouTube.
+      descripcion: v.descripcion.trim() || b.gancho,
+      tiene_miniatura: Boolean(v.tiene_miniatura),
+      etiquetas: clavesDe(b),
+    };
+  });
   return c.body(sitemapVideos(videos), 200, { 'content-type': 'application/xml; charset=utf-8' });
 });
 
 app.get('/sitemap.xml', async (c) => {
-  // Los videos publicados en la red también van al mapa (solo lee; hasta 5000).
+  // Los videos publicados en la red y los canales de sus creadores también van al mapa (solo lee; hasta 5000).
   const filas = await c.env.DB.prepare(
-    `SELECT r.video_id AS id, r.publicado_en FROM red_publicaciones r JOIN videos v ON v.id = r.video_id
+    `SELECT r.video_id AS id, r.publicado_en, v.usuario_id FROM red_publicaciones r JOIN videos v ON v.id = r.video_id
      WHERE r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace' AND v.archivado = 0
      ORDER BY r.publicado_en DESC LIMIT 5000`,
   )
-    .all<{ id: string; publicado_en: number }>()
-    .catch(() => ({ results: [] as { id: string; publicado_en: number }[] }));
-  return c.body(sitemap(filas.results ?? []), 200, { 'content-type': 'application/xml; charset=utf-8' });
+    .all<{ id: string; publicado_en: number; usuario_id: string }>()
+    .catch(() => ({ results: [] as { id: string; publicado_en: number; usuario_id: string }[] }));
+  const videos = filas.results ?? [];
+  // Cada canal, con la fecha de su video más nuevo (la lista ya viene de lo más nuevo a lo más viejo).
+  const canales = new Map<string, number>();
+  for (const v of videos) if (!canales.has(v.usuario_id)) canales.set(v.usuario_id, v.publicado_en);
+  return c.body(
+    sitemap(
+      videos,
+      [...canales].map(([id, publicado_en]) => ({ id, publicado_en })),
+    ),
+    200,
+    { 'content-type': 'application/xml; charset=utf-8' },
+  );
 });
+// IndexNow: el archivo con la llave pública que demuestra que el aviso sale de este sitio.
+app.get(`/${LLAVE_INDEXNOW}.txt`, (c) => c.text(LLAVE_INDEXNOW));
 app.get('/robots.txt', (c) => c.text(robots()));
-app.get('/llms.txt', (c) =>
-  c.text(llmsTxt(), 200, {
+app.get('/llms.txt', async (c) => {
+  // Además de las guías, los videos públicos más nuevos, para que una IA los encuentre y los cite (solo lee).
+  const filas = await c.env.DB.prepare(
+    `SELECT v.id, v.titulo, COALESCE(NULLIF(TRIM(v.descripcion), ''), json_extract(y.datos, '$.gancho'), '') AS descripcion,
+       u.nombre AS autor
+     FROM red_publicaciones r JOIN videos v ON v.id = r.video_id JOIN usuarios u ON u.id = v.usuario_id
+       LEFT JOIN video_youtube y ON y.video_id = v.id
+     WHERE r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace' AND v.archivado = 0
+     ORDER BY r.publicado_en DESC LIMIT 100`,
+  )
+    .all<{ id: string; titulo: string; descripcion: string; autor: string }>()
+    .catch((e) => {
+      console.error('llms: videos', e);
+      return { results: [] as { id: string; titulo: string; descripcion: string; autor: string }[] };
+    });
+  return c.text(llmsTxt() + videosParaIA(filas.results ?? []), 200, {
     'content-type': 'text/plain; charset=utf-8',
     'Cache-Control': 'public, max-age=3600',
-  }),
-);
+  });
+});
 app.get('/llms-full.txt', (c) =>
   c.text(llmsCompleto(), 200, {
     'content-type': 'text/plain; charset=utf-8',
@@ -2869,9 +2922,13 @@ app.get('/datos/red/:id', async (c) => {
   const f = await c.env.DB.prepare(`${SQL_RED} AND v.id = ?`).bind(c.req.param('id')).first<FilaRed>();
   if (!f) return err(c, 404, 'no_existe');
   const u = c.get('usuario');
-  const v = await c.env.DB.prepare('SELECT descripcion, usuario_id FROM videos WHERE id = ?')
+  const v = await c.env.DB.prepare(
+    `SELECT v.descripcion, v.usuario_id, y.datos AS youtube
+     FROM videos v LEFT JOIN video_youtube y ON y.video_id = v.id WHERE v.id = ?`,
+  )
     .bind(f.id)
-    .first<{ descripcion: string; usuario_id: string }>();
+    .first<{ descripcion: string; usuario_id: string; youtube: string | null }>();
+  const busqueda = textosDeBusqueda(v?.youtube);
   const gusta = u
     ? Boolean(
         await c.env.DB.prepare('SELECT 1 FROM red_me_gusta WHERE video_id = ? AND usuario_id = ?')
@@ -2883,7 +2940,11 @@ app.get('/datos/red/:id', async (c) => {
     {
       video: {
         ...tarjetaRed(f),
-        descripcion: v?.descripcion ?? '',
+        // Sin descripción propia, la primera línea que la IA escribió con lo que se dice en el video.
+        descripcion: v?.descripcion.trim() || busqueda.gancho,
+        // Los hashtags y los temas que la IA sacó de lo que se dice en el video (C-SEO-VIDEOS).
+        hashtags: busqueda.hashtags,
+        temas: busqueda.etiquetas,
         me_gusta_mio: gusta,
         es_dueno: u?.id === v?.usuario_id,
       },
@@ -2926,6 +2987,16 @@ app.post('/datos/videos/:id/publicar', requiereSesion, async (c) => {
       "UPDATE videos SET privacidad = 'enlace', archivado = 0, actualizado = ? WHERE id = ?",
     ).bind(ahora, v.id),
   ]);
+  // Se avisa a los buscadores (IndexNow) que hay una página nueva: el video, su canal y la lista de videos.
+  despues(
+    c,
+    avisarIndexNow(new URL(c.req.url).origin, [
+      `${DOMINIO}/videos/${v.id}`,
+      `${DOMINIO}/channel/${v.usuario_id}`,
+      `${DOMINIO}/videos`,
+      `${DOMINIO}/es/videos`,
+    ]),
+  );
   return c.json({ publicado: true });
 });
 
@@ -4313,6 +4384,10 @@ app.get('/shorts/:id', async (c) => {
   );
 });
 
+const SQL_SEO_VIDEO = `SELECT v.descripcion, v.transcripcion, v.capitulos, v.idioma, y.datos AS youtube
+  FROM videos v LEFT JOIN video_youtube y ON y.video_id = v.id WHERE v.id = ?`;
+
+// CANDADO C-SEO-VIDEOS: la página de cada video sale completa del servidor (ver servidor/seoVideo.ts).
 app.get('/videos/:id', async (c) => {
   const pagina = await paginaApp(c);
   const f = await c.env.DB.prepare(`${SQL_RED} AND v.id = ?`).bind(c.req.param('id')).first<FilaRed>();
@@ -4323,59 +4398,92 @@ app.get('/videos/:id', async (c) => {
       html.replace('</head>', '<meta name="robots" content="noindex" />\n  </head>'),
       cabeceras,
     );
-  const v = await c.env.DB.prepare('SELECT descripcion FROM videos WHERE id = ?')
-    .bind(f.id)
-    .first<{ descripcion: string }>();
-  const titulo = escaparAtributo(`${f.titulo} · Pantalay`);
-  const desc = escaparAtributo((v?.descripcion || `${f.autor} · Pantalay`).slice(0, 200));
-  const imagen = f.tiene_miniatura ? `${DOMINIO}/media/${f.id}/miniatura` : `${DOMINIO}/og.png`;
-  const ld = {
-    '@context': 'https://schema.org',
-    '@type': 'VideoObject',
-    name: f.titulo,
-    description: (v?.descripcion || f.titulo).slice(0, 500),
-    thumbnailUrl: imagen,
-    uploadDate: new Date(f.publicado_en).toISOString(),
-    duration: `PT${Math.max(1, Math.round(f.duracion))}S`,
-    contentUrl: `${DOMINIO}/media/${f.id}/video`,
-    embedUrl: `${DOMINIO}/embed/${f.id}`,
-    url: `${DOMINIO}/videos/${f.id}`,
-    author: { '@type': 'Person', name: f.autor },
-    interactionStatistic: [
-      {
-        '@type': 'InteractionCounter',
-        interactionType: 'https://schema.org/WatchAction',
-        userInteractionCount: f.vistas,
-      },
-      {
-        '@type': 'InteractionCounter',
-        interactionType: 'https://schema.org/LikeAction',
-        userInteractionCount: f.me_gusta,
-      },
-    ],
+  const [v, otros] = await Promise.all([
+    c.env.DB.prepare(SQL_SEO_VIDEO).bind(f.id).first<{
+      descripcion: string;
+      transcripcion: string;
+      capitulos: string;
+      idioma: string;
+      youtube: string | null;
+    }>(),
+    c.env.DB.prepare(`${SQL_RED} AND v.id <> ? ORDER BY r.publicado_en DESC LIMIT 12`)
+      .bind(f.id)
+      .all<FilaRed>()
+      .catch(() => ({ results: [] as FilaRed[] })),
+  ]);
+  const datos: VideoSeo = {
+    id: f.id,
+    usuario_id: f.usuario_id,
+    titulo: f.titulo,
+    descripcion: v?.descripcion ?? '',
+    autor: f.autor,
+    duracion: f.duracion,
+    ancho: f.ancho,
+    alto: f.alto,
+    tiene_miniatura: f.tiene_miniatura === 1,
+    idioma: v?.idioma ?? 'en',
+    transcripcion: v?.transcripcion ?? '[]',
+    capitulos: v?.capitulos ?? '[]',
+    youtube: v?.youtube ?? null,
+    publicado_en: f.publicado_en,
+    vistas: f.vistas,
+    me_gusta: f.me_gusta,
   };
-  const salida = html
-    .replace(/<title>[^<]*<\/title>/, () => `<title>${titulo}</title>`)
-    .replace(/<meta name="description"[^>]*>/, () => `<meta name="description" content="${desc}" />`)
-    .replace(/<meta property="og:title"[^>]*>/, () => `<meta property="og:title" content="${titulo}">`)
-    .replace(
-      /<meta property="og:description"[^>]*>/,
-      () => `<meta property="og:description" content="${desc}">`,
-    )
-    .replace(/<meta property="og:image"[^>]*>/, () => `<meta property="og:image" content="${imagen}">`)
-    .replace(/<meta property="og:type"[^>]*>/, () => '<meta property="og:type" content="video.other">')
-    .replace(
-      '</head>',
-      () =>
-        `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>\n  </head>`,
-    )
-    // El título, la descripción, el creador y el enlace escritos en el HTML (para Google sin ejecutar nada).
-    .replace(
-      '<div id="raiz"></div>',
-      () =>
-        `<div id="raiz"><main><article><h1>${escaparAtributo(f.titulo)}</h1><p><a href="/channel/${f.usuario_id}">${escaparAtributo(f.autor)}</a> · ${f.vistas} views</p>${v?.descripcion ? `<p>${escaparAtributo(v.descripcion)}</p>` : ''}<p><a href="${DOMINIO}/videos/${f.id}">${DOMINIO}/videos/${f.id}</a></p></article><p><a href="/videos">Pantalay Videos</a></p></main></div>`,
+  return new Response(
+    paginaVideo(
+      html,
+      datos,
+      (otros.results ?? []).map((o) => ({ id: o.id, titulo: o.titulo, autor: o.autor })),
+    ),
+    cabeceras,
+  );
+});
+
+// La página pública de un creador: su perfil y sus videos, para Google y las IA. Sin videos públicos, no se indexa.
+app.get('/channel/:id', async (c) => {
+  const pagina = await paginaApp(c);
+  const html = await pagina.text();
+  const cabeceras = { headers: pagina.headers, status: pagina.status };
+  const filas = await c.env.DB.prepare(
+    `SELECT v.id, v.titulo, v.tiene_miniatura, r.publicado_en, u.nombre, v.idioma
+     FROM red_publicaciones r JOIN videos v ON v.id = r.video_id JOIN usuarios u ON u.id = v.usuario_id
+     WHERE v.usuario_id = ? AND r.publicado = 1 AND r.oculto = 0 AND v.estado = 'listo' AND v.privacidad = 'enlace'
+       AND v.archivado = 0
+     ORDER BY r.publicado_en DESC LIMIT 200`,
+  )
+    .bind(c.req.param('id'))
+    .all<{
+      id: string;
+      titulo: string;
+      tiene_miniatura: number;
+      publicado_en: number;
+      nombre: string;
+      idioma: string;
+    }>()
+    .catch(() => ({ results: [] }));
+  const videos = filas.results ?? [];
+  const primero = videos[0];
+  if (!primero)
+    return new Response(
+      html.replace('</head>', '<meta name="robots" content="noindex" />\n  </head>'),
+      cabeceras,
     );
-  return new Response(salida, cabeceras);
+  const enEspanol =
+    videos.filter((x) => idiomaDelTexto(x.titulo, x.idioma) === 'es').length * 2 >= videos.length;
+  return new Response(
+    paginaCanal(html, {
+      id: c.req.param('id'),
+      nombre: primero.nombre,
+      idioma: enEspanol ? 'es' : 'en',
+      videos: videos.map((x) => ({
+        id: x.id,
+        titulo: x.titulo,
+        tiene_miniatura: x.tiene_miniatura === 1,
+        publicado_en: x.publicado_en,
+      })),
+    }),
+    cabeceras,
+  );
 });
 
 // La página pública del video lleva su propia tarjeta para WhatsApp y redes.

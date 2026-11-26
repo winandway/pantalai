@@ -86,10 +86,28 @@ test('publicar un video en la red de Pantalay', async ({ page, browser, request 
   // Lo que lee Google: datos de video y el mapa del sitio.
   const html = await (await request.get(`/videos/${id}`)).text();
   expect(html).toContain('"@type":"VideoObject"');
-  expect(html).toContain('<title>vertical-verde · Pantalay</title>');
-  // Título y enlace escritos en el HTML (Google sin ejecutar nada), y Videos con los enlaces a los videos.
+  expect(html).toContain('<title>vertical-verde · Soporte E2E · Pantalay</title>');
+  // CANDADO C-SEO-VIDEOS: la tarjeta dice la dirección del video (antes decía la de la portada), trae el video para
+  // las redes, la ruta de navegación y la vista previa grande para Google.
+  expect(html).toContain(`<meta property="og:url" content="https://pantalay.com/videos/${id}" />`);
+  expect(html).toContain(`<link rel="canonical" href="https://pantalay.com/videos/${id}" />`);
+  expect(html).toContain(`<meta property="og:video" content="https://pantalay.com/media/${id}/video" />`);
+  expect(html).toContain('"@type":"BreadcrumbList"');
+  expect(html).toContain('max-image-preview:large');
+  expect(html.match(/<meta property="og:url"/g)).toHaveLength(1);
+  expect(html.match(/<meta name="robots"/g)).toHaveLength(1);
+  // Título, miniatura y canal escritos en el HTML (Google sin ejecutar nada), y Videos con los enlaces a los videos.
   expect(html).toContain('<h1>vertical-verde</h1>');
-  expect(html).toContain(`https://pantalay.com/videos/${id}</a>`);
+  expect(html).toMatch(/<a href="\/channel\/[A-Za-z0-9_-]+">Soporte E2E<\/a>/);
+  // El canal del creador: un perfil con sus videos, y también va en el mapa del sitio.
+  const canal = html.match(/href="(\/channel\/[A-Za-z0-9_-]+)"/)![1]!;
+  const htmlCanal = await (await request.get(canal)).text();
+  expect(htmlCanal).toContain('"@type":"ProfilePage"');
+  expect(htmlCanal).toContain(`<a href="/videos/${id}">vertical-verde</a>`);
+  expect(htmlCanal).toContain(`<meta property="og:url" content="https://pantalay.com${canal}" />`);
+  expect(await (await request.get('/sitemap.xml')).text()).toContain(`${canal}</loc>`);
+  // Las IA encuentran el video en su guía.
+  expect(await (await request.get('/llms.txt')).text()).toContain(`(https://pantalay.com/videos/${id})`);
   expect(await (await request.get('/videos')).text()).toContain(`<a href="/videos/${id}">vertical-verde</a>`);
   // Los resultados del buscador no se indexan (regla de Google para búsquedas internas).
   expect(await (await request.get('/videos/search?q=x')).text()).toContain('noindex');
