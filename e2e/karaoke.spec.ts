@@ -26,7 +26,18 @@ test('grabar con Karaoke en el Estudio', async ({ page }) => {
   await expect(efecto).toHaveValue('50');
   await expect(page.getByLabel(/I’m using headphones/)).toBeChecked();
   // Queda guardado: al volver al Estudio sigue encendido.
-  await page.waitForTimeout(1200); // el borrador se guarda medio segundo después de tocar
+  // El borrador se guarda medio segundo después de tocar: se espera a VERLO guardado, no un rato fijo.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Object.keys(localStorage)
+          .filter((k) => k.includes('estudio'))
+          .some(
+            (k) => (JSON.parse(localStorage.getItem(k) ?? '{}') as { karaoke?: boolean }).karaoke === true,
+          ),
+      ),
+    )
+    .toBe(true);
   await page.reload();
   await expect(page.getByRole('button', { name: /Karaoke/ })).toHaveAttribute('aria-pressed', 'true');
   await page.locator('[data-archivo-estudio]').setInputFiles('e2e/datos/vertical-verde.mp4');

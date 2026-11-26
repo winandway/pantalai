@@ -2,6 +2,15 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Pruebas de punta a punta con Chrome real (cámara, micrófono y pantalla simulados) y con el motor de Safari
 // simulando un iPhone. Corren contra el sitio local (wrangler dev) o contra URL_BASE.
+/** Con qué arranca Chrome en las pruebas (una prueba que cambie «launchOptions» tiene que repetirlos). */
+export const ARGUMENTOS_CHROME = [
+  '--use-fake-ui-for-media-stream',
+  '--use-fake-device-for-media-stream',
+  '--auto-accept-this-tab-capture',
+  '--auto-select-tab-capture-source-by-title=Pantalay',
+  '--autoplay-policy=no-user-gesture-required',
+];
+
 export default defineConfig({
   testDir: 'e2e',
   timeout: 120_000,
@@ -14,13 +23,7 @@ export default defineConfig({
         channel: 'chrome',
         headless: true,
         launchOptions: {
-          args: [
-            '--use-fake-ui-for-media-stream',
-            '--use-fake-device-for-media-stream',
-            '--auto-accept-this-tab-capture',
-            '--auto-select-tab-capture-source-by-title=Pantalay',
-            '--autoplay-policy=no-user-gesture-required',
-          ],
+          args: ARGUMENTOS_CHROME,
         },
         permissions: ['camera', 'microphone', 'clipboard-read', 'clipboard-write'],
       },

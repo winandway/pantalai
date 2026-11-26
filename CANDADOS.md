@@ -1315,3 +1315,55 @@ el video está transcrito y `<h2>Transcripción</h2>`.
 
 **Qué no tocar.** No volver a armar la cabecera del video dentro de `app.ts`. No quitar el `LEFT JOIN video_youtube`.
 No mandar IndexNow desde otro origen. No poner datos privados en estas páginas: solo videos publicados en la red.
+
+## C-RELOJ-SIN-COLA y pruebas firmes de Karaoke y «Hablando» (26 nov 2026)
+
+**Qué se rompía y cómo se veía.** En GitHub (`verify`, trabajo «punta-a-punta») fallaban «a veces» dos pruebas de
+navegador y pasaban al repetir: `e2e/karaoke.spec.ts` (se quedaba 120 segundos esperando la barra de controles: la
+página estaba congelada mientras grababa) y `e2e/estudio-hablando.spec.ts` («cuadros con el cartel Hablando en verde:
+0»). Los videos grabados en GitHub lo delataban: menos de un cuadro por segundo, y cada cuadro más lejos del anterior
+(2 s, 3 s… hasta 9 s). Una grabación de 4 segundos duraba 30.
+
+**Causa real (tres, una del producto y dos de la prueba).**
+
+1. PRODUCTO: el reloj que marca los cuadros de la grabación (un Worker, en `componer` de `grabadora.ts`) mandaba 30
+   avisos por segundo sin esperar a que la página dibujara el anterior. En una máquina donde dibujar un cuadro tarda
+   más de 33 ms (sin tarjeta gráfica: la de GitHub, y también la computadora vieja de un cliente) los avisos se
+   amontonaban sin tope y la página se iba trabando hasta congelarse. No era la prueba: era el Estudio.
+2. PRODUCTO (chico): `DetectorVoz` contaba como silencio el rato que la página estuvo trabada sin medir; después de
+   un tirón, una sola medida caída en la pausa entre dos sílabas apagaba el cartel.
+3. PRUEBA: el verde del cartel se medía en 7 puntos sobre el renglón de las letras, en una imagen achicada a 192 de
+   ancho: cada punto mezclaba letra blanca con fondo y acertar dependía de cómo cayera la letra en esa máquina (en la
+   Mac sin tarjeta gráfica fallaba siempre). Y la «voz» de mentira llevaba sus sílabas con relojes de la página, que
+   con la página trabada dejaban la voz callada segundos enteros.
+
+**Qué se hizo.**
+
+- `web/src/logica/relojDibujo.ts` (pieza nueva): el reloj solo manda un aviso cuando la página contestó «listo» al
+  anterior; si tocó un paso mientras tanto, guarda UNO y lo manda apenas quede libre. Nunca hay más de uno en cola.
+  `grabadora.ts` lo usa con `arrancarRelojDibujo(dibujar)`. El código del Worker sale de la misma función que se
+  prueba (va entre paréntesis porque al publicar se le cambia el nombre).
+- `web/src/logica/voz.ts`: si pasaron más de 200 ms entre dos medidas, ese hueco no cuenta como silencio.
+- `e2e/estudio-hablando.spec.ts`: las sílabas las lleva un oscilador dentro del motor de sonido (no depende de la
+  página); se mira TODO el cartel a tamaño real (`examen.zona` en `e2e/ayuda.ts`) y se exige que más del 35 % sea
+  verde de «Hablando» en 6 de 8 cuadros (encendido da 74 a 78 %; «Escuchando» da 0 %, medido también sobre los
+  videos fallidos de GitHub).
+- `e2e/karaoke.spec.ts`: en vez de esperar 1,2 s fijos a que se guarde el borrador, espera a verlo guardado.
+- `e2e/estudio-maquina-lenta.spec.ts` (nueva): Chrome sin tarjeta gráfica y la página frenada 20 veces; el Estudio
+  tiene que seguir contestando mientras graba y dejar terminar.
+
+**Comprobado en ROJO (26 nov 2026).** Con el reloj viejo (mandar siempre): fallan 2 de `pruebas/reloj-dibujo.test.ts`
+y la e2e de máquina lenta se queda sin respuesta (la misma falla de Karaoke en GitHub, reproducida en la Mac). El
+detector sin el arreglo falla «un tirón de la página no cuenta como silencio» de `pruebas/voz.test.ts`. La medida
+vieja del cartel daba 0 cuadros verdes sin tarjeta gráfica con el cartel verde a la vista.
+**En verde:** las tres e2e, quince veces seguidas cada una en la Mac; «Hablando» también con la página frenada 6 y 12
+veces (verde en los 8 cuadros).
+
+**Cómo se comprueba.** `npx vitest run pruebas/reloj-dibujo.test.ts pruebas/voz.test.ts` y
+`npx playwright test e2e/karaoke.spec.ts e2e/estudio-hablando.spec.ts e2e/estudio-maquina-lenta.spec.ts --repeat-each=15`.
+Si una prueba del Estudio vuelve a fallar en GitHub, bajar el resultado («resultado-e2e») y contar los cuadros del
+video con `ffprobe -select_streams v -show_entries packet=pts_time`: si los cuadros se van espaciando, hay otra cola.
+
+**Qué no tocar.** No volver a un `setInterval` que mande avisos sin esperar el «listo». No medir colores de cosas
+chicas con `examen.cuadro` (achicado): para eso está `examen.zona`. No llevar sonidos de prueba con `setTimeout`.
+No arreglar una prueba lenta subiendo esperas: primero contar los cuadros del video.

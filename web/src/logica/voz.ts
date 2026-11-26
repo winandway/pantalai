@@ -17,14 +17,22 @@ export function nivelDeMuestras(m: Uint8Array): number {
 export class DetectorVoz {
   private encendido = false;
   private ultimaVoz = -Infinity;
+  private anterior = -Infinity;
   constructor(
     private readonly umbral = 0.12,
     private readonly umbralApagar = 0.07,
     private readonly sostenerMs = 450,
+    private readonly sinOirMs = 200,
   ) {}
 
-  /** Recibe el nivel de ahora y dice si está hablando. */
+  /** Recibe el nivel de ahora y dice si está hablando. Se llama seguido (cada 50 ms). */
   actualizar(nivel: number, ahora: number): boolean {
+    // Si la página estuvo trabada y pasó un rato largo sin medir, ese rato NO cuenta como silencio: no se oyó nada,
+    // ni voz ni silencio. Sin esto, en una máquina lenta el cartel se apagaba solo por caer justo en una pausa
+    // entre sílabas después de un tirón (C-HABLANDO, 26 nov 2026).
+    const hueco = ahora - this.anterior;
+    if (this.encendido && hueco > this.sinOirMs) this.ultimaVoz += hueco;
+    this.anterior = ahora;
     if (nivel >= this.umbral || (this.encendido && nivel >= this.umbralApagar)) {
       this.encendido = true;
       this.ultimaVoz = ahora;

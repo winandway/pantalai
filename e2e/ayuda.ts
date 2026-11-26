@@ -70,6 +70,40 @@ export async function examinarVideo(archivo: Buffer) {
       return [crudo[i]!, crudo[i + 1]!, crudo[i + 2]!];
     };
   };
+  /**
+   * Los colores de una zona del cuadro (fracciones 0 a 1 del video), a tamaño REAL, sin achicar. Para medir el color
+   * de algo chico (un cartel): achicado a 192 de ancho, sus letras se mezclan con el fondo y el color sale a la suerte.
+   */
+  const zona = (
+    segundo: number,
+    z: { x: number; y: number; w: number; h: number },
+  ): [number, number, number][] => {
+    const [W, H] = [...medidas][0]!.split(',').map(Number) as [number, number];
+    const w = Math.max(2, Math.round(W * z.w));
+    const h = Math.max(2, Math.round(H * z.h));
+    const crudo = execFileSync('ffmpeg', [
+      '-v',
+      'error',
+      '-ss',
+      String(segundo),
+      '-i',
+      ruta,
+      '-frames:v',
+      '1',
+      '-vf',
+      `crop=${w}:${h}:${Math.round(W * z.x)}:${Math.round(H * z.y)}`,
+      '-f',
+      'rawvideo',
+      '-pix_fmt',
+      'rgb24',
+      '-',
+    ]);
+    return Array.from({ length: crudo.length / 3 }, (_, i) => [
+      crudo[i * 3]!,
+      crudo[i * 3 + 1]!,
+      crudo[i * 3 + 2]!,
+    ]);
+  };
   // El pico de sonido de todo el archivo, en dB (0 = el tope; ahí satura).
   const picoDb = (): number => {
     const r = spawnSync('ffmpeg', ['-hide_banner', '-i', ruta, '-af', 'volumedetect', '-f', 'null', '-'], {
@@ -78,7 +112,7 @@ export async function examinarVideo(archivo: Buffer) {
     const m = /max_volume:\s*(-?[\d.]+) dB/.exec(r.stderr ?? '');
     return m ? Number(m[1]) : Number.NaN;
   };
-  return { medidas: [...medidas], cuadro, picoDb };
+  return { medidas: [...medidas], cuadro, zona, picoDb };
 }
 
 /**

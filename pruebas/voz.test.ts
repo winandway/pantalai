@@ -20,12 +20,33 @@ describe('cartel «Hablando» (lo puro)', () => {
 
   it('se enciende con la voz, aguanta entre sílabas y se apaga en el silencio', () => {
     const d = new DetectorVoz();
-    expect(d.actualizar(0.02, 0)).toBe(false); // silencio: «Escuchando»
-    expect(d.actualizar(0.3, 100)).toBe(true); // habla: «Hablando»
-    expect(d.actualizar(0.08, 150)).toBe(true); // baja un poco: sigue
-    expect(d.actualizar(0.01, 300)).toBe(true); // pausa corta entre palabras: sigue (no parpadea)
-    expect(d.actualizar(0.01, 700)).toBe(false); // silencio de verdad: se apaga
-    expect(d.actualizar(0.09, 800)).toBe(false); // un ruido suave no lo enciende
+    // Como en la página: una medida cada 50 ms. «hasta» repite el nivel hasta ese momento y da la última respuesta.
+    let ahora = 0;
+    const hasta = (ms: number, nivel: number) => {
+      let r = false;
+      for (; ahora <= ms; ahora += 50) r = d.actualizar(nivel, ahora);
+      return r;
+    };
+    expect(hasta(50, 0.02)).toBe(false); // silencio: «Escuchando»
+    expect(hasta(100, 0.3)).toBe(true); // habla: «Hablando»
+    expect(hasta(150, 0.08)).toBe(true); // baja un poco: sigue
+    expect(hasta(300, 0.01)).toBe(true); // pausa corta entre palabras: sigue (no parpadea)
+    expect(hasta(700, 0.01)).toBe(false); // silencio de verdad: se apaga
+    expect(hasta(800, 0.09)).toBe(false); // un ruido suave no lo enciende
+  });
+
+  it('un tirón de la página (rato sin medir) no cuenta como silencio', () => {
+    const d = new DetectorVoz();
+    expect(d.actualizar(0.3, 0)).toBe(true);
+    expect(d.actualizar(0.3, 50)).toBe(true);
+    // La página se traba 2 segundos y la primera medida cae justo en una pausa entre sílabas: sigue «Hablando».
+    expect(d.actualizar(0.01, 2050)).toBe(true);
+    expect(d.actualizar(0.01, 2100)).toBe(true);
+    expect(d.actualizar(0.3, 2150)).toBe(true); // siguió hablando: nunca parpadeó
+    // Y el silencio de verdad, medido seguido, lo apaga igual que siempre.
+    let r = true;
+    for (let t = 2200; t <= 2750; t += 50) r = d.actualizar(0.01, t);
+    expect(r).toBe(false);
   });
 
   it('las barras siguen el nivel y en silencio quedan bajitas y quietas', () => {

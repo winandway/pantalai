@@ -87,6 +87,9 @@
       «Hablando», crédito en «Para YouTube»). Motivo: se publicó por orden de la meta; falta la revisión del paquete.
 - [x] Estudio, fase 4 (10 nov 2026): cartel «Hablando/Escuchando» con el micrófono (anfitrión e invitado), barras de
       sonido y «Para YouTube» con el crédito al creador ya puesto (C-HABLANDO, C-CREDITO). Guía en Docs.
+- [x] 26 nov 2026: las pruebas de navegador de Karaoke y del cartel «Hablando» ya no fallan «a veces» en GitHub. La
+      causa era del producto (el reloj de los cuadros amontonaba avisos y congelaba la página en máquinas lentas) y de
+      cómo se medía el verde del cartel. Detalle en CANDADOS.md, C-RELOJ-SIN-COLA.
 
 - [x] Partes de subida iguales (grabaciones largas), vista previa con imagen, burbuja flotante, forma vertical,
       borde de colores, «Grabando» arriba, ruedita de subida, «Subir otra vez» (19 oct 2026, comprobado en vivo).

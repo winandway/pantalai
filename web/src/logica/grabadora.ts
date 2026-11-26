@@ -11,6 +11,7 @@ import {
   type CadenaKaraoke,
 } from './karaoke';
 import { medidaGrabacionEstudio } from './estudio';
+import { arrancarRelojDibujo } from './relojDibujo';
 import type { Segmento } from './tiempo';
 
 export type Modo = 'pantalla_camara' | 'pantalla' | 'camara';
@@ -826,9 +827,8 @@ export class Grabadora {
       pintar(ctx, this.pizarra, lienzo.width, lienzo.height, ahora);
       if (this.marca) this.pintarMarca(ctx, vertical);
     };
-    const codigo = 'let t=setInterval(()=>postMessage(0),1000/30);onmessage=()=>clearInterval(t)';
-    this.reloj = new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' })));
-    this.reloj.onmessage = dibujar;
+    // El reloj no manda un cuadro nuevo hasta que se dibujó el anterior (C-RELOJ-SIN-COLA).
+    this.reloj = arrancarRelojDibujo(dibujar);
     dibujar();
     return lienzo.captureStream(30).getVideoTracks()[0]!;
   }
