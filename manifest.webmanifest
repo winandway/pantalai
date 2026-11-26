@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Pantalay — Screen recorder and videos",
+  "short_name": "Pantalay",
+  "description": "Record your screen and camera, share it with a link, and watch videos and Shorts made with Pantalay.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/?fuente=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#16181d",
+  "categories": ["productivity", "video", "business"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Record", "url": "/record", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Videos", "url": "/videos", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Shorts", "url": "/shorts", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Library", "url": "/library", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
