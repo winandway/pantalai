@@ -23,12 +23,24 @@ test('la cuenta 3, 2, 1 se ve grande en el centro y no sale en el video', async 
     .getByRole('button', { name: 'All good, record' })
     .click();
 
-  const cuenta = page.locator('.escenario-cuenta');
-  await expect(cuenta).toBeVisible({ timeout: 20_000 });
-  await expect(cuenta.locator('span')).toHaveText(/^[321]$/);
+  // Se mide TODO de una sola vez, dentro de la página y apenas aparece el número: la cuenta dura 3 s y en la máquina
+  // lenta de GitHub ya no existía cuando la prueba volvía a preguntar (falló así el 14 y el 25 nov 2026).
+  const medidas = await page
+    .waitForFunction(
+      () => {
+        const s = document.querySelector('.escenario-cuenta span');
+        const e = document.querySelector('[data-escenario]');
+        if (!s || !e || !/^[321]$/.test(s.textContent ?? '')) return null;
+        const caja = (r: DOMRect) => ({ x: r.x, y: r.y, width: r.width, height: r.height });
+        const numero = caja(s.getBoundingClientRect());
+        return numero.height > 0 ? { numero, esc: caja(e.getBoundingClientRect()) } : null;
+      },
+      null,
+      { timeout: 20_000, polling: 'raf' },
+    )
+    .then((h) => h.jsonValue());
+  const { numero, esc } = medidas!;
   // Grande y en el centro del escenario, a la vista.
-  const numero = (await cuenta.locator('span').boundingBox())!;
-  const esc = (await page.locator('[data-escenario]').boundingBox())!;
   expect(numero.height).toBeGreaterThan(120);
   const cx = numero.x + numero.width / 2;
   const cy = numero.y + numero.height / 2;
@@ -45,7 +57,7 @@ test('la cuenta 3, 2, 1 se ve grande en el centro y no sale en el video', async 
   expect(await page.locator('[data-escenario] .escenario-cuenta').count()).toBe(0);
 
   await expect(page.locator('.estudio .indicador')).toHaveText('Recording', { timeout: 20_000 });
-  await expect(cuenta).toHaveCount(0);
+  await expect(page.locator('.escenario-cuenta')).toHaveCount(0);
   await page.waitForTimeout(2500);
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page).toHaveURL(/\/v\/[a-z0-9]{20}$/, { timeout: 60_000 });
